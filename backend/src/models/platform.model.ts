@@ -1,12 +1,12 @@
 import mongoose, { Schema } from "mongoose";
 
-interface Platform extends Document {
+export interface IPlatform {
   name: string;
 }
 
-const PlatformSchema = new Schema({
+const PlatformSchema = new Schema<IPlatform>({
   name: { type: String, required: true },
 });
 
-const Platform = mongoose.model("Platform", PlatformSchema);
+const Platform = mongoose.model<IPlatform>("Platform", PlatformSchema);
 export default Platform;

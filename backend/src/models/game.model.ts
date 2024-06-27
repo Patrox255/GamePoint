@@ -1,23 +1,25 @@
 import mongoose, { Schema, Types } from "mongoose";
 
-interface IGame extends Document {
+export interface IGame {
   title: string;
   price: number;
   discount?: number;
   releaseDate: Date;
-  genre: string[];
+  genres: Types.ObjectId[];
   platforms: Types.ObjectId[];
-  producer: string;
-  publisher: string;
+  developer?: Types.ObjectId;
+  publisher?: Types.ObjectId;
 }
 
-const GameSchema = new Schema({
+const GameSchema = new Schema<IGame>({
   title: { type: String, required: true },
   price: { type: Number, required: true },
   discount: { type: Number },
-  genre: [{ type: String, required: true }],
-  releaseDate: { type: Date, required: true },
+  genres: [{ type: Schema.Types.ObjectId, ref: "Genre", required: true }],
+  releaseDate: { type: Date },
   platforms: [{ type: Schema.Types.ObjectId, ref: "Platform", required: true }],
+  developer: { type: Schema.Types.ObjectId, ref: "Developer" },
+  publisher: { type: Schema.Types.ObjectId, ref: "Publisher" },
 });
 
 const Game = mongoose.model<IGame>("Game", GameSchema);

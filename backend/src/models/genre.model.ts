@@ -1,10 +1,10 @@
 import mongoose, { Schema } from "mongoose";
 
-interface IGenre extends Document {
+export interface IGenre {
   name: string;
 }
 
-const GenreSchema = new Schema({
+const GenreSchema = new Schema<IGenre>({
   name: { type: String, required: true },
 });
 

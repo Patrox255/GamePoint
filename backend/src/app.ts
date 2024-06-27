@@ -1,6 +1,12 @@
 import express, { Request, Response } from "express";
 import { connectDB } from "./db";
 import { CLIENT_ID, SECRET } from "./secret";
+import mongoose from "mongoose";
+import Platform, { IPlatform } from "./models/platform.model";
+import Genre, { IGenre } from "./models/genre.model";
+import Game, { IGame } from "./models/game.model";
+import Publisher, { IPublisher } from "./models/publisher.model";
+import Developer, { IDeveloper } from "./models/devloper.model";
 
 const app = express();
 const port = 3000;
@@ -11,43 +17,101 @@ const getJSON = async (url: string, options: RequestInit = {}) => {
   return data;
 };
 
+const sleep = (s: number) =>
+  new Promise((resolve) => setTimeout(resolve, s * 1000));
+
+const dropCollectionsIfTheyExist = async (collections: string[]) => {
+  for (const collection of collections) {
+    const collInfo = await mongoose.connection.db
+      .listCollections({
+        name: collection,
+      })
+      .next();
+    if (collInfo) {
+      await mongoose.connection.dropCollection(collection);
+    }
+  }
+};
+
+const createDocumentsOfObjsAndInsert = async <storedObjInterface>(
+  objs: storedObjInterface[],
+  model: mongoose.Model<storedObjInterface>
+) => {
+  // Here _id is going to be id of an individual document according to our mongoDB database
+  // and default id will be related to id from the API and we will be able to change ids in individual games obj properties
+  // to their equivalents according to our mongoDB database
+  const newObjs: (storedObjInterface & {
+    _id?: mongoose.ObjectId | undefined;
+  })[] = objs.map((obj) => ({ ...obj, _id: undefined }));
+  const documents = objs.map((obj) => new model(obj));
+  newObjs.forEach((newObj, i: number) => {
+    const correspondingDocument = documents[i];
+    newObj._id = correspondingDocument._id as mongoose.ObjectId;
+  });
+  await Promise.all(documents.map(async (doc) => await doc.save()));
+  return { documents, newObjs };
+};
+
 const random = (min: number, max: number) => Math.random() * (max - min) + min;
 
 const startServer = async () => {
   try {
-    await connectDB();
-
     app.get("/init", async (req: Request, res: Response) => {
-      const generateMultiQueries = (
-        conditionToQueriesArr: number[],
-        singleQueryGeneratorFunc: (i: number, cur: number) => string
-      ) => {
-        return conditionToQueriesArr.reduce<{
-          curQuery: string;
-          queries: string[];
-        }>(
-          (acc, cur, i) => {
-            const curQuery = singleQueryGeneratorFunc(i, cur).replace(
-              /\n/gi,
-              ""
-            );
-            if (
-              (i % 10 === 0 && i !== 0) ||
-              i === conditionToQueriesArr.length - 1
-            ) {
-              if (i !== conditionToQueriesArr.length - 1)
-                acc.queries.push(acc.curQuery);
-              else acc.queries.push(acc.curQuery + curQuery);
-              acc.curQuery = curQuery;
-            } else {
-              acc.curQuery += curQuery;
-            }
-            return acc;
-          },
-          { curQuery: "", queries: [] }
-        ).queries;
-      };
       try {
+        await connectDB();
+
+        const generateMultiQueries = async <T>(
+          conditionToQueriesArr: number[],
+          singleQueryGeneratorFunc: (i: number, cur: number) => string,
+          authorizedHeaders: {
+            Authorization: string;
+            "Client-ID": string;
+          }
+        ) => {
+          const multiQueries = conditionToQueriesArr.reduce<{
+            curQuery: string;
+            queries: string[];
+          }>(
+            (acc, cur, i) => {
+              const curQuery = singleQueryGeneratorFunc(i, cur).replace(
+                /\n/gi,
+                ""
+              );
+              if (
+                (i % 10 === 0 && i !== 0) ||
+                i === conditionToQueriesArr.length - 1
+              ) {
+                if (i !== conditionToQueriesArr.length - 1)
+                  acc.queries.push(acc.curQuery);
+                else acc.queries.push(acc.curQuery + curQuery);
+                acc.curQuery = curQuery;
+              } else {
+                acc.curQuery += curQuery;
+              }
+              return acc;
+            },
+            { curQuery: "", queries: [] }
+          ).queries;
+          const multiQueriesResultObjs = await Promise.all(
+            multiQueries.map(async (multiQuery) => {
+              const data = await getJSON("https://api.igdb.com/v4/multiquery", {
+                method: "POST",
+                headers: authorizedHeaders,
+                body: multiQuery,
+              });
+              return data.map(
+                (returnedDataObj: {
+                  name: string;
+                  result: { id: number; date: number }[];
+                }) => ({
+                  ...returnedDataObj.result[0],
+                })
+              );
+            })
+          );
+          return multiQueriesResultObjs.flat() as T;
+        };
+
         const { access_token } = await getJSON(
           `https://id.twitch.tv/oauth2/token?client_id=${CLIENT_ID}&client_secret=${SECRET}&grant_type=client_credentials`,
           {
@@ -71,100 +135,300 @@ const startServer = async () => {
             };`,
           }
         );
-        let releaseDates: number[] = [];
-        let platforms: number[] = [];
+        let releaseDatesIdsToFetch: number[] = [];
+        let platformsIdsToFetch: number[] = [];
+        let genresIdsToFetch: number[] = [];
+        let involvedCompaniesToFetch: number[] = [];
+        let companiesToFetch: number[] = [];
         games = games.map((game: object) => {
           const hasDisocunt = Math.round(random(0, 1)) === 0;
           if ((game as { release_dates?: number[] }).release_dates)
-            releaseDates.push(
+            releaseDatesIdsToFetch.push(
               (game as { release_dates: number[] }).release_dates[0]
             );
           if ((game as { platforms?: number[] }).platforms)
-            platforms.push(...(game as { platforms: number[] }).platforms);
+            platformsIdsToFetch.push(
+              ...(game as { platforms: number[] }).platforms
+            );
+          if ((game as { genres?: number[] }).genres)
+            genresIdsToFetch.push(...(game as { genres: number[] }).genres);
+          if ((game as { involved_companies: number[] }).involved_companies)
+            involvedCompaniesToFetch.push(
+              ...(game as { involved_companies: number[] }).involved_companies
+            );
           return {
             ...game,
             price: +random(5, 25).toFixed(2),
             discount: hasDisocunt ? Math.round(random(1, 100)) : 0,
           };
         });
-        releaseDates = [...new Set(releaseDates)];
-        platforms = [...new Set(platforms)];
-        const multiQueriesForReleaseDates = generateMultiQueries(
-          releaseDates,
-          (i, cur) =>
-            `query release_dates "${i}" {
-                fields date,game;
-                where id=${cur};
-              };`
+        releaseDatesIdsToFetch = [...new Set(releaseDatesIdsToFetch)];
+        platformsIdsToFetch = [...new Set(platformsIdsToFetch)];
+        genresIdsToFetch = [...new Set(genresIdsToFetch)];
+        involvedCompaniesToFetch = [...new Set(involvedCompaniesToFetch)];
+
+        const releaseDatesObjsTemp = await generateMultiQueries<
+          {
+            id: number;
+            date: string;
+            game: number;
+          }[]
+        >(
+          releaseDatesIdsToFetch,
+          (i, cur) => `query release_dates "${i}" {
+            fields date,game;
+            where id=${cur};
+          };`,
+          authorizedHeaders
         );
-        const releaseDatesDataObjs = await Promise.all(
-          multiQueriesForReleaseDates.map(async (multiQuery) => {
-            const data = await getJSON("https://api.igdb.com/v4/multiquery", {
-              method: "POST",
-              headers: authorizedHeaders,
-              body: multiQuery,
-            });
-            return data.map(
-              (returnedDataObj: {
-                name: string;
-                result: { id: number; date: number }[];
-              }) => ({
-                ...returnedDataObj.result[0],
-                date: new Date(returnedDataObj.result[0].date),
-              })
-            );
+        const releaseDatesObjs = releaseDatesObjsTemp.map(
+          (releaseDatesObj) => ({
+            ...releaseDatesObj,
+            date: releaseDatesObj.date
+              ? new Date(+releaseDatesObj.date * 1000)
+              : undefined,
           })
         );
-        const releaseDatesObjs: {
-          id: number;
-          date: Date;
-          game: number;
-        }[] = releaseDatesDataObjs.flat();
 
-        const multiQueriesForPlatforms = generateMultiQueries(
-          platforms,
+        const platformsObjs = await generateMultiQueries<
+          { id: number; name: string }[]
+        >(
+          platformsIdsToFetch,
           (i, cur) => `query platforms "${i}" {
+              fields name;
+              where id=${cur};
+            };`,
+          authorizedHeaders
+        );
+
+        await sleep(4);
+        const genresObjs = await generateMultiQueries<
+          { id: number; name: string }[]
+        >(
+          genresIdsToFetch,
+          (i, cur) => `query genres "${i}" {
             fields name;
             where id=${cur};
-          };`
+          };`,
+          authorizedHeaders
         );
-        const platformsDataObjs = await Promise.all(
-          multiQueriesForPlatforms.map(async (multiQuery) => {
-            const data = await getJSON("https://api.igdb.com/v4/multiquery", {
-              method: "POST",
-              headers: authorizedHeaders,
-              body: multiQuery,
-            });
-            return data.map(
-              (multiQueryResponse: {
-                name: string;
-                result: { id: number; name: string }[];
-              }) => ({
-                ...multiQueryResponse.result[0],
-              })
-            );
-          })
-        );
-        const platformsObjs: { id: number; name: string }[] =
-          platformsDataObjs.flat();
-        // Store in our API and then map appropriate platform IDs in fetched games
 
-        games = games.map((game: { id: number; release_dates?: number[] }) => ({
-          ...game,
-          releaseDate: game.release_dates
-            ? releaseDatesObjs.find(
+        const involvedCompaniesObjs = await generateMultiQueries<
+          {
+            company: number;
+            developer: boolean;
+            publisher: boolean;
+            id: number;
+          }[]
+        >(
+          involvedCompaniesToFetch,
+          (i, cur) => `query involved_companies "${i}" {
+          fields company,developer,publisher;
+          where id=${cur};
+        };`,
+          authorizedHeaders
+        );
+
+        let publisherCompaniesIds: number[] = [];
+        let developerCompaniesIds: number[] = [];
+
+        games = games.map((game: { involved_companies?: number[] }) => {
+          if (!game.involved_companies) return game;
+          const involvedCompaniesIds = game.involved_companies;
+
+          const developerInvolvedCompanyId = involvedCompaniesIds.find(
+            (involvedCompanyId) =>
+              involvedCompaniesObjs.find(
+                (involvedCompanyObj) =>
+                  involvedCompanyObj.id === involvedCompanyId
+              )?.developer
+          );
+          const developerCompanyId = involvedCompaniesObjs.find(
+            (involvedCompanyObj) =>
+              involvedCompanyObj.id === developerInvolvedCompanyId
+          )?.company;
+          const publisherInvolvedCompany = involvedCompaniesIds.find(
+            (involvedCompanyId) =>
+              involvedCompaniesObjs.find(
+                (involvedCompanyObj) =>
+                  involvedCompanyObj.id === involvedCompanyId
+              )?.publisher
+          );
+          const publisherCompanyId = involvedCompaniesObjs.find(
+            (involvedCompanyObj) =>
+              involvedCompanyObj.id === publisherInvolvedCompany
+          )?.company;
+          if (developerCompanyId) {
+            companiesToFetch.push(developerCompanyId);
+            developerCompaniesIds.push(developerCompanyId);
+          }
+          if (publisherCompanyId) {
+            companiesToFetch.push(publisherCompanyId);
+            publisherCompaniesIds.push(publisherCompanyId);
+          }
+          return {
+            ...game,
+            involved_companies: {
+              publisher: publisherCompanyId,
+              developer: developerCompanyId,
+            },
+          };
+        });
+        companiesToFetch = [...new Set(companiesToFetch)];
+        publisherCompaniesIds = [...new Set(publisherCompaniesIds)];
+        developerCompaniesIds = [...new Set(developerCompaniesIds)];
+
+        await sleep(4);
+        const companiesObjs = await generateMultiQueries<
+          { name: string; id: number }[]
+        >(
+          companiesToFetch,
+          (i, cur) => `query companies "${i}" {
+          fields name;
+          where id=${cur};
+        };`,
+          authorizedHeaders
+        );
+
+        games = games.map(
+          (game: {
+            involved_companies?: { publisher?: number; developer?: number };
+          }) => {
+            if (!game.involved_companies)
+              return { ...game, publisher: undefined, developer: undefined };
+            const publisher = game.involved_companies.publisher
+              ? companiesObjs.find(
+                  (companyObj) =>
+                    companyObj.id === game.involved_companies?.publisher
+                )?.name
+              : undefined;
+            const developer = game.involved_companies.developer
+              ? companiesObjs.find(
+                  (companyObj) =>
+                    companyObj.id === game.involved_companies?.developer
+                )?.name
+              : undefined;
+            return { ...game, publisher, developer };
+          }
+        );
+        await dropCollectionsIfTheyExist([
+          "games",
+          "genres",
+          "platforms",
+          "publishers",
+          "developers",
+        ]);
+
+        const publisherObjs = publisherCompaniesIds.map(
+          (publisherCompanyId) => {
+            const { name } = companiesObjs.find(
+              (companyObj) => companyObj.id === publisherCompanyId
+            )!;
+            return { name };
+          }
+        );
+        const developerObjs = developerCompaniesIds.map(
+          (developerCompanyId) => {
+            const { name } = companiesObjs.find(
+              (companyObj) => companyObj.id === developerCompanyId
+            )!;
+            return { name };
+          }
+        );
+        const publisherDocuments =
+          await createDocumentsOfObjsAndInsert<IPublisher>(
+            publisherObjs,
+            Publisher
+          );
+        const developerDocuments =
+          await createDocumentsOfObjsAndInsert<IDeveloper>(
+            developerObjs,
+            Developer
+          );
+        const platformDocuments =
+          await createDocumentsOfObjsAndInsert<IPlatform>(
+            platformsObjs,
+            Platform
+          );
+        const genreDocuments = await createDocumentsOfObjsAndInsert<IGenre>(
+          genresObjs,
+          Genre
+        );
+
+        const gamesToSend = games.map(
+          (game: {
+            id: number;
+            release_dates?: number[];
+            genres?: number[];
+            platforms?: number[];
+            name: string;
+            publisher?: string;
+            developer?: string;
+          }) => {
+            let releaseDate = undefined;
+            if (game.release_dates) {
+              releaseDate = releaseDatesObjs.find(
                 (releaseDateObj) => releaseDateObj.id === game.release_dates![0]
-              )!.date
-            : undefined,
-        }));
+              )
+                ? releaseDatesObjs.find(
+                    (releaseDateObj) =>
+                      releaseDateObj.id === game.release_dates![0]
+                  )?.date
+                : undefined;
+            }
 
+            return {
+              ...game,
+              releaseDate,
+              genres: game.genres?.map(
+                (genreApiID) =>
+                  genreDocuments.newObjs.find(
+                    (genreDbObj) =>
+                      (genreDbObj as IGenre & { id: number }).id === genreApiID
+                  )?._id
+              ),
+              platforms: game.platforms?.map(
+                (platformAPIId) =>
+                  platformDocuments.newObjs.find(
+                    (platformDbObj) =>
+                      (platformDbObj as IPlatform & { id: number }).id ===
+                      platformAPIId
+                  )?._id
+              ),
+              title: game.name,
+              publisher: game.publisher
+                ? publisherDocuments.newObjs.find(
+                    (publisherObj) => publisherObj.name === game.publisher
+                  )?._id
+                : undefined,
+              developer: game.developer
+                ? developerDocuments.newObjs.find(
+                    (developerObj) => developerObj.name === game.developer
+                  )?._id
+                : undefined,
+            };
+          }
+        );
+        const gamesDocuments = await createDocumentsOfObjsAndInsert<IGame>(
+          gamesToSend,
+          Game
+        );
+
+        await mongoose.connection.close();
         res.status(200).json({
-          ...games,
+          ...gamesToSend,
           dateObjs: releaseDatesObjs,
-          platforms,
+          platformsObjs: platformDocuments.newObjs,
+          genresObjs: genreDocuments.newObjs,
         });
       } catch (err) {
         console.error(err);
+        res
+          .status(404)
+          .json(
+            (err as { message?: string }).message ||
+              "An error occured. Please try again!"
+          );
       }
     });
 
