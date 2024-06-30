@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import { connectDB } from "./db";
-import { CLIENT_ID, SECRET } from "./secret";
+import { CLIENT_ID, FRONTEND_URL, SECRET } from "./secret";
 import mongoose from "mongoose";
 import Platform, { IPlatform } from "./models/platform.model";
 import Genre, { IGenre } from "./models/genre.model";
@@ -10,6 +10,8 @@ import Developer, { IDeveloper } from "./models/devloper.model";
 
 const app = express();
 const port = 3000;
+
+const cors = require("cors"); // eslint-disable-line
 
 const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -54,8 +56,44 @@ const createDocumentsOfObjsAndInsert = async <storedObjInterface>(
 
 const random = (min: number, max: number) => Math.random() * (max - min) + min;
 
+interface Error {
+  message?: string;
+  status?: number;
+}
+
+const corsOptions = {
+  origin: FRONTEND_URL,
+  methods: ["GET"],
+  allowedHeaders: ["Content-Type"],
+};
+
 const startServer = async () => {
   try {
+    app.use(cors(corsOptions));
+
+    app.options("*", cors(corsOptions));
+
+    app.get("/products", async (req: Request, res: Response) => {
+      try {
+        await connectDB();
+
+        const games = await Game.find()
+          .populate(["genres", "developer", "publisher", "platforms"])
+          .sort({ popularity: -1, date: -1 })
+          .limit(10)
+          .exec();
+
+        await mongoose.connection.close();
+        res.status(200).json([...games]);
+      } catch (err) {
+        console.error(err);
+        await mongoose.connection.close();
+        res
+          .status((err as Error).status || 503)
+          .json({ message: (err as Error).message });
+      }
+    });
+
     app.get("/init", async (req: Request, res: Response) => {
       try {
         await connectDB();
@@ -140,6 +178,7 @@ const startServer = async () => {
         let genresIdsToFetch: number[] = [];
         let involvedCompaniesToFetch: number[] = [];
         let companiesToFetch: number[] = [];
+        let artworksToFetch: number[] = [];
         games = games.map((game: object) => {
           const hasDisocunt = Math.round(random(0, 1)) === 0;
           if ((game as { release_dates?: number[] }).release_dates)
@@ -156,6 +195,10 @@ const startServer = async () => {
             involvedCompaniesToFetch.push(
               ...(game as { involved_companies: number[] }).involved_companies
             );
+          if ((game as { artworks: number[] }).artworks)
+            artworksToFetch.push(
+              ...(game as { artworks: number[] }).artworks.slice(0, 5)
+            );
           return {
             ...game,
             price: +random(5, 25).toFixed(2),
@@ -166,6 +209,7 @@ const startServer = async () => {
         platformsIdsToFetch = [...new Set(platformsIdsToFetch)];
         genresIdsToFetch = [...new Set(genresIdsToFetch)];
         involvedCompaniesToFetch = [...new Set(involvedCompaniesToFetch)];
+        artworksToFetch = [...new Set(artworksToFetch)];
 
         const releaseDatesObjsTemp = await generateMultiQueries<
           {
@@ -290,9 +334,21 @@ const startServer = async () => {
           authorizedHeaders
         );
 
+        const artworkObjs = await generateMultiQueries<
+          { url: string; id: number }[]
+        >(
+          artworksToFetch,
+          (i, cur) => `query artworks "${i}" {
+          fields url;
+          where id=${cur};
+        };`,
+          authorizedHeaders
+        );
+
         games = games.map(
           (game: {
             involved_companies?: { publisher?: number; developer?: number };
+            artworks?: number[];
           }) => {
             if (!game.involved_companies)
               return { ...game, publisher: undefined, developer: undefined };
@@ -308,7 +364,21 @@ const startServer = async () => {
                     companyObj.id === game.involved_companies?.developer
                 )?.name
               : undefined;
-            return { ...game, publisher, developer };
+            const artworks = game.artworks
+              ? game.artworks
+                  .map((artworkId) => {
+                    const artworkObj = artworkObjs.find(
+                      (artworkObj) => artworkObj.id === artworkId
+                    )!;
+
+                    if (!artworkObj) return undefined;
+
+                    artworkObj.url = artworkObj.url.replace("thumb", "720p");
+                    return artworkObj.url;
+                  })
+                  .filter((artworkUrl) => artworkUrl)
+              : [];
+            return { ...game, publisher, developer, artworks };
           }
         );
         await dropCollectionsIfTheyExist([
@@ -364,6 +434,7 @@ const startServer = async () => {
             name: string;
             publisher?: string;
             developer?: string;
+            hypes?: number;
           }) => {
             let releaseDate = undefined;
             if (game.release_dates) {
@@ -406,13 +477,11 @@ const startServer = async () => {
                     (developerObj) => developerObj.name === game.developer
                   )?._id
                 : undefined,
+              popularity: game.hypes || 0,
             };
           }
         );
-        const gamesDocuments = await createDocumentsOfObjsAndInsert<IGame>(
-          gamesToSend,
-          Game
-        );
+        await createDocumentsOfObjsAndInsert<IGame>(gamesToSend, Game);
 
         await mongoose.connection.close();
         res.status(200).json({
@@ -422,12 +491,12 @@ const startServer = async () => {
           genresObjs: genreDocuments.newObjs,
         });
       } catch (err) {
+        await mongoose.connection.close();
         console.error(err);
         res
-          .status(404)
+          .status((err as Error).status || 404)
           .json(
-            (err as { message?: string }).message ||
-              "An error occured. Please try again!"
+            (err as Error).message || "An error occured. Please try again!"
           );
       }
     });

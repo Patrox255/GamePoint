@@ -9,6 +9,8 @@ export interface IGame {
   platforms: Types.ObjectId[];
   developer?: Types.ObjectId;
   publisher?: Types.ObjectId;
+  popularity?: number;
+  artworks?: string[];
 }
 
 const GameSchema = new Schema<IGame>({
@@ -20,6 +22,8 @@ const GameSchema = new Schema<IGame>({
   platforms: [{ type: Schema.Types.ObjectId, ref: "Platform", required: true }],
   developer: { type: Schema.Types.ObjectId, ref: "Developer" },
   publisher: { type: Schema.Types.ObjectId, ref: "Publisher" },
+  popularity: { type: Number, default: 0 },
+  artworks: [{ type: String, required: true }],
 });
 
 const Game = mongoose.model<IGame>("Game", GameSchema);

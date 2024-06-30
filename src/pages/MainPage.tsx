@@ -1,3 +1,12 @@
+import Hero from "../components/main/Hero";
+import MostPopularGames from "../components/main/MostPopularGames";
+import MainWrapper from "../components/structure/MainWrapper";
+
 export default function MainPage() {
-  return <h1 className="text-2xl">Welcome</h1>;
+  return (
+    <MainWrapper>
+      <Hero />
+      <MostPopularGames />
+    </MainWrapper>
+  );
 }

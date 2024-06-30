@@ -4,12 +4,25 @@ import "./index.css";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import RootLayout from "./pages/RootLayout.tsx";
 import MainPage from "./pages/MainPage.tsx";
+import ErrorPage from "./pages/ErrorPage.tsx";
+import { loader as mainPageMostPopularGamesLoader } from "./components/main/MostPopularGames.tsx";
 
 const router = createBrowserRouter([
   {
-    path: "/",
+    path: "",
     element: <RootLayout />,
-    children: [{ index: true, element: <MainPage /> }],
+    errorElement: (
+      <RootLayout>
+        <ErrorPage />
+      </RootLayout>
+    ),
+    children: [
+      {
+        path: "/",
+        element: <MainPage />,
+        loader: mainPageMostPopularGamesLoader,
+      },
+    ],
   },
 ]);
 
