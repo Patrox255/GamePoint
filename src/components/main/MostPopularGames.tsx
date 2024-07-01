@@ -1,38 +1,30 @@
 /* eslint-disable react-refresh/only-export-components */
 import { Suspense } from "react";
-import { API_URL } from "../../lib/config";
-import { getJSON } from "../../lib/fetch";
+
 import DataSlider from "./slider/DataSlider";
-import { Await, defer, useLoaderData } from "react-router-dom";
+import { Await, useRouteLoaderData } from "react-router-dom";
 import Error from "../UI/Error";
 import { IGame } from "../../models/game.model";
 import SliderProductElement from "./slider/SliderProductElement";
-import Spinner from "../UI/Spinner";
+import { ILoaderResult } from "../../lib/fetch";
+import LoadingFallback from "../UI/LoadingFallback";
 
 export default function MostPopularGames() {
-  const loaderData = useLoaderData() as { products: Promise<IGame[]> };
+  const loaderData = useRouteLoaderData("root") as {
+    products: Promise<ILoaderResult<IGame>>;
+  };
 
   return (
     <article className="flex flex-col justify-center items-center py-12 w-full">
-      <h1 className="text-highlightRed text-4xl pb-3">
+      <h1 className="text-highlightRed text-4xl">
         Check out the most popular games currently
       </h1>
-      <Suspense
-        fallback={
-          <>
-            <p className="pb-4">Getting games data...</p>
-            <Spinner />
-          </>
-        }
-      >
+      <Suspense fallback={<LoadingFallback />}>
         <Await resolve={loaderData.products}>
-          {(result: {
-            data?: IGame[];
-            error?: { messsage: string; status: number };
-          }) =>
+          {(result: ILoaderResult<IGame>) =>
             result.error ? (
               <Error
-                message={result.error.messsage}
+                message={result.error.message}
                 status={result.error.status}
               />
             ) : (
@@ -46,17 +38,3 @@ export default function MostPopularGames() {
     </article>
   );
 }
-
-export const load10MostPopularProducts = async () => {
-  const data = await getJSON(`${API_URL}/products`);
-  console.log(data);
-  return data;
-};
-
-export const loader = async () => {
-  try {
-    return defer({ products: load10MostPopularProducts() });
-  } catch (err) {
-    return { error: err };
-  }
-};

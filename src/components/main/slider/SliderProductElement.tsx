@@ -1,9 +1,24 @@
 import { AnimatePresence, AnimationProps, motion } from "framer-motion";
-import { Dispatch, SetStateAction, createContext, useContext } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { IGame } from "../../../models/game.model";
 import { SliderContext } from "./DataSlider";
 import SliderImageOverview from "./SliderImageOverview";
 import { useSlider } from "../../../lib/hooks";
+import ArrowSVG from "../../UI/ArrowSVG";
+import leftArrow from "../../../assets/left-arrow.svg";
+import rightArrow from "../../../assets/right-arrow.svg";
+import TagsComponent from "../../game/TagsComponent";
+import PriceTag from "../../game/PriceTag";
+import Button from "../../UI/Button";
+import { Link } from "react-router-dom";
+import slugify from "slugify";
 
 export const SliderProductElementArtworkContext = createContext<{
   artworkIndex: number;
@@ -18,7 +33,10 @@ export default function SliderProductElement({
 }: {
   elements: IGame[];
 }) {
-  const { activeElementIndex } = useContext(SliderContext);
+  const { activeElementIndex, changeActiveElementIndex } =
+    useContext(SliderContext);
+  const [finishedLoadingDescription, setFinishedLoadingDescription] =
+    useState<boolean>(false);
   const element = elements[activeElementIndex];
 
   const {
@@ -29,63 +47,105 @@ export default function SliderProductElement({
   const sliderProductElementsAnimation: AnimationProps = {
     initial: { transform: "scale(0.2)", opacity: 0 },
     animate: { transform: "scale(1)", opacity: 1 },
-    exit: { transform: "scale(0.2)", opacity: 0 },
+    // exit: { transform: "scale(0.2)", opacity: 0 },
     transition: { duration: 1 },
   };
 
   const hasArtworks = element.artworks.length !== 0;
 
+  useEffect(() => {
+    setArtworkIndex(0);
+    setFinishedLoadingDescription(false);
+  }, [activeElementIndex, setArtworkIndex]);
+
   return (
-    <section
-      className={`overflow-hidden w-3/5 h-auto`}
-      // className="overflow-hidden "
-      // initial={{ width: "0", height: "0" }}
-      // animate={isActive ? { width: "60%", height: "auto" } : undefined}
-    >
-      <figure className="w-full flex gap-3 justify-center items-center">
-        <div className="figure-image-container w-3/4 flex justify-center items-center flex-col min-h-[720px]">
-          <AnimatePresence mode="wait">
-            {!hasArtworks ? (
-              <motion.p
-                {...sliderProductElementsAnimation}
-                key={`img-error-${element.title}`}
-              >
-                No artworks have been found for this game :(.
-              </motion.p>
-            ) : (
-              <>
-                <motion.img
-                  src={element.artworks[artworkIndex]}
-                  className="w-[1280px] rounded-xl"
+    <>
+      <ArrowSVG
+        arrowSrc={leftArrow}
+        alt="Arrow pointing to the left"
+        onClick={() => {
+          changeActiveElementIndex("decrement");
+        }}
+      />
+      <section
+        className={`overflow-hidden w-3/5 h-auto`}
+        // className="overflow-hidden "
+        // initial={{ width: "0", height: "0" }}
+        // animate={isActive ? { width: "60%", height: "auto" } : undefined}
+      >
+        <figure className="w-full flex gap-3 justify-center items-center min-h-[48rem]">
+          <div className="figure-image-container w-3/5 flex justify-center items-center flex-col">
+            <AnimatePresence mode="wait">
+              {!hasArtworks ? (
+                <motion.p
                   {...sliderProductElementsAnimation}
-                  key={`artwork-${artworkIndex}-${element.artworks[artworkIndex]}`}
+                  key={`img-error-${element.title}`}
+                >
+                  No artworks have been found for this game :(.
+                </motion.p>
+              ) : (
+                <>
+                  <motion.img
+                    src={element.artworks[artworkIndex]}
+                    className="w-[1280px] rounded-xl"
+                    {...sliderProductElementsAnimation}
+                    key={`artwork-${artworkIndex}-${element.artworks[artworkIndex]}`}
+                  />
+                </>
+              )}
+            </AnimatePresence>
+            {hasArtworks && element.artworks.length > 1 && (
+              <SliderProductElementArtworkContext.Provider
+                value={{ artworkIndex, setArtworkIndex }}
+              >
+                <SliderImageOverview
+                  imagesArr={element.artworks}
+                  key={`slider-image-overview-${element.title}`}
                 />
-              </>
+              </SliderProductElementArtworkContext.Provider>
             )}
-          </AnimatePresence>
-          {hasArtworks && element.artworks.length > 1 && (
-            <SliderProductElementArtworkContext.Provider
-              value={{ artworkIndex, setArtworkIndex }}
+          </div>
+          <AnimatePresence mode="wait">
+            <motion.figcaption
+              className="w-2/5 flex justify-center items-center flex-col h-full gap-3"
+              {...sliderProductElementsAnimation}
+              key={`figcaption-${element.title}`}
+              onAnimationComplete={() => setFinishedLoadingDescription(true)}
             >
-              <SliderImageOverview
-                imagesArr={element.artworks}
-                key={`slider-image-overview-${element.title}`}
+              <h2 className="text-2xl text-highlightRed font-bold">
+                {element.title}
+              </h2>
+              <TagsComponent
+                tags={element.genres.map((genre) => genre.name)}
+                paramName="genre"
               />
-            </SliderProductElementArtworkContext.Provider>
-          )}
-        </div>
-        <AnimatePresence mode="wait">
-          <motion.figcaption
-            className="w-1/4 flex justify-center items-center flex-col h-min-[720px]"
-            {...sliderProductElementsAnimation}
-            key={`figcaption-${element.title}`}
-          >
-            <h2 className="text-2xl text-highlightRed py-3 font-bold">
-              {element.title}
-            </h2>
-          </motion.figcaption>
-        </AnimatePresence>
-      </figure>
-    </section>
+              <p className="text-sm">{element.summary}</p>
+              <div className="price-product-page-container w-full flex justify-around">
+                <PriceTag
+                  price={element.price}
+                  discount={element.discount}
+                  startAnimation={finishedLoadingDescription}
+                />
+                <Button>
+                  <Link
+                    to={`/products/${slugify(element.title, { lower: true })}`}
+                  >
+                    Learn More
+                  </Link>
+                </Button>
+              </div>
+            </motion.figcaption>
+          </AnimatePresence>
+        </figure>
+      </section>
+      <ArrowSVG
+        arrowSrc={rightArrow}
+        alt="Arrow pointing to the left"
+        onClick={() => {
+          changeActiveElementIndex("increment");
+        }}
+        translateXVal="2rem"
+      />
+    </>
   );
 }

@@ -6,7 +6,7 @@ import { IPublisher } from "./publisher.model";
 export interface IGame {
   title: string;
   price: number;
-  discount?: number;
+  discount: number;
   releaseDate: Date;
   genres: IGenre[];
   platforms: IPlatform[];

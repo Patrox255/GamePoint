@@ -83,11 +83,46 @@ const startServer = async () => {
           .limit(10)
           .exec();
 
-        await mongoose.connection.close();
         res.status(200).json([...games]);
       } catch (err) {
-        console.error(err);
-        await mongoose.connection.close();
+        res
+          .status((err as Error).status || 503)
+          .json({ message: (err as Error).message });
+      }
+    });
+
+    app.get("/popular-genres", async (req: Request, res: Response) => {
+      try {
+        await connectDB();
+
+        const genres: { name: string; popularity: number }[] = [];
+        const games = await Game.find()
+          .populate(["genres", "developer", "publisher", "platforms"])
+          .exec();
+        games.forEach((game) =>
+          game.genres.forEach((genre) => {
+            interface IGameGenre {
+              _id: mongoose.ObjectId;
+              name: string;
+            }
+            const foundGenreObj = genres.find(
+              (genreObj) =>
+                genreObj.name === (genre as unknown as IGameGenre).name
+            );
+
+            if (foundGenreObj) foundGenreObj.popularity += game.popularity!;
+            else
+              genres.push({
+                name: (genre as unknown as IGameGenre).name,
+                popularity: game.popularity!,
+              });
+          })
+        );
+
+        genres.sort((a, b) => b.popularity - a.popularity);
+
+        res.status(200).json(genres);
+      } catch (err) {
         res
           .status((err as Error).status || 503)
           .json({ message: (err as Error).message });
@@ -483,7 +518,6 @@ const startServer = async () => {
         );
         await createDocumentsOfObjsAndInsert<IGame>(gamesToSend, Game);
 
-        await mongoose.connection.close();
         res.status(200).json({
           ...gamesToSend,
           dateObjs: releaseDatesObjs,
@@ -492,7 +526,6 @@ const startServer = async () => {
         });
       } catch (err) {
         await mongoose.connection.close();
-        console.error(err);
         res
           .status((err as Error).status || 404)
           .json(
@@ -501,7 +534,16 @@ const startServer = async () => {
       }
     });
 
-    app.listen(port);
+    const server = app.listen(port);
+
+    const closeServer = async () => {
+      await mongoose.connection.close();
+      server.close(() => process.exit(1));
+    };
+
+    ["SIGTERM", "SIGINT", "uncaughtException"].forEach((event) =>
+      process.on(event, closeServer)
+    );
   } catch (err) {
     console.error(err);
     process.exit(1);

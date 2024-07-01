@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import Button from "./Button";
+import logo from "../../assets/logo.png";
 
 const Nav = () => {
   return (
@@ -9,7 +10,7 @@ const Nav = () => {
       <header className="min-w-[20%] px-6 text-4xl text-highlightRed font-bold tracking-widest">
         <Link to="/" className="w-4/12 block">
           <img
-            src="logo.png"
+            src={logo}
             alt="G letter with a gamepad next to it"
             className="w-full space rounded-[100px]"
           />

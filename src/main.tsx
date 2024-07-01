@@ -5,7 +5,7 @@ import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import RootLayout from "./pages/RootLayout.tsx";
 import MainPage from "./pages/MainPage.tsx";
 import ErrorPage from "./pages/ErrorPage.tsx";
-import { loader as mainPageMostPopularGamesLoader } from "./components/main/MostPopularGames.tsx";
+import { loader as mainPageLoader } from "./pages/MainPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -19,8 +19,9 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
+        id: "root",
         element: <MainPage />,
-        loader: mainPageMostPopularGamesLoader,
+        loader: mainPageLoader,
       },
     ],
   },

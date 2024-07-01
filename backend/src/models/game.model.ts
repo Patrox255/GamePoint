@@ -3,7 +3,7 @@ import mongoose, { Schema, Types } from "mongoose";
 export interface IGame {
   title: string;
   price: number;
-  discount?: number;
+  discount: number;
   releaseDate: Date;
   genres: Types.ObjectId[];
   platforms: Types.ObjectId[];
@@ -11,12 +11,13 @@ export interface IGame {
   publisher?: Types.ObjectId;
   popularity?: number;
   artworks?: string[];
+  summary: string;
 }
 
 const GameSchema = new Schema<IGame>({
   title: { type: String, required: true },
   price: { type: Number, required: true },
-  discount: { type: Number },
+  discount: { type: Number, required: true },
   genres: [{ type: Schema.Types.ObjectId, ref: "Genre", required: true }],
   releaseDate: { type: Date },
   platforms: [{ type: Schema.Types.ObjectId, ref: "Platform", required: true }],
@@ -24,6 +25,7 @@ const GameSchema = new Schema<IGame>({
   publisher: { type: Schema.Types.ObjectId, ref: "Publisher" },
   popularity: { type: Number, default: 0 },
   artworks: [{ type: String, required: true }],
+  summary: { type: String, required: true },
 });
 
 const Game = mongoose.model<IGame>("Game", GameSchema);

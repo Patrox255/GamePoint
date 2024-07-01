@@ -10,3 +10,8 @@ export const getJSON = async function <dataInterface>(url: string) {
 
   return { data } as { data: dataInterface[] };
 };
+
+export interface ILoaderResult<resultInterface> {
+  data?: resultInterface[];
+  error?: { message: string; status: number };
+}
