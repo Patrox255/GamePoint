@@ -1,40 +1,31 @@
 /* eslint-disable react-refresh/only-export-components */
-import { Suspense } from "react";
-
 import DataSlider from "./slider/DataSlider";
-import { Await, useRouteLoaderData } from "react-router-dom";
 import Error from "../UI/Error";
-import { IGame } from "../../models/game.model";
 import SliderProductElement from "./slider/SliderProductElement";
-import { ILoaderResult } from "../../lib/fetch";
 import LoadingFallback from "../UI/LoadingFallback";
+import { useQuery } from "@tanstack/react-query";
+import { load10MostPopularGames } from "../../lib/fetch";
 
 export default function MostPopularGames() {
-  const loaderData = useRouteLoaderData("root") as {
-    products: Promise<ILoaderResult<IGame>>;
-  };
+  const { error, isError, data, isLoading } = useQuery({
+    queryKey: ["games", "most-popular"],
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      load10MostPopularGames(signal),
+    staleTime: 2000,
+  });
 
   return (
     <article className="flex flex-col justify-center items-center py-12 w-full">
       <h1 className="text-highlightRed text-4xl">
         Check out the most popular games currently
       </h1>
-      <Suspense fallback={<LoadingFallback />}>
-        <Await resolve={loaderData.products}>
-          {(result: ILoaderResult<IGame>) =>
-            result.error ? (
-              <Error
-                message={result.error.message}
-                status={result.error.status}
-              />
-            ) : (
-              <DataSlider elements={result.data!}>
-                <SliderProductElement elements={result.data!} />
-              </DataSlider>
-            )
-          }
-        </Await>
-      </Suspense>
+      {isLoading && <LoadingFallback />}
+      {isError && <Error message={error.message} />}
+      {data && (
+        <DataSlider elements={data.data}>
+          <SliderProductElement elements={data.data} />
+        </DataSlider>
+      )}
     </article>
   );
 }

@@ -14,7 +14,7 @@ import { useSlider } from "../../../lib/hooks";
 import ArrowSVG from "../../UI/ArrowSVG";
 import leftArrow from "../../../assets/left-arrow.svg";
 import rightArrow from "../../../assets/right-arrow.svg";
-import TagsComponent from "../../game/TagsComponent";
+import TagsComponent from "../../game/tags/TagsComponent";
 import PriceTag from "../../game/PriceTag";
 import Button from "../../UI/Button";
 import { Link } from "react-router-dom";

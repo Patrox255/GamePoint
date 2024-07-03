@@ -1,12 +1,9 @@
-import { defer } from "react-router-dom";
 import Hero from "../components/main/Hero";
 import MostPopularGames from "../components/main/MostPopularGames";
 import MainWrapper from "../components/structure/MainWrapper";
-import { getJSON } from "../lib/fetch";
-import { API_URL } from "../lib/config";
-import { IGame } from "../models/game.model";
-import { IGenre } from "../models/genre.model";
 import MostPopularGenres from "../components/main/MostPopularGenres";
+import { LoaderFunction } from "react-router-dom";
+import { load10MostPopularGames, queryClient } from "../lib/fetch";
 
 export default function MainPage() {
   return (
@@ -18,24 +15,18 @@ export default function MainPage() {
   );
 }
 
-export const load10MostPopularProducts = async () => {
-  const data = await getJSON<IGame>(`${API_URL}/products`);
-  return data;
-};
-
-export const load10MostPopularGenres = async () => {
-  const data = await getJSON<IGenre>(`${API_URL}/popular-genres`);
-  console.log(data);
-  return data;
-};
-
-export const loader = async () => {
+export const loader: LoaderFunction = async function () {
   try {
-    return defer({
-      products: await load10MostPopularProducts(),
-      popularGenres: load10MostPopularGenres(),
+    await queryClient.fetchQuery({
+      queryKey: ["games", "most-popular"],
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        load10MostPopularGames(signal),
     });
   } catch (err) {
-    return { error: err };
+    // If this loader function catches an error from fetchQuery then we only log it
+    // and if it also reoccurs in our frontend while useQuery function is being executed then the error is properly handled there
+    console.error(err);
   }
+  return null;
 };
+// Also we only preload most popular games as I believe that user can easily wait on the actual page for the genres to appear

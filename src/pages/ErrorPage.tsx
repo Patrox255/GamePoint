@@ -4,6 +4,7 @@ import Error from "../components/UI/Error";
 
 export default function ErrorPage() {
   const error = useRouteError();
+  console.log(error);
   return (
     <MainWrapper>
       <Error

@@ -1,13 +1,14 @@
 import { Link } from "react-router-dom";
 import Button from "./Button";
 import logo from "../../assets/logo.png";
+import Input from "./Input";
 
 const Nav = () => {
   return (
     <nav
       className={`w-full h-[15vh] flex items-center justify-between pt-6 pb-3 fixed top-0 left-0 z-10 bg-bodyBg opacity-80 hover:opacity-100 transition-all duration-1000`}
     >
-      <header className="min-w-[20%] px-6 text-4xl text-highlightRed font-bold tracking-widest">
+      <header className="w-1/5 px-6 text-4xl text-highlightRed font-bold tracking-widest">
         <Link to="/" className="w-4/12 block">
           <img
             src={logo}
@@ -16,7 +17,8 @@ const Nav = () => {
           />
         </Link>
       </header>
-      <div className="px-6">
+      <div className="px-6 flex justify-end gap-3 w-4/5 items-center">
+        <Input placeholder="Look for a game" />
         <Button>Log in</Button>
       </div>
     </nav>

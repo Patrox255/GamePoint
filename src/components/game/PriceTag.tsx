@@ -1,6 +1,6 @@
 import { useAnimate, motion } from "framer-motion";
 import { useEffect } from "react";
-import customColors from "../../styles/colors";
+import customColors from "../../styles/properties";
 
 export default function PriceTag({
   price,
@@ -23,9 +23,7 @@ export default function PriceTag({
   const isFree = price === 0 || discount === 100;
   const hasDiscount = discount !== 0;
   const priceAfterDiscount =
-    Math.ceil((1 - discount / 100) * price * 100) / 100;
-
-  console.log(discount);
+    Math.trunc((1 - discount / 100) * price * 100) / 100;
 
   useEffect(() => {
     if (isFree || !hasDiscount || !startAnimation) return;
@@ -103,7 +101,7 @@ export default function PriceTag({
           <motion.p
             className="discount rounded-xl"
             initial={{
-              backgroundColor: "transparent",
+              backgroundColor: customColors.bodyBg,
               opacity: 0,
               width: 0,
               padding: 0,

@@ -1,6 +1,6 @@
 import { MouseEventHandler, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import customColors from "../../styles/colors";
+import properties from "../../styles/properties";
 
 export default function Button({
   children = "",
@@ -25,15 +25,15 @@ export default function Button({
 }) {
   const initialClasses = {
     opacity: 0.5,
-    ...(useBgColor && { backgroundColor: customColors.bodyBg }),
+    ...(useBgColor && { backgroundColor: properties.bodyBg }),
     boxShadow: "none",
     transform: "scale(0.9)",
   };
 
   const activeClasses = {
     opacity: 1,
-    ...(useBgColor && { backgroundColor: customColors.highlightRed }),
-    boxShadow: "0 0 40px -4px rgba(173,52,52,1)",
+    ...(useBgColor && { backgroundColor: properties.highlightRed }),
+    boxShadow: properties.boxShadow,
     transform: "scale(1)",
   };
 

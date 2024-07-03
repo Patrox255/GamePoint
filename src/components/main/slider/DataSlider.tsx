@@ -19,7 +19,7 @@ export default function DataSlider<ElementInterface>({
 }) {
   const { activeElementIndex, changeActiveElementIndex } = useSlider(
     elements,
-    100000
+    20000
   );
 
   return (
