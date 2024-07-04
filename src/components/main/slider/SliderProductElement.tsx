@@ -10,7 +10,7 @@ import {
 import { IGame } from "../../../models/game.model";
 import { SliderContext } from "./DataSlider";
 import SliderImageOverview from "./SliderImageOverview";
-import { useSlider } from "../../../lib/hooks";
+import { useSlider } from "../../../hooks/useSlider";
 import ArrowSVG from "../../UI/ArrowSVG";
 import leftArrow from "../../../assets/left-arrow.svg";
 import rightArrow from "../../../assets/right-arrow.svg";
@@ -19,6 +19,7 @@ import PriceTag from "../../game/PriceTag";
 import Button from "../../UI/Button";
 import { Link } from "react-router-dom";
 import slugify from "slugify";
+import AnimatedAppearance from "../../UI/AnimatedAppearance";
 
 export const SliderProductElementArtworkContext = createContext<{
   artworkIndex: number;
@@ -115,10 +116,12 @@ export default function SliderProductElement({
               <h2 className="text-2xl text-highlightRed font-bold">
                 {element.title}
               </h2>
-              <TagsComponent
-                tags={element.genres.map((genre) => genre.name)}
-                paramName="genre"
-              />
+              <AnimatedAppearance>
+                <TagsComponent
+                  tags={element.genres.map((genre) => genre.name)}
+                  paramName="genre"
+                />
+              </AnimatedAppearance>
               <p className="text-sm">{element.summary}</p>
               <div className="price-product-page-container w-full flex justify-around">
                 <PriceTag

@@ -14,18 +14,18 @@ export default function AnimatedAppearance({
   return (
     <motion.div
       ref={ref}
-      className="flex flex-row flex-wrap w-full justify-center items-center gap-x-1 gap-y-2"
+      className="flex flex-col w-full justify-center items-center"
       variants={{
         hidden: {
           opacity: 0,
         },
         visible: {
           opacity: 1,
-          ...(staggerChildren && {
-            transition: {
-              staggerChildren: 0.15,
-            },
-          }),
+
+          transition: {
+            ...(staggerChildren && { staggerChildren: 0.15 }),
+            duration: 1,
+          },
         },
       }}
       initial="hidden"

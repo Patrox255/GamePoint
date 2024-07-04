@@ -6,10 +6,12 @@ export default function PriceTag({
   price,
   discount,
   startAnimation = false,
+  removeOriginalPriceAfterAnimation = false,
 }: {
   price: number;
   discount: number;
   startAnimation: boolean;
+  removeOriginalPriceAfterAnimation?: boolean;
 }) {
   const [scope, animate] = useAnimate();
 
@@ -46,6 +48,7 @@ export default function PriceTag({
             textDecorationLine: "line-through",
             fontSize: ".8rem",
             ...(hasDiscount && { fontWeight: 400 }),
+            ...(removeOriginalPriceAfterAnimation && { opacity: 0 }),
           },
           { duration: 0.5 }
         ),
@@ -70,7 +73,13 @@ export default function PriceTag({
       );
     };
     sequence();
-  }, [isFree, hasDiscount, animate, startAnimation]);
+  }, [
+    isFree,
+    hasDiscount,
+    animate,
+    startAnimation,
+    removeOriginalPriceAfterAnimation,
+  ]);
 
   return (
     <div

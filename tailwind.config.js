@@ -13,6 +13,9 @@ export default {
       fontFamily: {
         main: ["SpaceGrotesk", "Roboto", "sans-serif"],
       },
+      gridTemplateColumns: {
+        gameSearchBarResult: "minmax(0, 1fr) minmax(0, 0.5fr)",
+      },
     },
   },
   plugins: [],

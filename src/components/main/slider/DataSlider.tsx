@@ -1,6 +1,7 @@
 import { ReactNode, createContext } from "react";
 
-import { useSlider } from "../../../lib/hooks";
+import { useSlider } from "../../../hooks/useSlider";
+import AnimatedAppearance from "../../UI/AnimatedAppearance";
 
 export const SliderContext = createContext<{
   activeElementIndex: number;
@@ -23,12 +24,14 @@ export default function DataSlider<ElementInterface>({
   );
 
   return (
-    <div className="data-slider-container flex justify-center items-center text-center w-4/5 gap-2">
-      <SliderContext.Provider
-        value={{ activeElementIndex, changeActiveElementIndex }}
-      >
-        {children}
-      </SliderContext.Provider>
-    </div>
+    <AnimatedAppearance>
+      <div className="data-slider-container flex justify-center items-center text-center w-4/5 gap-2">
+        <SliderContext.Provider
+          value={{ activeElementIndex, changeActiveElementIndex }}
+        >
+          {children}
+        </SliderContext.Provider>
+      </div>
+    </AnimatedAppearance>
   );
 }

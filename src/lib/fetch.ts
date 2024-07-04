@@ -4,7 +4,7 @@ import { IGenre } from "../models/genre.model";
 import { API_URL } from "./config";
 
 export const queryClient = new QueryClient();
-queryClient.invalidateQueries({ queryKey: ["games"], exact: false });
+// queryClient.invalidateQueries({ queryKey: ["games"], exact: false });
 
 export const getJSON = async function <dataInterface>(
   url: string,
@@ -30,7 +30,21 @@ export interface ILoaderResult<resultInterface> {
 }
 
 export const load10MostPopularGames = async (signal?: AbortSignal) => {
-  const data = await getJSON<IGame>(`${API_URL}/products`, signal);
+  const data = await getJSON<IGame>(
+    `${API_URL}/products?most_popular=1&limit=10`,
+    signal
+  );
+  return data;
+};
+
+export const load10GamesByQuery = async (
+  query: string,
+  signal?: AbortSignal
+) => {
+  const data = await getJSON<IGame>(
+    `${API_URL}/products?limit=10&query=${query}`,
+    signal
+  );
   return data;
 };
 

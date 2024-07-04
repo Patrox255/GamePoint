@@ -67,6 +67,12 @@ const corsOptions = {
   allowedHeaders: ["Content-Type"],
 };
 
+const handleTransformQueryValueToNumber = function <T>(param: T) {
+  if (typeof param === "string") return parseInt(param);
+  if (Array.isArray(param) && param.length !== 0) return parseInt(param[0]);
+  return undefined;
+};
+
 const startServer = async () => {
   try {
     app.use(cors(corsOptions));
@@ -77,11 +83,29 @@ const startServer = async () => {
       try {
         await connectDB();
 
-        const games = await Game.find()
-          .populate(["genres", "developer", "publisher", "platforms"])
-          .sort({ popularity: -1, date: -1 })
-          .limit(10)
-          .exec();
+        const { limit, most_popular, query } = req.query;
+        const limitNr = handleTransformQueryValueToNumber(limit);
+
+        let mongooseQuery;
+
+        if (!query) mongooseQuery = Game.find();
+        else
+          mongooseQuery = Game.find({
+            title: { $regex: query, $options: "i" },
+          });
+
+        mongooseQuery.populate([
+          "genres",
+          "developer",
+          "publisher",
+          "platforms",
+        ]);
+
+        if (most_popular === "1")
+          mongooseQuery.sort({ popularity: -1, date: -1 });
+        if (limitNr) mongooseQuery.limit(limitNr);
+
+        const games = await mongooseQuery.exec();
 
         res.status(200).json([...games]);
       } catch (err) {
