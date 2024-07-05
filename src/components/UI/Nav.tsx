@@ -1,19 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
 import Button from "./Button";
 import logo from "../../assets/logo.png";
-import {
-  createContext,
-  Dispatch,
-  memo,
-  SetStateAction,
-  useEffect,
-  useState,
-} from "react";
+import { memo } from "react";
 import NavSearchBar from "../main/nav/NavSearchBar";
 import createUrlWithCurrentSearchParams from "../../helpers/createUrlWithCurrentSearchParams";
-import { useDispatch, useSelector } from "react-redux";
-import { actions, IMainSearchBarState } from "../../store/mainSearchBarSlice";
-import { AppDispatch } from "../../store";
+import { actions } from "../../store/mainSearchBarSlice";
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxStore";
 
 // export const NavSearchBarContext = createContext<{
@@ -44,6 +35,7 @@ const Nav = memo(() => {
     initialRender = false;
     dispatch(actions.setSearchTerm(query));
   }
+
   // console.log(searchTerm, query);
   // useEffect(() => {
   //   if (query !== null && searchTerm !== query) setSearchTerm(query);

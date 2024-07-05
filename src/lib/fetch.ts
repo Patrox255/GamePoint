@@ -39,10 +39,22 @@ export const load10MostPopularGames = async (signal?: AbortSignal) => {
 
 export const load10GamesByQuery = async (
   query: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  pageNr: number = 0
 ) => {
   const data = await getJSON<IGame>(
-    `${API_URL}/products?limit=10&query=${query}`,
+    `${API_URL}/products?limit=10&query=${query}&page=${pageNr}`,
+    signal
+  );
+  return data;
+};
+
+export const retrieveAmountOfGamesByQuery = async (
+  query: string,
+  signal?: AbortSignal
+) => {
+  const data = await getJSON<number>(
+    `${API_URL}/products?count=1&query=${query}`,
     signal
   );
   return data;

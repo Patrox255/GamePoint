@@ -4,14 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { load10GamesByQuery } from "../../../lib/fetch";
 import LoadingFallback from "../../UI/LoadingFallback";
 import Error from "../../UI/Error";
-import PriceTag from "../../game/PriceTag";
-import { AnimatePresence, motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import slugify from "slugify";
+import { motion } from "framer-motion";
 // import { NavSearchBarContext } from "../../UI/Nav";
 import { useInput } from "../../../hooks/useInput";
 import { useAppSelector } from "../../../hooks/reduxStore";
 import { actions } from "../../../store/mainSearchBarSlice";
+import GamesResults from "./GamesResults";
 
 export default function NavSearchBar({ placeholder }: { placeholder: string }) {
   // const { searchTerm, setSearchTerm } = useContext(NavSearchBarContext);
@@ -54,82 +52,8 @@ export default function NavSearchBar({ placeholder }: { placeholder: string }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
-          {data && data.data.length !== 0 && (
-            <motion.ul
-              className="w-full grid gap-2 text-center"
-              variants={{
-                highlighted: {
-                  opacity: 1,
-                },
-                normal: {
-                  opacity: 1,
-                },
-                disappear: {
-                  opacity: 0,
-                },
-              }}
-              initial="disappear"
-              animate="normal"
-            >
-              <AnimatePresence>
-                {data.data.map((game) => (
-                  <motion.li
-                    key={game.title}
-                    variants={{
-                      highlighted: {
-                        opacity: 1,
-                        x: 10,
-                      },
-                      normal: {
-                        opacity: 0.8,
-                        x: 0,
-                        scale: 1,
-                      },
-                      disappear: {
-                        opacity: 0,
-                        x: 0,
-                        scale: 1.5,
-                      },
-                    }}
-                    initial="disappear"
-                    animate="normal"
-                    exit="disappear"
-                    whileHover="highlighted"
-                    layout
-                  >
-                    <Link
-                      className="w-full grid grid-cols-gameSearchBarResult items-center gap-2 px-6"
-                      to={`/products/${slugify(game.title, { lower: true })}`}
-                    >
-                      <figure className="grid grid-cols-2 items-center gap-2 justify-center">
-                        {game.artworks.length !== 0 ? (
-                          <img
-                            src={game.artworks[0].replace("720p", "logo_med")}
-                            className="m-auto h-auto"
-                          />
-                        ) : (
-                          <div className="py-6">
-                            Failed to retrieve image of the game
-                          </div>
-                        )}
-
-                        <figcaption>
-                          <h2 className="text-highlightRed font-bold text-lg min-w-2/5">
-                            {game.title}
-                          </h2>
-                        </figcaption>
-                      </figure>
-                      <PriceTag
-                        price={game.price}
-                        discount={game.discount}
-                        startAnimation
-                        removeOriginalPriceAfterAnimation
-                      />
-                    </Link>
-                  </motion.li>
-                ))}
-              </AnimatePresence>
-            </motion.ul>
+          {data && data.data.length !== 0 && searchTerm !== "" && (
+            <GamesResults games={data.data} />
           )}
           {data && data.data.length === 0 && (
             <p>There are no games which match with the provided query</p>

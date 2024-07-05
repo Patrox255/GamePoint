@@ -1,7 +1,5 @@
-import { useContext } from "react";
 import { useInput } from "../../hooks/useInput";
 import Input from "../UI/Input";
-import { ProductsContext } from "../../store/ProductsContext";
 import { useAppSelector } from "../../hooks/reduxStore";
 import { actions } from "../../store/mainSearchBarSlice";
 

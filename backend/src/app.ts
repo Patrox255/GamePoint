@@ -83,16 +83,25 @@ const startServer = async () => {
       try {
         await connectDB();
 
-        const { limit, most_popular, query } = req.query;
+        const { limit, most_popular, query, count, page } = req.query;
         const limitNr = handleTransformQueryValueToNumber(limit);
+
+        const titleQueryFilter = {
+          title: { $regex: query, $options: "i" },
+        };
+
+        if (count === "1") {
+          let count;
+          if (!query) count = await Game.countDocuments().exec();
+          else count = await Game.countDocuments(titleQueryFilter).exec();
+          res.status(200).json([count]);
+          return;
+        }
 
         let mongooseQuery;
 
         if (!query) mongooseQuery = Game.find();
-        else
-          mongooseQuery = Game.find({
-            title: { $regex: query, $options: "i" },
-          });
+        else mongooseQuery = Game.find(titleQueryFilter);
 
         mongooseQuery.populate([
           "genres",
@@ -103,6 +112,14 @@ const startServer = async () => {
 
         if (most_popular === "1")
           mongooseQuery.sort({ popularity: -1, date: -1 });
+        mongooseQuery.skip(
+          page &&
+            !Array.isArray(page) &&
+            parseInt(page as string) &&
+            isFinite(parseInt(page as string))
+            ? parseInt(page as string) * 10
+            : 0
+        );
         if (limitNr) mongooseQuery.limit(limitNr);
 
         const games = await mongooseQuery.exec();
