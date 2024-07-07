@@ -5,11 +5,13 @@ import customColors from "../../styles/properties";
 export default function PriceTag({
   price,
   discount,
+  finalPrice,
   startAnimation = false,
   removeOriginalPriceAfterAnimation = false,
 }: {
   price: number;
   discount: number;
+  finalPrice: number;
   startAnimation: boolean;
   removeOriginalPriceAfterAnimation?: boolean;
 }) {
@@ -24,8 +26,7 @@ export default function PriceTag({
 
   const isFree = price === 0 || discount === 100;
   const hasDiscount = discount !== 0;
-  const priceAfterDiscount =
-    Math.trunc((1 - discount / 100) * price * 100) / 100;
+  const priceAfterDiscount = finalPrice;
 
   useEffect(() => {
     if (isFree || !hasDiscount || !startAnimation) return;

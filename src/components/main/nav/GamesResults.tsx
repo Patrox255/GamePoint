@@ -65,7 +65,7 @@ export default function GamesResults({
                       "720p",
                       largeFormat ? "screenshot_big" : "logo_med"
                     )}
-                    className={`m-auto h-auto rounded-xl ${
+                    className={`m-auto h-auto rounded-xl w-full ${
                       largeFormat ? "max-w-sm" : "max-w-36"
                     }`}
                   />
@@ -88,6 +88,7 @@ export default function GamesResults({
               <PriceTag
                 price={game.price}
                 discount={game.discount}
+                finalPrice={game.finalPrice}
                 startAnimation
                 {...(!largeFormat && {
                   removeOriginalPriceAfterAnimation: true,

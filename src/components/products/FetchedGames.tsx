@@ -41,8 +41,6 @@ export default function FetchedGames() {
       </motion.li>
     );
   };
-  console.log(totalGamesAmountForQuery);
-  console.log(pageNr);
 
   let content;
   const maxPageNr =
@@ -51,7 +49,6 @@ export default function FetchedGames() {
       : Math.ceil(totalGamesAmountForQuery / 10) === 0
       ? 0
       : Math.ceil(totalGamesAmountForQuery / 10) - 1;
-  console.log(maxPageNr);
   const showGames = games && Array.isArray(games) && !isLoading && !isError;
   if (isError) content = <Error message={error?.message} />;
   else if (isLoading || pageNr === null) content = <LoadingFallback />;
@@ -110,10 +107,8 @@ export default function FetchedGames() {
   return (
     <div
       className={`results-container min-h-[90vh] flex justify-${
-        showGames ? "between" : "center"
-      } items-${showGames ? "start" : "center"} w-full ${
-        showGames ? "flex-col" : ""
-      }`}
+        showGames && games.length !== 0 ? "between" : "center"
+      } items-center w-full ${showGames ? "flex-col" : ""}`}
     >
       {content}
     </div>

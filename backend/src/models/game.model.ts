@@ -12,6 +12,7 @@ export interface IGame {
   popularity?: number;
   artworks?: string[];
   summary: string;
+  finalPrice: number;
 }
 
 const GameSchema = new Schema<IGame>({
@@ -26,6 +27,7 @@ const GameSchema = new Schema<IGame>({
   popularity: { type: Number, default: 0 },
   artworks: [{ type: String, required: true }],
   summary: { type: String, required: true },
+  finalPrice: { type: Number, required: true },
 });
 
 const Game = mongoose.model<IGame>("Game", GameSchema);

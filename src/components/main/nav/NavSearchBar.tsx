@@ -17,14 +17,17 @@ export default function NavSearchBar({ placeholder }: { placeholder: string }) {
     (state) => state.mainSearchBarSlice.searchTerm
   );
   actions.setSearchTerm;
-  const { handleInputChange } = useInput({
+  const { handleInputChange, queryDebouncingState } = useInput({
     stateValue: searchTerm,
     setStateAction: actions.setSearchTerm,
+    searchParamName: "query",
+    debouncingTime: 500,
   });
+  console.log(searchTerm);
 
   const { data, isLoading, error, isError } = useQuery({
-    queryFn: ({ signal }) => load10GamesByQuery(searchTerm!, signal),
-    queryKey: ["games", "search", searchTerm],
+    queryFn: ({ signal }) => load10GamesByQuery(queryDebouncingState, signal),
+    queryKey: ["games", "search", queryDebouncingState],
     enabled: searchTerm !== "",
   });
 

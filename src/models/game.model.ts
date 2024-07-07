@@ -15,4 +15,5 @@ export interface IGame {
   popularity?: number;
   artworks: string[];
   summary: string;
+  finalPrice: number;
 }

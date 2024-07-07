@@ -128,6 +128,7 @@ export default function SliderProductElement({
                   price={element.price}
                   discount={element.discount}
                   startAnimation={finishedLoadingDescription}
+                  finalPrice={element.finalPrice}
                 />
                 <Button>
                   <Link

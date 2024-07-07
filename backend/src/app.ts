@@ -78,30 +78,33 @@ const startServer = async () => {
     app.use(cors(corsOptions));
 
     app.options("*", cors(corsOptions));
+    await connectDB();
 
     app.get("/products", async (req: Request, res: Response) => {
       try {
-        await connectDB();
-
-        const { limit, most_popular, query, count, page } = req.query;
+        const { limit, most_popular, query, count, page, priceMin, priceMax } =
+          req.query;
         const limitNr = handleTransformQueryValueToNumber(limit);
 
-        const titleQueryFilter = {
-          title: { $regex: query, $options: "i" },
+        const filter = {
+          ...(query && { title: { $regex: query, $options: "i" } }),
+          ...((priceMin || priceMax) && {
+            finalPrice: {
+              ...(priceMin && !isNaN(+priceMin) && { $gte: +priceMin }),
+              ...(priceMax && !isNaN(+priceMax) && { $lte: +priceMax }),
+            },
+          }),
         };
 
         if (count === "1") {
           let count;
           if (!query) count = await Game.countDocuments().exec();
-          else count = await Game.countDocuments(titleQueryFilter).exec();
+          else count = await Game.countDocuments(filter).exec();
           res.status(200).json([count]);
           return;
         }
 
-        let mongooseQuery;
-
-        if (!query) mongooseQuery = Game.find();
-        else mongooseQuery = Game.find(titleQueryFilter);
+        const mongooseQuery = Game.find(filter);
 
         mongooseQuery.populate([
           "genres",
@@ -132,10 +135,24 @@ const startServer = async () => {
       }
     });
 
+    app.get("/products/price", async (req: Request, res: Response) => {
+      try {
+        const gamesFromDb = await Game.find({}, { finalPrice: true })
+          .sort({ finalPrice: -1 })
+          .exec();
+        res.status(200).json({
+          min: gamesFromDb[gamesFromDb.length - 1].finalPrice,
+          max: gamesFromDb[0].finalPrice,
+        });
+      } catch (e) {
+        res
+          .status((e as Error).status || 503)
+          .json({ message: (e as Error).message });
+      }
+    });
+
     app.get("/popular-genres", async (req: Request, res: Response) => {
       try {
-        await connectDB();
-
         const genres: { name: string; popularity: number }[] = [];
         const games = await Game.find()
           .populate(["genres", "developer", "publisher", "platforms"])
@@ -172,8 +189,6 @@ const startServer = async () => {
 
     app.get("/init", async (req: Request, res: Response) => {
       try {
-        await connectDB();
-
         const generateMultiQueries = async <T>(
           conditionToQueriesArr: number[],
           singleQueryGeneratorFunc: (i: number, cur: number) => string,
@@ -425,6 +440,8 @@ const startServer = async () => {
           (game: {
             involved_companies?: { publisher?: number; developer?: number };
             artworks?: number[];
+            price: number;
+            discount: number;
           }) => {
             if (!game.involved_companies)
               return { ...game, publisher: undefined, developer: undefined };
@@ -454,7 +471,13 @@ const startServer = async () => {
                   })
                   .filter((artworkUrl) => artworkUrl)
               : [];
-            return { ...game, publisher, developer, artworks };
+            return {
+              ...game,
+              publisher,
+              developer,
+              artworks,
+              finalPrice: Math.trunc(game.price * (100 - game.discount)) / 100,
+            };
           }
         );
         await dropCollectionsIfTheyExist([
