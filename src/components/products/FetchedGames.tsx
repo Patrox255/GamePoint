@@ -5,6 +5,7 @@ import LoadingFallback from "../UI/LoadingFallback";
 import GamesResults from "../main/nav/GamesResults";
 import { motion } from "framer-motion";
 import properties from "../../styles/properties";
+import OrderCustomization from "./SearchCustomization/OrderCustomization";
 
 export default function FetchedGames() {
   const {
@@ -55,7 +56,9 @@ export default function FetchedGames() {
   else if (showGames && games.length !== 0)
     content = (
       <>
-        <GamesResults games={games} largeFormat />
+        <GamesResults games={games} largeFormat>
+          <OrderCustomization />
+        </GamesResults>
         <nav className="pages py-8">
           <ul className="flex justify-center items-center gap-3">
             {pageNr - 2 <= 0 ? (

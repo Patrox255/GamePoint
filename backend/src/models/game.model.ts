@@ -12,7 +12,7 @@ export interface IGame {
   popularity?: number;
   artworks?: string[];
   summary: string;
-  finalPrice: number;
+  finalPrice?: number;
 }
 
 const GameSchema = new Schema<IGame>({
@@ -27,7 +27,25 @@ const GameSchema = new Schema<IGame>({
   popularity: { type: Number, default: 0 },
   artworks: [{ type: String, required: true }],
   summary: { type: String, required: true },
-  finalPrice: { type: Number, required: true },
+  finalPrice: { type: Number },
+});
+
+GameSchema.pre("save", function (next) {
+  this.finalPrice = Math.trunc(this.price * (100 - this.discount)) / 100;
+  next();
+});
+
+GameSchema.pre("findOneAndUpdate", async function (next) {
+  const update = this.getUpdate() as {
+    price?: number;
+    discount?: number;
+    finalPrice?: number;
+  };
+  const docToUpdate = (await this.model.findOne(this.getQuery())) as IGame;
+  const price = update.price ? update.price : docToUpdate.price;
+  const discount = update.discount ? update.discount : docToUpdate.discount;
+  update.finalPrice = Math.trunc(price * (100 - discount)) / 100;
+  next();
 });
 
 const Game = mongoose.model<IGame>("Game", GameSchema);

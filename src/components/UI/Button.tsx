@@ -10,6 +10,7 @@ export default function Button({
   onClick = undefined,
   useBorder = true,
   useBgColor = true,
+  disabled = false, // only to leave this button greyed out and disable onclick if some feature is not available
   ...props // sadly it is not supported in TS so I add each prop individually
 }: {
   children?: ReactNode;
@@ -22,6 +23,7 @@ export default function Button({
   onClick?: MouseEventHandler<HTMLButtonElement>;
   useBorder?: boolean;
   useBgColor?: boolean;
+  disabled?: boolean;
 }) {
   const initialClasses = {
     opacity: 0.5,
@@ -42,6 +44,11 @@ export default function Button({
     transform: "scale(1)",
   };
 
+  const disabledClasses = {
+    ...basicClasses,
+    opacity: 0.3,
+  };
+
   return (
     <AnimatePresence mode="wait">
       <motion.button
@@ -52,10 +59,12 @@ export default function Button({
           additionalTailwindCSS &&
           Object.values(additionalTailwindCSS).join(" ")
         }`}
-        whileHover={activeClasses}
+        whileHover={disabled ? undefined : activeClasses}
         initial={initialClasses}
-        animate={active ? activeClasses : basicClasses}
-        disabled={active}
+        animate={
+          active ? activeClasses : disabled ? disabledClasses : basicClasses
+        }
+        disabled={active || disabled}
         key={passedKey}
         onClick={onClick}
       >

@@ -82,8 +82,18 @@ const startServer = async () => {
 
     app.get("/products", async (req: Request, res: Response) => {
       try {
-        const { limit, most_popular, query, count, page, priceMin, priceMax } =
-          req.query;
+        const {
+          limit,
+          most_popular,
+          query,
+          count,
+          page,
+          priceMin,
+          priceMax,
+          popularityOrder,
+          priceOrder,
+          titleOrder,
+        } = req.query;
         const limitNr = handleTransformQueryValueToNumber(limit);
 
         const filter = {
@@ -97,9 +107,8 @@ const startServer = async () => {
         };
 
         if (count === "1") {
-          let count;
-          if (!query) count = await Game.countDocuments().exec();
-          else count = await Game.countDocuments(filter).exec();
+          const count = await Game.countDocuments(filter).exec();
+          console.log(count, priceMin, priceMax);
           res.status(200).json([count]);
           return;
         }
@@ -113,8 +122,41 @@ const startServer = async () => {
           "platforms",
         ]);
 
-        if (most_popular === "1")
-          mongooseQuery.sort({ popularity: -1, date: -1 });
+        const generateOrderObj = (
+          properties: {
+            value: undefined | "1" | "-1";
+            name: string;
+          }[]
+        ) => {
+          const sortProperties: { [key: string]: mongoose.SortOrder } = {};
+          properties.forEach((property) => {
+            if (
+              property.value &&
+              +property.value &&
+              (+property.value === 1 || +property.value === -1)
+            )
+              sortProperties[property.name] = Number(property.value) as 1 | -1;
+          });
+          return sortProperties;
+        };
+
+        let sortProperties: { [key: string]: mongoose.SortOrder } =
+          generateOrderObj([
+            {
+              value: popularityOrder as undefined | "1" | "-1",
+              name: "popularity",
+            },
+            {
+              value: priceOrder as undefined | "1" | "-1",
+              name: "finalPrice",
+            },
+            {
+              value: titleOrder as undefined | "1" | "-1",
+              name: "title",
+            },
+          ]);
+        if (most_popular === "1") sortProperties = { popularity: -1, date: -1 };
+        mongooseQuery.sort(sortProperties);
         mongooseQuery.skip(
           page &&
             !Array.isArray(page) &&
@@ -140,6 +182,10 @@ const startServer = async () => {
         const gamesFromDb = await Game.find({}, { finalPrice: true })
           .sort({ finalPrice: -1 })
           .exec();
+        console.log(
+          gamesFromDb[gamesFromDb.length - 1].finalPrice,
+          gamesFromDb[0].finalPrice
+        );
         res.status(200).json({
           min: gamesFromDb[gamesFromDb.length - 1].finalPrice,
           max: gamesFromDb[0].finalPrice,
@@ -476,7 +522,6 @@ const startServer = async () => {
               publisher,
               developer,
               artworks,
-              finalPrice: Math.trunc(game.price * (100 - game.discount)) / 100,
             };
           }
         );

@@ -43,7 +43,10 @@ export const load10GamesByQuery = async (
   signal?: AbortSignal,
   pageNr: number = 0,
   priceMin?: number,
-  priceMax?: number
+  priceMax?: number,
+  popularityOrder?: string,
+  priceOrder?: string,
+  titleOrder?: string
 ) => {
   const data = await getJSON<IGame[]>(
     generateUrlEndpointWithSearchParams(`${API_URL}/products`, {
@@ -52,6 +55,9 @@ export const load10GamesByQuery = async (
       priceMin,
       priceMax,
       limit: 10,
+      popularityOrder,
+      priceOrder,
+      titleOrder,
     }),
     signal
   );

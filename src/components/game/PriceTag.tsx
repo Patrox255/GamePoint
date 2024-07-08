@@ -99,7 +99,11 @@ export default function PriceTag({
           {priceFormat.format(price)}
         </motion.p>
       )}
-      {isFree && <p>Free To Play</p>}
+      {isFree && (
+        <p className="price font-bold bg-highlightGreen py-2 px-3 rounded-xl">
+          Free To Play
+        </p>
+      )}
       {!isFree && hasDiscount && (
         <>
           <motion.p

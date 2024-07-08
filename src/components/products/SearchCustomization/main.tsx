@@ -8,7 +8,7 @@ export default function SearchCustomization() {
       </h1>
       <section className="flex flex-col w-full gap-2">
         <h2 className="text-highlightRed">Price</h2>
-        <div className="flex w-full gap-3 items-center justify-center">
+        <div className="flex w-full gap-3 items-center justify-center flex-col">
           <PriceCustomization />
         </div>
       </section>

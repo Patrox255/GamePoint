@@ -1,12 +1,10 @@
-import { createContext, ReactNode, useState } from "react";
-import { IGame } from "../models/game.model";
+import { createContext, ReactNode, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
+
+import { IGame } from "../models/game.model";
 import { load10GamesByQuery, retrieveAmountOfGamesByQuery } from "../lib/fetch";
-import { useAppSelector } from "../hooks/reduxStore";
 import { useStateWithSearchParams } from "../hooks/useStateWithSearchParams";
-import { useInput } from "../hooks/useInput";
-import generateInitialStateFromSearchParams from "../helpers/generateInitialStateFromSearchParams";
-import { actions } from "./mainSearchBarSlice";
+import { SearchCustomizationContext } from "./SearchCustomizationContext";
 
 export const ProductsContext = createContext<{
   games: IGame[];
@@ -17,11 +15,6 @@ export const ProductsContext = createContext<{
   setPageNr: (value: number) => void;
   hasToChangePage: boolean;
   totalGamesAmountForQuery: number | null;
-  minPrice: number;
-  handleMinChange: (newMinPrice: string) => void;
-  maxPrice: number;
-  handleMaxChange: (newMaxPrice: string) => void;
-  handleSearchTermChange: (newInputValue: string) => void;
 }>({
   games: [],
   isLoading: false,
@@ -31,11 +24,6 @@ export const ProductsContext = createContext<{
   setPageNr: () => {},
   hasToChangePage: false,
   totalGamesAmountForQuery: null,
-  minPrice: 0,
-  handleMinChange: () => {},
-  maxPrice: 0,
-  handleMaxChange: () => {},
-  handleSearchTermChange: () => {},
 });
 
 export default function ProductsContextProvider({
@@ -43,43 +31,14 @@ export default function ProductsContextProvider({
 }: {
   children: ReactNode;
 }) {
-  const searchTerm = useAppSelector(
-    (state) => state.mainSearchBarSlice.searchTerm
-  );
-  const { handleInputChange, queryDebouncingState: searchTermDebouncingState } =
-    useInput({
-      stateValue: searchTerm,
-      setStateAction: actions.setSearchTerm,
-      searchParamName: "query",
-    });
   const {
-    state: pageNr,
-    setStateWithSearchParams: setPageNr,
-    searchParams,
-  } = useStateWithSearchParams(0, "page", "/products");
-  const [min, setMin] = useState<number>(
-    generateInitialStateFromSearchParams(NaN, searchParams.get("min"))
-  );
-  const [max, setMax] = useState<number>(
-    generateInitialStateFromSearchParams(NaN, searchParams.get("max"))
-  );
-  const {
-    handleInputChange: handleMinChange,
-    queryDebouncingState: minQueryDebouncingState,
-  } = useInput({
-    stateValue: min,
-    setStateValue: setMin,
-    searchParamName: "min",
-    debouncingTime: 600,
-  });
-  const {
-    handleInputChange: handleMaxChange,
-    queryDebouncingState: maxQueryDebouncingState,
-  } = useInput({
-    stateValue: max,
-    setStateValue: setMax,
-    searchParamName: "max",
-  });
+    minQueryDebouncingState,
+    maxQueryDebouncingState,
+    searchTermDebouncingState,
+    orderCustomizationState,
+  } = useContext(SearchCustomizationContext);
+  const { state: pageNr, setStateWithSearchParams: setPageNr } =
+    useStateWithSearchParams(0, "page", "/products");
 
   const {
     data: countGamesData,
@@ -119,15 +78,32 @@ export default function ProductsContextProvider({
 
     setPageNr(0);
   }
+
+  const { debouncedPopularity, debouncedPrice, debouncedTitle } =
+    orderCustomizationState;
+
   const { data, error, isLoading, isError } = useQuery({
     queryFn: ({ signal, queryKey }) => {
-      const [, , searchTerm, pageNr, min, max] = queryKey;
+      const [
+        ,
+        ,
+        searchTerm,
+        pageNr,
+        min,
+        max,
+        debouncedPopularity,
+        debouncedPrice,
+        debouncedTitle,
+      ] = queryKey;
       return load10GamesByQuery(
         searchTerm as string,
         signal,
         pageNr! as number,
         min as number,
-        max as number
+        max as number,
+        debouncedPopularity as string,
+        debouncedPrice as string,
+        debouncedTitle as string
       );
     },
     queryKey: [
@@ -137,6 +113,9 @@ export default function ProductsContextProvider({
       pageNr,
       minQueryDebouncingState,
       maxQueryDebouncingState,
+      debouncedPopularity,
+      debouncedPrice,
+      debouncedTitle,
     ],
     enabled:
       !countGamesIsLoading &&
@@ -157,11 +136,6 @@ export default function ProductsContextProvider({
         hasToChangePage,
         totalGamesAmountForQuery:
           (countGamesData && countGamesData.data) || null,
-        minPrice: min,
-        maxPrice: max,
-        handleMinChange,
-        handleMaxChange,
-        handleSearchTermChange: handleInputChange,
       }}
     >
       {children}

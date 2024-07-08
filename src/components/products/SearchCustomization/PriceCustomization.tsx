@@ -1,15 +1,17 @@
 import { useContext } from "react";
 import Input from "../../UI/Input";
 import { motion } from "framer-motion";
-import { ProductsContext } from "../../../store/ProductsContext";
 import { useQuery } from "@tanstack/react-query";
 import { retrieveMinAndMaxOfExistingPrices } from "../../../lib/fetch";
 import LoadingFallback from "../../UI/LoadingFallback";
 import Error from "../../UI/Error";
+import { SearchCustomizationContext } from "../../../store/SearchCustomizationContext";
+import Button from "../../UI/Button";
 
 export default function PriceCustomization() {
-  const { minPrice, maxPrice, handleMaxChange, handleMinChange } =
-    useContext(ProductsContext);
+  const { minPrice, maxPrice, handleMaxChange, handleMinChange } = useContext(
+    SearchCustomizationContext
+  );
 
   function handleSetPriceValue(type: "min" | "max", inputString: string) {
     const value = parseFloat(inputString);
@@ -31,62 +33,81 @@ export default function PriceCustomization() {
   else {
     const min = data?.data.min;
     const max = data?.data.max;
+    console.log(min, max);
     !isNaN(minPrice) && minPrice < min! && handleMinChange(min! + "");
     !isNaN(maxPrice) && maxPrice > max! && handleMaxChange(max! + "");
+    const onlyFreeToPlay = minPrice === 0 && maxPrice === 0;
+    const canSetToFreeToPlay = min === 0;
     content = (
       <>
-        <Input
-          width="w-1/4"
-          placeholder="Min"
-          type="number"
-          min={min}
-          max={max}
-          step={0.01}
-          value={minPrice}
-          onChange={(s) => handleSetPriceValue("min", s)}
-        />
-        <motion.div
-          className="relative w-1/2 h-[10px] bg-darkerBg"
-          initial={{ opacity: 0.7 }}
-          whileHover={{ opacity: 1 }}
-        >
+        <div className="flex flex-row w-full justify-center items-center gap-3">
           <Input
-            width="w-full"
-            type="range"
-            useBorder={false}
-            useShadow={false}
-            useOpacity={true}
-            additionalTailwindClasses="absolute top-0 left-0 z-1 !h-0"
+            width="w-1/4"
+            placeholder="Min"
+            type="number"
+            min={min}
+            max={max}
+            step={0.01}
+            value={minPrice}
             onChange={(s) => handleSetPriceValue("min", s)}
-            min={min}
-            max={max}
-            step={0.01}
-            value={isNaN(minPrice) ? 0 : minPrice}
           />
+          <motion.div
+            className="relative w-1/2 h-[10px] bg-darkerBg"
+            initial={{ opacity: 0.7 }}
+            whileHover={{ opacity: 1 }}
+          >
+            <Input
+              width="w-full"
+              type="range"
+              useBorder={false}
+              useShadow={false}
+              useOpacity={true}
+              additionalTailwindClasses="absolute top-0 left-0 z-1 !h-0"
+              onChange={(s) => handleSetPriceValue("min", s)}
+              min={min}
+              max={max}
+              step={0.01}
+              value={isNaN(minPrice) ? 0 : minPrice}
+            />
+            <Input
+              width="w-full"
+              type="range"
+              useBorder={false}
+              useShadow={false}
+              useOpacity={true}
+              additionalTailwindClasses="absolute top-0 left-0"
+              onChange={(s) => handleSetPriceValue("max", s)}
+              min={min}
+              max={max}
+              step={0.01}
+              value={isNaN(maxPrice) ? 100 : maxPrice}
+            />
+          </motion.div>
           <Input
-            width="w-full"
-            type="range"
-            useBorder={false}
-            useShadow={false}
-            useOpacity={true}
-            additionalTailwindClasses="absolute top-0 left-0"
-            onChange={(s) => handleSetPriceValue("max", s)}
+            width="w-1/4"
+            placeholder="Max"
+            type="number"
             min={min}
             max={max}
             step={0.01}
-            value={isNaN(maxPrice) ? 100 : maxPrice}
+            value={maxPrice}
+            onChange={(s) => handleSetPriceValue("max", s)}
           />
-        </motion.div>
-        <Input
-          width="w-1/4"
-          placeholder="Max"
-          type="number"
-          min={min}
-          max={max}
-          step={0.01}
-          value={maxPrice}
-          onChange={(s) => handleSetPriceValue("max", s)}
-        />
+        </div>
+        <div>
+          <Button
+            disabled={!canSetToFreeToPlay}
+            active={onlyFreeToPlay}
+            onClick={() => {
+              handleMinChange("0");
+              handleMaxChange("0");
+            }}
+          >
+            {!canSetToFreeToPlay
+              ? "There are currently no free to play games available"
+              : "Free To Play"}
+          </Button>
+        </div>
       </>
     );
   }

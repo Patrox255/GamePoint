@@ -3,13 +3,16 @@ import { Link } from "react-router-dom";
 import slugify from "slugify";
 import PriceTag from "../../game/PriceTag";
 import { IGame } from "../../../models/game.model";
+import { ReactNode } from "react";
 
 export default function GamesResults({
   games,
   largeFormat = false,
+  children,
 }: {
   games: IGame[];
   largeFormat?: boolean;
+  children?: ReactNode;
 }) {
   return (
     <motion.ul
@@ -29,6 +32,7 @@ export default function GamesResults({
       animate="normal"
     >
       <AnimatePresence>
+        {children}
         {games.map((game) => (
           <motion.li
             key={game.title}
