@@ -29,16 +29,15 @@ export default function OrderCustomization() {
               whileHover={{ opacity: 1 }}
               onClick={() =>
                 orderCustomizationDispatch({
-                  type: "CHANGE_STATE",
+                  type: "CHANGE_PROPERTY_VALUE",
                   payload: {
                     fieldName: currentCustomizationStateKey,
                     newState:
-                      orderCustomizationState[currentCustomizationStateKey] ===
-                      ""
+                      orderCustomizationState[currentCustomizationStateKey]
+                        .value === ""
                         ? "1"
-                        : orderCustomizationState[
-                            currentCustomizationStateKey
-                          ] === "-1"
+                        : orderCustomizationState[currentCustomizationStateKey]
+                            .value === "-1"
                         ? ""
                         : "-1",
                   },
@@ -66,15 +65,17 @@ export default function OrderCustomization() {
                   },
                 }}
                 initial={
-                  orderCustomizationState[currentCustomizationStateKey] === "-1"
+                  orderCustomizationState[currentCustomizationStateKey]
+                    .value === "-1"
                     ? "ascending"
                     : "hidden"
                 }
                 animate={
-                  orderCustomizationState[currentCustomizationStateKey] === ""
+                  orderCustomizationState[currentCustomizationStateKey]
+                    .value === ""
                     ? undefined
-                    : orderCustomizationState[currentCustomizationStateKey] ===
-                      "1"
+                    : orderCustomizationState[currentCustomizationStateKey]
+                        .value === "1"
                     ? "ascending"
                     : "descending"
                 }

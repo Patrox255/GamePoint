@@ -3,6 +3,7 @@ import { IGame } from "../models/game.model";
 import { IGenre } from "../models/genre.model";
 import { API_URL } from "./config";
 import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
+import { IOrderCustomizationProperty } from "../store/SearchCustomizationContext";
 
 export const queryClient = new QueryClient();
 // queryClient.invalidateQueries({ queryKey: ["games"], exact: false });
@@ -44,9 +45,10 @@ export const load10GamesByQuery = async (
   pageNr: number = 0,
   priceMin?: number,
   priceMax?: number,
-  popularityOrder?: string,
-  priceOrder?: string,
-  titleOrder?: string
+  popularityOrder?: IOrderCustomizationProperty,
+  priceOrder?: IOrderCustomizationProperty,
+  titleOrder?: IOrderCustomizationProperty,
+  orderOfSortingIndicators?: ("title" | "popularity" | "price")[]
 ) => {
   const data = await getJSON<IGame[]>(
     generateUrlEndpointWithSearchParams(`${API_URL}/products`, {
@@ -58,6 +60,7 @@ export const load10GamesByQuery = async (
       popularityOrder,
       priceOrder,
       titleOrder,
+      order: orderOfSortingIndicators,
     }),
     signal
   );

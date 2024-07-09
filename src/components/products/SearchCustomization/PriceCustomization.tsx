@@ -33,7 +33,6 @@ export default function PriceCustomization() {
   else {
     const min = data?.data.min;
     const max = data?.data.max;
-    console.log(min, max);
     !isNaN(minPrice) && minPrice < min! && handleMinChange(min! + "");
     !isNaN(maxPrice) && maxPrice > max! && handleMaxChange(max! + "");
     const onlyFreeToPlay = minPrice === 0 && maxPrice === 0;

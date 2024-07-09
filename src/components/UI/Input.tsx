@@ -56,8 +56,6 @@ export default function Input({
     isValidNumberIfTypeNumber && onChange && onChange(value);
   };
 
-  console.log(value);
-
   return (
     <motion.input
       type={type}

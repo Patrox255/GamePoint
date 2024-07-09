@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { connectDB } from "./db";
 import { CLIENT_ID, FRONTEND_URL, SECRET } from "./secret";
 import mongoose from "mongoose";
@@ -67,10 +67,29 @@ const corsOptions = {
   allowedHeaders: ["Content-Type"],
 };
 
-const handleTransformQueryValueToNumber = function <T>(param: T) {
-  if (typeof param === "string") return parseInt(param);
-  if (Array.isArray(param) && param.length !== 0) return parseInt(param[0]);
-  return undefined;
+const parseQueries = async (req: Request) => {
+  return Object.fromEntries(
+    [...Object.entries(req.query)].map((entry) => [
+      entry[0],
+      entry[1] ? JSON.parse(entry[1] as string) : undefined,
+    ])
+  );
+};
+
+const errorHandler = (err: Error, req: Request, res: Response) => {
+  console.error(err);
+  res.status(err.status || 503).json({ message: err.message });
+};
+
+const validateQueriesTypes = async (queries: unknown[][]) => {
+  queries.forEach((query) => {
+    if (
+      query[1] !== undefined &&
+      ((query[0] === "array" && !Array.isArray(query[1])) ||
+        (query[0] !== "array" && typeof query[1] !== query[0]))
+    )
+      throw "Invalid data provided";
+  });
 };
 
 const startServer = async () => {
@@ -80,570 +99,592 @@ const startServer = async () => {
     app.options("*", cors(corsOptions));
     await connectDB();
 
-    app.get("/products", async (req: Request, res: Response) => {
-      try {
-        const {
-          limit,
-          most_popular,
-          query,
-          count,
-          page,
-          priceMin,
-          priceMax,
-          popularityOrder,
-          priceOrder,
-          titleOrder,
-        } = req.query;
-        const limitNr = handleTransformQueryValueToNumber(limit);
+    app.get(
+      "/products",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const queries = await parseQueries(req);
+          const {
+            limit,
+            most_popular,
+            query,
+            count,
+            page,
+            priceMin,
+            priceMax,
+            popularityOrder,
+            priceOrder,
+            titleOrder,
+          } = queries;
 
-        const filter = {
-          ...(query && { title: { $regex: query, $options: "i" } }),
-          ...((priceMin || priceMax) && {
-            finalPrice: {
-              ...(priceMin && !isNaN(+priceMin) && { $gte: +priceMin }),
-              ...(priceMax && !isNaN(+priceMax) && { $lte: +priceMax }),
-            },
-          }),
-        };
-
-        if (count === "1") {
-          const count = await Game.countDocuments(filter).exec();
-          console.log(count, priceMin, priceMax);
-          res.status(200).json([count]);
-          return;
-        }
-
-        const mongooseQuery = Game.find(filter);
-
-        mongooseQuery.populate([
-          "genres",
-          "developer",
-          "publisher",
-          "platforms",
-        ]);
-
-        const generateOrderObj = (
-          properties: {
-            value: undefined | "1" | "-1";
-            name: string;
-          }[]
-        ) => {
-          const sortProperties: { [key: string]: mongoose.SortOrder } = {};
-          properties.forEach((property) => {
-            if (
-              property.value &&
-              +property.value &&
-              (+property.value === 1 || +property.value === -1)
-            )
-              sortProperties[property.name] = Number(property.value) as 1 | -1;
-          });
-          return sortProperties;
-        };
-
-        let sortProperties: { [key: string]: mongoose.SortOrder } =
-          generateOrderObj([
-            {
-              value: popularityOrder as undefined | "1" | "-1",
-              name: "popularity",
-            },
-            {
-              value: priceOrder as undefined | "1" | "-1",
-              name: "finalPrice",
-            },
-            {
-              value: titleOrder as undefined | "1" | "-1",
-              name: "title",
-            },
+          await validateQueriesTypes([
+            ["number", limit],
+            ["number", most_popular],
+            ["string", query],
+            ["number", count],
+            ["number", page],
+            ["number", priceMin],
+            ["number", priceMax],
+            ["object", popularityOrder],
+            ["object", priceOrder],
+            ["object", titleOrder],
           ]);
-        if (most_popular === "1") sortProperties = { popularity: -1, date: -1 };
-        mongooseQuery.sort(sortProperties);
-        mongooseQuery.skip(
-          page &&
-            !Array.isArray(page) &&
-            parseInt(page as string) &&
-            isFinite(parseInt(page as string))
-            ? parseInt(page as string) * 10
-            : 0
-        );
-        if (limitNr) mongooseQuery.limit(limitNr);
+          const limitNr = limit;
 
-        const games = await mongooseQuery.exec();
+          const filter = {
+            ...(query && { title: { $regex: query, $options: "i" } }),
+            ...((priceMin !== undefined || priceMax !== undefined) && {
+              finalPrice: {
+                ...(priceMin !== undefined &&
+                  !isNaN(+priceMin) && { $gte: +priceMin }),
+                ...(priceMax !== undefined &&
+                  !isNaN(+priceMax) && { $lte: +priceMax }),
+              },
+            }),
+          };
 
-        res.status(200).json([...games]);
-      } catch (err) {
-        res
-          .status((err as Error).status || 503)
-          .json({ message: (err as Error).message });
-      }
-    });
-
-    app.get("/products/price", async (req: Request, res: Response) => {
-      try {
-        const gamesFromDb = await Game.find({}, { finalPrice: true })
-          .sort({ finalPrice: -1 })
-          .exec();
-        console.log(
-          gamesFromDb[gamesFromDb.length - 1].finalPrice,
-          gamesFromDb[0].finalPrice
-        );
-        res.status(200).json({
-          min: gamesFromDb[gamesFromDb.length - 1].finalPrice,
-          max: gamesFromDb[0].finalPrice,
-        });
-      } catch (e) {
-        res
-          .status((e as Error).status || 503)
-          .json({ message: (e as Error).message });
-      }
-    });
-
-    app.get("/popular-genres", async (req: Request, res: Response) => {
-      try {
-        const genres: { name: string; popularity: number }[] = [];
-        const games = await Game.find()
-          .populate(["genres", "developer", "publisher", "platforms"])
-          .exec();
-        games.forEach((game) =>
-          game.genres.forEach((genre) => {
-            interface IGameGenre {
-              _id: mongoose.ObjectId;
-              name: string;
-            }
-            const foundGenreObj = genres.find(
-              (genreObj) =>
-                genreObj.name === (genre as unknown as IGameGenre).name
-            );
-
-            if (foundGenreObj) foundGenreObj.popularity += game.popularity!;
-            else
-              genres.push({
-                name: (genre as unknown as IGameGenre).name,
-                popularity: game.popularity!,
-              });
-          })
-        );
-
-        genres.sort((a, b) => b.popularity - a.popularity);
-
-        res.status(200).json(genres);
-      } catch (err) {
-        res
-          .status((err as Error).status || 503)
-          .json({ message: (err as Error).message });
-      }
-    });
-
-    app.get("/init", async (req: Request, res: Response) => {
-      try {
-        const generateMultiQueries = async <T>(
-          conditionToQueriesArr: number[],
-          singleQueryGeneratorFunc: (i: number, cur: number) => string,
-          authorizedHeaders: {
-            Authorization: string;
-            "Client-ID": string;
+          if (count === 1) {
+            const count = await Game.countDocuments(filter).exec();
+            res.status(200).json([count]);
+            return;
           }
-        ) => {
-          const multiQueries = conditionToQueriesArr.reduce<{
-            curQuery: string;
-            queries: string[];
-          }>(
-            (acc, cur, i) => {
-              const curQuery = singleQueryGeneratorFunc(i, cur).replace(
-                /\n/gi,
-                ""
-              );
-              if (
-                (i % 10 === 0 && i !== 0) ||
-                i === conditionToQueriesArr.length - 1
-              ) {
-                if (i !== conditionToQueriesArr.length - 1)
-                  acc.queries.push(acc.curQuery);
-                else acc.queries.push(acc.curQuery + curQuery);
-                acc.curQuery = curQuery;
-              } else {
-                acc.curQuery += curQuery;
-              }
-              return acc;
-            },
-            { curQuery: "", queries: [] }
-          ).queries;
-          const multiQueriesResultObjs = await Promise.all(
-            multiQueries.map(async (multiQuery) => {
-              const data = await getJSON("https://api.igdb.com/v4/multiquery", {
-                method: "POST",
-                headers: authorizedHeaders,
-                body: multiQuery,
+
+          const mongooseQuery = Game.find(filter);
+
+          mongooseQuery.populate([
+            "genres",
+            "developer",
+            "publisher",
+            "platforms",
+          ]);
+
+          interface IOrderCustomizationProperty {
+            value: "" | "1" | "-1";
+            order: number;
+          }
+
+          const generateOrderObj = (
+            properties: {
+              obj: IOrderCustomizationProperty;
+              name: string;
+            }[]
+          ) => {
+            const sortProperties: { [key: string]: mongoose.SortOrder } = {};
+            properties
+              .filter(
+                (property) =>
+                  property.obj.value === "1" || property.obj.value === "-1"
+              )
+              .sort((a, b) => a.obj.order - b.obj.order)
+              .forEach((property) => {
+                sortProperties[property.name] = Number(property.obj.value) as
+                  | 1
+                  | -1;
               });
-              return data.map(
-                (returnedDataObj: {
-                  name: string;
-                  result: { id: number; date: number }[];
-                }) => ({
-                  ...returnedDataObj.result[0],
-                })
+            return sortProperties;
+          };
+
+          let sortProperties: { [key: string]: mongoose.SortOrder } =
+            generateOrderObj([
+              {
+                obj: popularityOrder as IOrderCustomizationProperty,
+                name: "popularity",
+              },
+              {
+                obj: priceOrder as IOrderCustomizationProperty,
+                name: "finalPrice",
+              },
+              {
+                obj: titleOrder as IOrderCustomizationProperty,
+                name: "title",
+              },
+            ]);
+          if (most_popular === 1) sortProperties = { popularity: -1, date: -1 };
+          mongooseQuery.sort(sortProperties);
+          mongooseQuery.skip(
+            page && !Array.isArray(page) && isFinite(page) ? page * 10 : 0
+          );
+          if (limitNr) mongooseQuery.limit(limitNr);
+
+          const games = await mongooseQuery.exec();
+
+          res.status(200).json([...games]);
+        } catch (err) {
+          next(err);
+        }
+      }
+    );
+
+    app.get(
+      "/products/price",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const gamesFromDb = await Game.find({}, { finalPrice: true })
+            .sort({ finalPrice: -1 })
+            .exec();
+          res.status(200).json({
+            min: gamesFromDb[gamesFromDb.length - 1].finalPrice,
+            max: gamesFromDb[0].finalPrice,
+          });
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
+
+    app.get(
+      "/popular-genres",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const genres: { name: string; popularity: number }[] = [];
+          const games = await Game.find()
+            .populate(["genres", "developer", "publisher", "platforms"])
+            .exec();
+          games.forEach((game) =>
+            game.genres.forEach((genre) => {
+              interface IGameGenre {
+                _id: mongoose.ObjectId;
+                name: string;
+              }
+              const foundGenreObj = genres.find(
+                (genreObj) =>
+                  genreObj.name === (genre as unknown as IGameGenre).name
               );
+
+              if (foundGenreObj) foundGenreObj.popularity += game.popularity!;
+              else
+                genres.push({
+                  name: (genre as unknown as IGameGenre).name,
+                  popularity: game.popularity!,
+                });
             })
           );
-          return multiQueriesResultObjs.flat() as T;
-        };
 
-        const { access_token } = await getJSON(
-          `https://id.twitch.tv/oauth2/token?client_id=${CLIENT_ID}&client_secret=${SECRET}&grant_type=client_credentials`,
-          {
-            method: "POST",
-          }
-        );
-        const authorizedHeaders = {
-          Authorization: `Bearer ${access_token}`,
-          "Client-ID": CLIENT_ID,
-        };
-        let [{ result: games }] = await getJSON(
-          "https://api.igdb.com/v4/multiquery",
-          {
-            method: "POST",
-            headers: authorizedHeaders,
-            body: `query games "Games" {
+          genres.sort((a, b) => b.popularity - a.popularity);
+
+          res.status(200).json(genres);
+        } catch (err) {
+          next(err);
+        }
+      }
+    );
+
+    app.get(
+      "/init",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const generateMultiQueries = async <T>(
+            conditionToQueriesArr: number[],
+            singleQueryGeneratorFunc: (i: number, cur: number) => string,
+            authorizedHeaders: {
+              Authorization: string;
+              "Client-ID": string;
+            }
+          ) => {
+            const multiQueries = conditionToQueriesArr.reduce<{
+              curQuery: string;
+              queries: string[];
+            }>(
+              (acc, cur, i) => {
+                const curQuery = singleQueryGeneratorFunc(i, cur).replace(
+                  /\n/gi,
+                  ""
+                );
+                if (
+                  (i % 10 === 0 && i !== 0) ||
+                  i === conditionToQueriesArr.length - 1
+                ) {
+                  if (i !== conditionToQueriesArr.length - 1)
+                    acc.queries.push(acc.curQuery);
+                  else acc.queries.push(acc.curQuery + curQuery);
+                  acc.curQuery = curQuery;
+                } else {
+                  acc.curQuery += curQuery;
+                }
+                return acc;
+              },
+              { curQuery: "", queries: [] }
+            ).queries;
+            const multiQueriesResultObjs = await Promise.all(
+              multiQueries.map(async (multiQuery) => {
+                const data = await getJSON(
+                  "https://api.igdb.com/v4/multiquery",
+                  {
+                    method: "POST",
+                    headers: authorizedHeaders,
+                    body: multiQuery,
+                  }
+                );
+                return data.map(
+                  (returnedDataObj: {
+                    name: string;
+                    result: { id: number; date: number }[];
+                  }) => ({
+                    ...returnedDataObj.result[0],
+                  })
+                );
+              })
+            );
+            return multiQueriesResultObjs.flat() as T;
+          };
+
+          const { access_token } = await getJSON(
+            `https://id.twitch.tv/oauth2/token?client_id=${CLIENT_ID}&client_secret=${SECRET}&grant_type=client_credentials`,
+            {
+              method: "POST",
+            }
+          );
+          const authorizedHeaders = {
+            Authorization: `Bearer ${access_token}`,
+            "Client-ID": CLIENT_ID,
+          };
+          let [{ result: games }] = await getJSON(
+            "https://api.igdb.com/v4/multiquery",
+            {
+              method: "POST",
+              headers: authorizedHeaders,
+              body: `query games "Games" {
               fields *;
               sort hypes desc;
               limit:50;
 
             };`,
-          }
-        );
-        let releaseDatesIdsToFetch: number[] = [];
-        let platformsIdsToFetch: number[] = [];
-        let genresIdsToFetch: number[] = [];
-        let involvedCompaniesToFetch: number[] = [];
-        let companiesToFetch: number[] = [];
-        let artworksToFetch: number[] = [];
-        games = games.map((game: object) => {
-          const hasDisocunt = Math.round(random(0, 1)) === 0;
-          if ((game as { release_dates?: number[] }).release_dates)
-            releaseDatesIdsToFetch.push(
-              (game as { release_dates: number[] }).release_dates[0]
-            );
-          if ((game as { platforms?: number[] }).platforms)
-            platformsIdsToFetch.push(
-              ...(game as { platforms: number[] }).platforms
-            );
-          if ((game as { genres?: number[] }).genres)
-            genresIdsToFetch.push(...(game as { genres: number[] }).genres);
-          if ((game as { involved_companies: number[] }).involved_companies)
-            involvedCompaniesToFetch.push(
-              ...(game as { involved_companies: number[] }).involved_companies
-            );
-          if ((game as { artworks: number[] }).artworks)
-            artworksToFetch.push(
-              ...(game as { artworks: number[] }).artworks.slice(0, 5)
-            );
-          return {
-            ...game,
-            price: +random(5, 25).toFixed(2),
-            discount: hasDisocunt ? Math.round(random(1, 100)) : 0,
-          };
-        });
-        releaseDatesIdsToFetch = [...new Set(releaseDatesIdsToFetch)];
-        platformsIdsToFetch = [...new Set(platformsIdsToFetch)];
-        genresIdsToFetch = [...new Set(genresIdsToFetch)];
-        involvedCompaniesToFetch = [...new Set(involvedCompaniesToFetch)];
-        artworksToFetch = [...new Set(artworksToFetch)];
+            }
+          );
+          let releaseDatesIdsToFetch: number[] = [];
+          let platformsIdsToFetch: number[] = [];
+          let genresIdsToFetch: number[] = [];
+          let involvedCompaniesToFetch: number[] = [];
+          let companiesToFetch: number[] = [];
+          let artworksToFetch: number[] = [];
+          games = games.map((game: object) => {
+            const hasDisocunt = Math.round(random(0, 1)) === 0;
+            if ((game as { release_dates?: number[] }).release_dates)
+              releaseDatesIdsToFetch.push(
+                (game as { release_dates: number[] }).release_dates[0]
+              );
+            if ((game as { platforms?: number[] }).platforms)
+              platformsIdsToFetch.push(
+                ...(game as { platforms: number[] }).platforms
+              );
+            if ((game as { genres?: number[] }).genres)
+              genresIdsToFetch.push(...(game as { genres: number[] }).genres);
+            if ((game as { involved_companies: number[] }).involved_companies)
+              involvedCompaniesToFetch.push(
+                ...(game as { involved_companies: number[] }).involved_companies
+              );
+            if ((game as { artworks: number[] }).artworks)
+              artworksToFetch.push(
+                ...(game as { artworks: number[] }).artworks.slice(0, 5)
+              );
+            return {
+              ...game,
+              price: +random(5, 25).toFixed(2),
+              discount: hasDisocunt ? Math.round(random(1, 100)) : 0,
+            };
+          });
+          releaseDatesIdsToFetch = [...new Set(releaseDatesIdsToFetch)];
+          platformsIdsToFetch = [...new Set(platformsIdsToFetch)];
+          genresIdsToFetch = [...new Set(genresIdsToFetch)];
+          involvedCompaniesToFetch = [...new Set(involvedCompaniesToFetch)];
+          artworksToFetch = [...new Set(artworksToFetch)];
 
-        const releaseDatesObjsTemp = await generateMultiQueries<
-          {
-            id: number;
-            date: string;
-            game: number;
-          }[]
-        >(
-          releaseDatesIdsToFetch,
-          (i, cur) => `query release_dates "${i}" {
+          const releaseDatesObjsTemp = await generateMultiQueries<
+            {
+              id: number;
+              date: string;
+              game: number;
+            }[]
+          >(
+            releaseDatesIdsToFetch,
+            (i, cur) => `query release_dates "${i}" {
             fields date,game;
             where id=${cur};
           };`,
-          authorizedHeaders
-        );
-        const releaseDatesObjs = releaseDatesObjsTemp.map(
-          (releaseDatesObj) => ({
-            ...releaseDatesObj,
-            date: releaseDatesObj.date
-              ? new Date(+releaseDatesObj.date * 1000)
-              : undefined,
-          })
-        );
+            authorizedHeaders
+          );
+          const releaseDatesObjs = releaseDatesObjsTemp.map(
+            (releaseDatesObj) => ({
+              ...releaseDatesObj,
+              date: releaseDatesObj.date
+                ? new Date(+releaseDatesObj.date * 1000)
+                : undefined,
+            })
+          );
 
-        const platformsObjs = await generateMultiQueries<
-          { id: number; name: string }[]
-        >(
-          platformsIdsToFetch,
-          (i, cur) => `query platforms "${i}" {
+          const platformsObjs = await generateMultiQueries<
+            { id: number; name: string }[]
+          >(
+            platformsIdsToFetch,
+            (i, cur) => `query platforms "${i}" {
               fields name;
               where id=${cur};
             };`,
-          authorizedHeaders
-        );
+            authorizedHeaders
+          );
 
-        await sleep(4);
-        const genresObjs = await generateMultiQueries<
-          { id: number; name: string }[]
-        >(
-          genresIdsToFetch,
-          (i, cur) => `query genres "${i}" {
+          await sleep(4);
+          const genresObjs = await generateMultiQueries<
+            { id: number; name: string }[]
+          >(
+            genresIdsToFetch,
+            (i, cur) => `query genres "${i}" {
             fields name;
             where id=${cur};
           };`,
-          authorizedHeaders
-        );
+            authorizedHeaders
+          );
 
-        const involvedCompaniesObjs = await generateMultiQueries<
-          {
-            company: number;
-            developer: boolean;
-            publisher: boolean;
-            id: number;
-          }[]
-        >(
-          involvedCompaniesToFetch,
-          (i, cur) => `query involved_companies "${i}" {
+          const involvedCompaniesObjs = await generateMultiQueries<
+            {
+              company: number;
+              developer: boolean;
+              publisher: boolean;
+              id: number;
+            }[]
+          >(
+            involvedCompaniesToFetch,
+            (i, cur) => `query involved_companies "${i}" {
           fields company,developer,publisher;
           where id=${cur};
         };`,
-          authorizedHeaders
-        );
-
-        let publisherCompaniesIds: number[] = [];
-        let developerCompaniesIds: number[] = [];
-
-        games = games.map((game: { involved_companies?: number[] }) => {
-          if (!game.involved_companies) return game;
-          const involvedCompaniesIds = game.involved_companies;
-
-          const developerInvolvedCompanyId = involvedCompaniesIds.find(
-            (involvedCompanyId) =>
-              involvedCompaniesObjs.find(
-                (involvedCompanyObj) =>
-                  involvedCompanyObj.id === involvedCompanyId
-              )?.developer
+            authorizedHeaders
           );
-          const developerCompanyId = involvedCompaniesObjs.find(
-            (involvedCompanyObj) =>
-              involvedCompanyObj.id === developerInvolvedCompanyId
-          )?.company;
-          const publisherInvolvedCompany = involvedCompaniesIds.find(
-            (involvedCompanyId) =>
-              involvedCompaniesObjs.find(
-                (involvedCompanyObj) =>
-                  involvedCompanyObj.id === involvedCompanyId
-              )?.publisher
-          );
-          const publisherCompanyId = involvedCompaniesObjs.find(
-            (involvedCompanyObj) =>
-              involvedCompanyObj.id === publisherInvolvedCompany
-          )?.company;
-          if (developerCompanyId) {
-            companiesToFetch.push(developerCompanyId);
-            developerCompaniesIds.push(developerCompanyId);
-          }
-          if (publisherCompanyId) {
-            companiesToFetch.push(publisherCompanyId);
-            publisherCompaniesIds.push(publisherCompanyId);
-          }
-          return {
-            ...game,
-            involved_companies: {
-              publisher: publisherCompanyId,
-              developer: developerCompanyId,
-            },
-          };
-        });
-        companiesToFetch = [...new Set(companiesToFetch)];
-        publisherCompaniesIds = [...new Set(publisherCompaniesIds)];
-        developerCompaniesIds = [...new Set(developerCompaniesIds)];
 
-        await sleep(4);
-        const companiesObjs = await generateMultiQueries<
-          { name: string; id: number }[]
-        >(
-          companiesToFetch,
-          (i, cur) => `query companies "${i}" {
+          let publisherCompaniesIds: number[] = [];
+          let developerCompaniesIds: number[] = [];
+
+          games = games.map((game: { involved_companies?: number[] }) => {
+            if (!game.involved_companies) return game;
+            const involvedCompaniesIds = game.involved_companies;
+
+            const developerInvolvedCompanyId = involvedCompaniesIds.find(
+              (involvedCompanyId) =>
+                involvedCompaniesObjs.find(
+                  (involvedCompanyObj) =>
+                    involvedCompanyObj.id === involvedCompanyId
+                )?.developer
+            );
+            const developerCompanyId = involvedCompaniesObjs.find(
+              (involvedCompanyObj) =>
+                involvedCompanyObj.id === developerInvolvedCompanyId
+            )?.company;
+            const publisherInvolvedCompany = involvedCompaniesIds.find(
+              (involvedCompanyId) =>
+                involvedCompaniesObjs.find(
+                  (involvedCompanyObj) =>
+                    involvedCompanyObj.id === involvedCompanyId
+                )?.publisher
+            );
+            const publisherCompanyId = involvedCompaniesObjs.find(
+              (involvedCompanyObj) =>
+                involvedCompanyObj.id === publisherInvolvedCompany
+            )?.company;
+            if (developerCompanyId) {
+              companiesToFetch.push(developerCompanyId);
+              developerCompaniesIds.push(developerCompanyId);
+            }
+            if (publisherCompanyId) {
+              companiesToFetch.push(publisherCompanyId);
+              publisherCompaniesIds.push(publisherCompanyId);
+            }
+            return {
+              ...game,
+              involved_companies: {
+                publisher: publisherCompanyId,
+                developer: developerCompanyId,
+              },
+            };
+          });
+          companiesToFetch = [...new Set(companiesToFetch)];
+          publisherCompaniesIds = [...new Set(publisherCompaniesIds)];
+          developerCompaniesIds = [...new Set(developerCompaniesIds)];
+
+          await sleep(4);
+          const companiesObjs = await generateMultiQueries<
+            { name: string; id: number }[]
+          >(
+            companiesToFetch,
+            (i, cur) => `query companies "${i}" {
           fields name;
           where id=${cur};
         };`,
-          authorizedHeaders
-        );
+            authorizedHeaders
+          );
 
-        const artworkObjs = await generateMultiQueries<
-          { url: string; id: number }[]
-        >(
-          artworksToFetch,
-          (i, cur) => `query artworks "${i}" {
+          const artworkObjs = await generateMultiQueries<
+            { url: string; id: number }[]
+          >(
+            artworksToFetch,
+            (i, cur) => `query artworks "${i}" {
           fields url;
           where id=${cur};
         };`,
-          authorizedHeaders
-        );
-
-        games = games.map(
-          (game: {
-            involved_companies?: { publisher?: number; developer?: number };
-            artworks?: number[];
-            price: number;
-            discount: number;
-          }) => {
-            if (!game.involved_companies)
-              return { ...game, publisher: undefined, developer: undefined };
-            const publisher = game.involved_companies.publisher
-              ? companiesObjs.find(
-                  (companyObj) =>
-                    companyObj.id === game.involved_companies?.publisher
-                )?.name
-              : undefined;
-            const developer = game.involved_companies.developer
-              ? companiesObjs.find(
-                  (companyObj) =>
-                    companyObj.id === game.involved_companies?.developer
-                )?.name
-              : undefined;
-            const artworks = game.artworks
-              ? game.artworks
-                  .map((artworkId) => {
-                    const artworkObj = artworkObjs.find(
-                      (artworkObj) => artworkObj.id === artworkId
-                    )!;
-
-                    if (!artworkObj) return undefined;
-
-                    artworkObj.url = artworkObj.url.replace("thumb", "720p");
-                    return artworkObj.url;
-                  })
-                  .filter((artworkUrl) => artworkUrl)
-              : [];
-            return {
-              ...game,
-              publisher,
-              developer,
-              artworks,
-            };
-          }
-        );
-        await dropCollectionsIfTheyExist([
-          "games",
-          "genres",
-          "platforms",
-          "publishers",
-          "developers",
-        ]);
-
-        const publisherObjs = publisherCompaniesIds.map(
-          (publisherCompanyId) => {
-            const { name } = companiesObjs.find(
-              (companyObj) => companyObj.id === publisherCompanyId
-            )!;
-            return { name };
-          }
-        );
-        const developerObjs = developerCompaniesIds.map(
-          (developerCompanyId) => {
-            const { name } = companiesObjs.find(
-              (companyObj) => companyObj.id === developerCompanyId
-            )!;
-            return { name };
-          }
-        );
-        const publisherDocuments =
-          await createDocumentsOfObjsAndInsert<IPublisher>(
-            publisherObjs,
-            Publisher
+            authorizedHeaders
           );
-        const developerDocuments =
-          await createDocumentsOfObjsAndInsert<IDeveloper>(
-            developerObjs,
-            Developer
-          );
-        const platformDocuments =
-          await createDocumentsOfObjsAndInsert<IPlatform>(
-            platformsObjs,
-            Platform
-          );
-        const genreDocuments = await createDocumentsOfObjsAndInsert<IGenre>(
-          genresObjs,
-          Genre
-        );
 
-        const gamesToSend = games.map(
-          (game: {
-            id: number;
-            release_dates?: number[];
-            genres?: number[];
-            platforms?: number[];
-            name: string;
-            publisher?: string;
-            developer?: string;
-            hypes?: number;
-          }) => {
-            let releaseDate = undefined;
-            if (game.release_dates) {
-              releaseDate = releaseDatesObjs.find(
-                (releaseDateObj) => releaseDateObj.id === game.release_dates![0]
-              )
-                ? releaseDatesObjs.find(
-                    (releaseDateObj) =>
-                      releaseDateObj.id === game.release_dates![0]
-                  )?.date
+          games = games.map(
+            (game: {
+              involved_companies?: { publisher?: number; developer?: number };
+              artworks?: number[];
+              price: number;
+              discount: number;
+            }) => {
+              if (!game.involved_companies)
+                return { ...game, publisher: undefined, developer: undefined };
+              const publisher = game.involved_companies.publisher
+                ? companiesObjs.find(
+                    (companyObj) =>
+                      companyObj.id === game.involved_companies?.publisher
+                  )?.name
                 : undefined;
+              const developer = game.involved_companies.developer
+                ? companiesObjs.find(
+                    (companyObj) =>
+                      companyObj.id === game.involved_companies?.developer
+                  )?.name
+                : undefined;
+              const artworks = game.artworks
+                ? game.artworks
+                    .map((artworkId) => {
+                      const artworkObj = artworkObjs.find(
+                        (artworkObj) => artworkObj.id === artworkId
+                      )!;
+
+                      if (!artworkObj) return undefined;
+
+                      artworkObj.url = artworkObj.url.replace("thumb", "720p");
+                      return artworkObj.url;
+                    })
+                    .filter((artworkUrl) => artworkUrl)
+                : [];
+              return {
+                ...game,
+                publisher,
+                developer,
+                artworks,
+              };
             }
-
-            return {
-              ...game,
-              releaseDate,
-              genres: game.genres?.map(
-                (genreApiID) =>
-                  genreDocuments.newObjs.find(
-                    (genreDbObj) =>
-                      (genreDbObj as IGenre & { id: number }).id === genreApiID
-                  )?._id
-              ),
-              platforms: game.platforms?.map(
-                (platformAPIId) =>
-                  platformDocuments.newObjs.find(
-                    (platformDbObj) =>
-                      (platformDbObj as IPlatform & { id: number }).id ===
-                      platformAPIId
-                  )?._id
-              ),
-              title: game.name,
-              publisher: game.publisher
-                ? publisherDocuments.newObjs.find(
-                    (publisherObj) => publisherObj.name === game.publisher
-                  )?._id
-                : undefined,
-              developer: game.developer
-                ? developerDocuments.newObjs.find(
-                    (developerObj) => developerObj.name === game.developer
-                  )?._id
-                : undefined,
-              popularity: game.hypes || 0,
-            };
-          }
-        );
-        await createDocumentsOfObjsAndInsert<IGame>(gamesToSend, Game);
-
-        res.status(200).json({
-          ...gamesToSend,
-          dateObjs: releaseDatesObjs,
-          platformsObjs: platformDocuments.newObjs,
-          genresObjs: genreDocuments.newObjs,
-        });
-      } catch (err) {
-        await mongoose.connection.close();
-        res
-          .status((err as Error).status || 404)
-          .json(
-            (err as Error).message || "An error occured. Please try again!"
           );
+          await dropCollectionsIfTheyExist([
+            "games",
+            "genres",
+            "platforms",
+            "publishers",
+            "developers",
+          ]);
+
+          const publisherObjs = publisherCompaniesIds.map(
+            (publisherCompanyId) => {
+              const { name } = companiesObjs.find(
+                (companyObj) => companyObj.id === publisherCompanyId
+              )!;
+              return { name };
+            }
+          );
+          const developerObjs = developerCompaniesIds.map(
+            (developerCompanyId) => {
+              const { name } = companiesObjs.find(
+                (companyObj) => companyObj.id === developerCompanyId
+              )!;
+              return { name };
+            }
+          );
+          const publisherDocuments =
+            await createDocumentsOfObjsAndInsert<IPublisher>(
+              publisherObjs,
+              Publisher
+            );
+          const developerDocuments =
+            await createDocumentsOfObjsAndInsert<IDeveloper>(
+              developerObjs,
+              Developer
+            );
+          const platformDocuments =
+            await createDocumentsOfObjsAndInsert<IPlatform>(
+              platformsObjs,
+              Platform
+            );
+          const genreDocuments = await createDocumentsOfObjsAndInsert<IGenre>(
+            genresObjs,
+            Genre
+          );
+
+          const gamesToSend = games.map(
+            (game: {
+              id: number;
+              release_dates?: number[];
+              genres?: number[];
+              platforms?: number[];
+              name: string;
+              publisher?: string;
+              developer?: string;
+              hypes?: number;
+            }) => {
+              let releaseDate = undefined;
+              if (game.release_dates) {
+                releaseDate = releaseDatesObjs.find(
+                  (releaseDateObj) =>
+                    releaseDateObj.id === game.release_dates![0]
+                )
+                  ? releaseDatesObjs.find(
+                      (releaseDateObj) =>
+                        releaseDateObj.id === game.release_dates![0]
+                    )?.date
+                  : undefined;
+              }
+
+              return {
+                ...game,
+                releaseDate,
+                genres: game.genres?.map(
+                  (genreApiID) =>
+                    genreDocuments.newObjs.find(
+                      (genreDbObj) =>
+                        (genreDbObj as IGenre & { id: number }).id ===
+                        genreApiID
+                    )?._id
+                ),
+                platforms: game.platforms?.map(
+                  (platformAPIId) =>
+                    platformDocuments.newObjs.find(
+                      (platformDbObj) =>
+                        (platformDbObj as IPlatform & { id: number }).id ===
+                        platformAPIId
+                    )?._id
+                ),
+                title: game.name,
+                publisher: game.publisher
+                  ? publisherDocuments.newObjs.find(
+                      (publisherObj) => publisherObj.name === game.publisher
+                    )?._id
+                  : undefined,
+                developer: game.developer
+                  ? developerDocuments.newObjs.find(
+                      (developerObj) => developerObj.name === game.developer
+                    )?._id
+                  : undefined,
+                popularity: game.hypes || 0,
+              };
+            }
+          );
+          await createDocumentsOfObjsAndInsert<IGame>(gamesToSend, Game);
+
+          res.status(200).json({
+            ...gamesToSend,
+            dateObjs: releaseDatesObjs,
+            platformsObjs: platformDocuments.newObjs,
+            genresObjs: genreDocuments.newObjs,
+          });
+        } catch (err) {
+          next(err);
+        }
       }
-    });
+    );
 
     const server = app.listen(port);
+
+    app.use(errorHandler);
 
     const closeServer = async () => {
       await mongoose.connection.close();

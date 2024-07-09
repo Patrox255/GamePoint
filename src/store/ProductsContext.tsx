@@ -4,7 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { IGame } from "../models/game.model";
 import { load10GamesByQuery, retrieveAmountOfGamesByQuery } from "../lib/fetch";
 import { useStateWithSearchParams } from "../hooks/useStateWithSearchParams";
-import { SearchCustomizationContext } from "./SearchCustomizationContext";
+import {
+  IOrderCustomizationProperty,
+  SearchCustomizationContext,
+} from "./SearchCustomizationContext";
 
 export const ProductsContext = createContext<{
   games: IGame[];
@@ -101,9 +104,9 @@ export default function ProductsContextProvider({
         pageNr! as number,
         min as number,
         max as number,
-        debouncedPopularity as string,
-        debouncedPrice as string,
-        debouncedTitle as string
+        debouncedPopularity as IOrderCustomizationProperty,
+        debouncedPrice as IOrderCustomizationProperty,
+        debouncedTitle as IOrderCustomizationProperty
       );
     },
     queryKey: [

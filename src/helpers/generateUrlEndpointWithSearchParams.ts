@@ -1,9 +1,10 @@
 export default function generateUrlEndpointWithSearchParams(
   url: string,
   searchParams: {
-    [key: string]: number | string | undefined;
+    [key: string]: unknown;
   }
 ) {
+  console.log(searchParams);
   return `${url}?${[...Object.entries(searchParams)]
     .filter((entry) => entry[1] !== undefined)
     .map(
@@ -12,8 +13,8 @@ export default function generateUrlEndpointWithSearchParams(
           typeof entry[1] === "number"
             ? isNaN(entry[1])
               ? ""
-              : entry[1]
-            : entry[1]
+              : JSON.stringify(entry[1])
+            : JSON.stringify(entry[1])
         }`
     )
     .join("&")}`;

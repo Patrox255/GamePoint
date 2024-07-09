@@ -33,7 +33,6 @@ export const useInput = function <T extends string | number>({
   );
 
   const debouncingFn = useCallback(() => {
-    console.log("QUERY STATE: " + stateValue);
     setQueryDebouncingState(stateValue!);
     searchParams.set(searchParamName, stateValue! + "");
     navigate(createUrlWithCurrentSearchParams({ searchParams, pathname }), {

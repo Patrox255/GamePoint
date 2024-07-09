@@ -28,7 +28,7 @@ export default function NavSearchBar({ placeholder }: { placeholder: string }) {
   const { data, isLoading, error, isError } = useQuery({
     queryFn: ({ signal }) => load10GamesByQuery(queryDebouncingState, signal),
     queryKey: ["games", "search", queryDebouncingState],
-    enabled: searchTerm !== "",
+    enabled: queryDebouncingState !== "",
   });
 
   const [showResults, setShowResults] = useState<boolean>(false);

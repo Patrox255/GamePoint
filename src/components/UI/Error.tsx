@@ -4,11 +4,11 @@ export default function Error({
   status = 404,
 }) {
   return (
-    <>
-      <h1>{title}</h1>
+    <div className="flex flex-col justify-center items-center w-full text-center p-3 bg-highlightRed/20 rounded-xl">
+      <h1 className="text-2xl text-highlightRed">{title}</h1>
       <p>
         {message} Error code: {status}. Please try again later!
       </p>
-    </>
+    </div>
   );
 }
