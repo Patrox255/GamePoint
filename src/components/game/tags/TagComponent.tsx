@@ -1,13 +1,12 @@
 import { motion } from "framer-motion";
-import Button from "../../UI/Button";
-import { Link } from "react-router-dom";
+import { ReactNode } from "react";
 
 export default function TagComponent({
   tag,
-  paramName,
+  children,
 }: {
   tag: string;
-  paramName: string;
+  children: ReactNode;
 }) {
   return (
     <motion.li
@@ -25,9 +24,7 @@ export default function TagComponent({
         },
       }}
     >
-      <Button>
-        <Link to={`/products?${paramName}=${tag}`}>{tag}</Link>
-      </Button>
+      {children}
     </motion.li>
   );
 }

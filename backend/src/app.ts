@@ -115,6 +115,8 @@ const startServer = async () => {
             popularityOrder,
             priceOrder,
             titleOrder,
+            discount,
+            genres,
           } = queries;
 
           await validateQueriesTypes([
@@ -128,7 +130,10 @@ const startServer = async () => {
             ["object", popularityOrder],
             ["object", priceOrder],
             ["object", titleOrder],
+            ["number", discount],
+            ["array", genres],
           ]);
+          const genresObjs = await Genre.find({ name: { $in: genres } });
           const limitNr = limit;
 
           const filter = {
@@ -141,6 +146,13 @@ const startServer = async () => {
                   !isNaN(+priceMax) && { $lte: +priceMax }),
               },
             }),
+            ...(discount === 1 && { discount: { $gt: 0 } }),
+            ...(genres &&
+              genresObjs.length !== 0 && {
+                genres: {
+                  $in: genresObjs.map((genreObj) => genreObj._id),
+                },
+              }),
           };
 
           if (count === 1) {
@@ -150,6 +162,7 @@ const startServer = async () => {
           }
 
           const mongooseQuery = Game.find(filter);
+          console.log(filter);
 
           mongooseQuery.populate([
             "genres",
@@ -173,7 +186,8 @@ const startServer = async () => {
             properties
               .filter(
                 (property) =>
-                  property.obj.value === "1" || property.obj.value === "-1"
+                  property.obj &&
+                  (property.obj.value === "1" || property.obj.value === "-1")
               )
               .sort((a, b) => a.obj.order - b.obj.order)
               .forEach((property) => {
@@ -233,34 +247,49 @@ const startServer = async () => {
     );
 
     app.get(
-      "/popular-genres",
+      "/genres",
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          const genres: { name: string; popularity: number }[] = [];
-          const games = await Game.find()
-            .populate(["genres", "developer", "publisher", "platforms"])
-            .exec();
-          games.forEach((game) =>
-            game.genres.forEach((genre) => {
-              interface IGameGenre {
-                _id: mongoose.ObjectId;
-                name: string;
-              }
-              const foundGenreObj = genres.find(
-                (genreObj) =>
-                  genreObj.name === (genre as unknown as IGameGenre).name
-              );
+          const queries = await parseQueries(req);
+          const { mostPopular, query, limit } = queries;
+          await validateQueriesTypes([
+            ["number", mostPopular],
+            ["string", query],
+            ["number", limit],
+          ]);
+          let genres: (IGenre & { popularity?: number })[] = [];
+          if (mostPopular === 1) {
+            const games = await Game.find()
+              .populate(["genres", "developer", "publisher", "platforms"])
+              .exec();
+            games.forEach((game) =>
+              game.genres.forEach((genre) => {
+                interface IGameGenre {
+                  _id: mongoose.ObjectId;
+                  name: string;
+                }
+                const foundGenreObj = genres.find(
+                  (genreObj) =>
+                    genreObj.name === (genre as unknown as IGameGenre).name
+                );
 
-              if (foundGenreObj) foundGenreObj.popularity += game.popularity!;
-              else
-                genres.push({
-                  name: (genre as unknown as IGameGenre).name,
-                  popularity: game.popularity!,
-                });
-            })
-          );
+                if (foundGenreObj)
+                  foundGenreObj.popularity! += game.popularity!;
+                else
+                  genres.push({
+                    name: (genre as unknown as IGameGenre).name,
+                    popularity: game.popularity!,
+                  });
+              })
+            );
 
-          genres.sort((a, b) => b.popularity - a.popularity);
+            genres.sort((a, b) => b.popularity! - a.popularity!);
+            genres = genres.slice(0, limit);
+          } else {
+            genres = await Genre.find({
+              name: { $regex: query, $options: "i" },
+            });
+          }
 
           res.status(200).json(genres);
         } catch (err) {
@@ -683,6 +712,10 @@ const startServer = async () => {
     );
 
     const server = app.listen(port);
+
+    app.use(function (req, res) {
+      res.status(404).json({ message: "Your request contains an invalid URL" });
+    });
 
     app.use(errorHandler);
 

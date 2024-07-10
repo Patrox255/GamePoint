@@ -11,6 +11,7 @@ export default function Button({
   useBorder = true,
   useBgColor = true,
   disabled = false, // only to leave this button greyed out and disable onclick if some feature is not available
+  canClickWhileActive = false,
   ...props // sadly it is not supported in TS so I add each prop individually
 }: {
   children?: ReactNode;
@@ -24,19 +25,26 @@ export default function Button({
   useBorder?: boolean;
   useBgColor?: boolean;
   disabled?: boolean;
+  canClickWhileActive?: boolean;
 }) {
   const initialClasses = {
     opacity: 0.5,
     ...(useBgColor && { backgroundColor: properties.bodyBg }),
     boxShadow: "none",
     transform: "scale(0.9)",
+    cursor: "pointer",
   };
 
-  const activeClasses = {
+  const hoverClasses = {
     opacity: 1,
     ...(useBgColor && { backgroundColor: properties.highlightRed }),
     boxShadow: properties.boxShadow,
     transform: "scale(1)",
+  };
+
+  const activeClasses = {
+    ...hoverClasses,
+    ...(canClickWhileActive ? {} : { cursor: "not-allowed" }),
   };
 
   const basicClasses = {
@@ -47,6 +55,7 @@ export default function Button({
   const disabledClasses = {
     ...basicClasses,
     opacity: 0.3,
+    cursor: "not-allowed",
   };
 
   return (
@@ -59,12 +68,20 @@ export default function Button({
           additionalTailwindCSS &&
           Object.values(additionalTailwindCSS).join(" ")
         }`}
-        whileHover={disabled ? undefined : activeClasses}
+        whileHover={
+          disabled
+            ? undefined
+            : active
+            ? canClickWhileActive
+              ? basicClasses
+              : undefined
+            : hoverClasses
+        }
         initial={initialClasses}
         animate={
           active ? activeClasses : disabled ? disabledClasses : basicClasses
         }
-        disabled={active || disabled}
+        disabled={(active && !canClickWhileActive) || disabled}
         key={passedKey}
         onClick={onClick}
       >

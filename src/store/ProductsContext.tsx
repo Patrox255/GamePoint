@@ -39,6 +39,8 @@ export default function ProductsContextProvider({
     maxQueryDebouncingState,
     searchTermDebouncingState,
     orderCustomizationState,
+    debouncedDiscountActive,
+    selectedGenresState: { debouncedGenres },
   } = useContext(SearchCustomizationContext);
   const { state: pageNr, setStateWithSearchParams: setPageNr } =
     useStateWithSearchParams(0, "page", "/products");
@@ -50,12 +52,14 @@ export default function ProductsContextProvider({
     isLoading: countGamesIsLoading,
   } = useQuery({
     queryFn: ({ signal, queryKey }) => {
-      const [, , , searchTerm, min, max] = queryKey;
+      const [, , , searchTerm, min, max, discount, genres] = queryKey;
       return retrieveAmountOfGamesByQuery(
         searchTerm as string,
         signal,
         min as number,
-        max as number
+        max as number,
+        discount as number,
+        genres as string[]
       );
     },
     queryKey: [
@@ -65,6 +69,8 @@ export default function ProductsContextProvider({
       searchTermDebouncingState,
       minQueryDebouncingState,
       maxQueryDebouncingState,
+      debouncedDiscountActive,
+      debouncedGenres,
     ],
     enabled: pageNr !== null,
   });
@@ -97,6 +103,8 @@ export default function ProductsContextProvider({
         debouncedPopularity,
         debouncedPrice,
         debouncedTitle,
+        discount,
+        genres,
       ] = queryKey;
       return load10GamesByQuery(
         searchTerm as string,
@@ -106,7 +114,9 @@ export default function ProductsContextProvider({
         max as number,
         debouncedPopularity as IOrderCustomizationProperty,
         debouncedPrice as IOrderCustomizationProperty,
-        debouncedTitle as IOrderCustomizationProperty
+        debouncedTitle as IOrderCustomizationProperty,
+        discount as number,
+        genres as string[]
       );
     },
     queryKey: [
@@ -119,6 +129,8 @@ export default function ProductsContextProvider({
       debouncedPopularity,
       debouncedPrice,
       debouncedTitle,
+      debouncedDiscountActive,
+      debouncedGenres,
     ],
     enabled:
       !countGamesIsLoading &&

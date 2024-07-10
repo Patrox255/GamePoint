@@ -39,7 +39,7 @@ export default function PriceCustomization() {
     const canSetToFreeToPlay = min === 0;
     content = (
       <>
-        <div className="flex flex-row w-full justify-center items-center gap-3">
+        <article className="flex flex-row w-full justify-center items-center gap-3">
           <Input
             width="w-1/4"
             placeholder="Min"
@@ -92,21 +92,20 @@ export default function PriceCustomization() {
             value={maxPrice}
             onChange={(s) => handleSetPriceValue("max", s)}
           />
-        </div>
-        <div>
-          <Button
-            disabled={!canSetToFreeToPlay}
-            active={onlyFreeToPlay}
-            onClick={() => {
-              handleMinChange("0");
-              handleMaxChange("0");
-            }}
-          >
-            {!canSetToFreeToPlay
-              ? "There are currently no free to play games available"
-              : "Free To Play"}
-          </Button>
-        </div>
+        </article>
+
+        <Button
+          disabled={!canSetToFreeToPlay}
+          active={onlyFreeToPlay}
+          onClick={() => {
+            handleMinChange("0");
+            handleMaxChange("0");
+          }}
+        >
+          {!canSetToFreeToPlay
+            ? "There are currently no free to play games available"
+            : "Free To Play"}
+        </Button>
       </>
     );
   }

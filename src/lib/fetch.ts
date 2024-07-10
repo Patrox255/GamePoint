@@ -48,7 +48,8 @@ export const load10GamesByQuery = async (
   popularityOrder?: IOrderCustomizationProperty,
   priceOrder?: IOrderCustomizationProperty,
   titleOrder?: IOrderCustomizationProperty,
-  orderOfSortingIndicators?: ("title" | "popularity" | "price")[]
+  discount?: number,
+  genres?: string[]
 ) => {
   const data = await getJSON<IGame[]>(
     generateUrlEndpointWithSearchParams(`${API_URL}/products`, {
@@ -60,7 +61,8 @@ export const load10GamesByQuery = async (
       popularityOrder,
       priceOrder,
       titleOrder,
-      order: orderOfSortingIndicators,
+      discount,
+      genres,
     }),
     signal
   );
@@ -71,7 +73,9 @@ export const retrieveAmountOfGamesByQuery = async (
   query: string,
   signal?: AbortSignal,
   priceMin?: number,
-  priceMax?: number
+  priceMax?: number,
+  discount?: number,
+  genres?: string[]
 ) => {
   const data = await getJSON<number>(
     generateUrlEndpointWithSearchParams(`${API_URL}/products`, {
@@ -79,14 +83,33 @@ export const retrieveAmountOfGamesByQuery = async (
       query,
       priceMax,
       priceMin,
+      discount,
+      genres,
     }),
     signal
   );
   return data;
 };
 
-export const load10MostPopularGenres = async (signal?: AbortSignal) => {
-  const data = await getJSON<IGenre[]>(`${API_URL}/popular-genres`, signal);
+export const loadGenres = async ({
+  signal,
+  mostPopular,
+  query,
+  limit,
+}: {
+  signal?: AbortSignal;
+  mostPopular?: number;
+  query?: string;
+  limit?: number;
+}) => {
+  const data = await getJSON<IGenre[]>(
+    generateUrlEndpointWithSearchParams(`${API_URL}/genres`, {
+      mostPopular,
+      query,
+      limit,
+    }),
+    signal
+  );
   console.log(data);
   return data;
 };

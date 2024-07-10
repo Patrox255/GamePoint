@@ -17,12 +17,17 @@ export const useInput = function <T extends string | number>({
   setStateAction,
   searchParamName,
   debouncingTime = 500,
+  saveDebouncedStateInSearchParamsAndSessionStorage = true,
 }: {
   stateValue?: T;
-  setStateValue?: Dispatch<SetStateAction<T>> | ((newState: T) => void);
+  setStateValue?:
+    | Dispatch<SetStateAction<T>>
+    | ((newState: T) => void)
+    | Dispatch<SetStateAction<T>>;
   setStateAction?: ActionCreatorWithPayload<string, string>;
   searchParamName: string;
   debouncingTime?: number;
+  saveDebouncedStateInSearchParamsAndSessionStorage?: boolean;
 }) {
   const dispatch = useAppDispatch();
   const { pathname, search } = useLocation();
@@ -34,16 +39,24 @@ export const useInput = function <T extends string | number>({
 
   const debouncingFn = useCallback(() => {
     setQueryDebouncingState(stateValue!);
-    searchParams.set(searchParamName, stateValue! + "");
+    if (!saveDebouncedStateInSearchParamsAndSessionStorage) return;
+    searchParams.set(searchParamName, JSON.stringify(stateValue));
+    sessionStorage.setItem(searchParamName, JSON.stringify(stateValue));
     navigate(createUrlWithCurrentSearchParams({ searchParams, pathname }), {
       replace: true,
     });
-  }, [searchParams, stateValue, pathname, navigate, searchParamName]);
+  }, [
+    searchParams,
+    stateValue,
+    pathname,
+    navigate,
+    searchParamName,
+    saveDebouncedStateInSearchParamsAndSessionStorage,
+  ]);
 
   useDebouncing(debouncingFn, stateValue !== undefined, debouncingTime);
 
   function handleInputChange(newValue: string) {
-    console.log(searchParamName, newValue, stateValue !== undefined);
     stateValue !== undefined &&
       setStateValue &&
       setStateValue(

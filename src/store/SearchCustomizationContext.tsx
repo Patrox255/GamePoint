@@ -12,8 +12,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useInput } from "../hooks/useInput";
 import { useAppSelector } from "../hooks/reduxStore";
 import { actions } from "./mainSearchBarSlice";
-import generateInitialStateFromSearchParams from "../helpers/generateInitialStateFromSearchParams";
+import generateInitialStateFromSearchParamsOrSessionStorage from "../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
 import useChangeSearchParamsWhenUseReducerChanges from "../hooks/useChangeSearchParamsWhenUseReducerChanges";
+import { useStateWithSearchParams } from "../hooks/useStateWithSearchParams";
 
 type IOrderCustomizationPropertyValues = "" | "1" | "-1";
 
@@ -32,7 +33,7 @@ interface IOrderCustomization {
 }
 
 interface IOrderCustomizationReducer {
-  type: "CHANGE_PROPERTY_VALUE" | "CHANGE_PROPERTY";
+  type: orderCustomizationReducerActionTypes;
   payload: {
     fieldName: "popularity" | "title" | "price";
     newState: IOrderCustomizationPropertyValues | IOrderCustomizationProperty;
@@ -51,6 +52,11 @@ export const SearchCustomizationContext = createContext<{
   maxQueryDebouncingState: number;
   orderCustomizationState: IOrderCustomization;
   orderCustomizationDispatch: React.Dispatch<IOrderCustomizationReducer>;
+  discountActive: number;
+  debouncedDiscountActive: number;
+  setDiscountActive: (newDiscount: number) => void;
+  selectedGenresState: ISelectedGenres;
+  selectedGenresDispatch: React.Dispatch<ISelectedGenresReducer>;
 }>({
   minPrice: 0,
   maxPrice: 0,
@@ -62,6 +68,11 @@ export const SearchCustomizationContext = createContext<{
   maxQueryDebouncingState: 0,
   orderCustomizationState: {} as IOrderCustomization,
   orderCustomizationDispatch: () => {},
+  discountActive: 0,
+  debouncedDiscountActive: 0,
+  setDiscountActive: () => {},
+  selectedGenresState: {} as ISelectedGenres,
+  selectedGenresDispatch: () => {},
 });
 
 type orderCustomizationReducerActionTypes =
@@ -70,14 +81,7 @@ type orderCustomizationReducerActionTypes =
 
 const orderCustomizationReducer: Reducer<
   IOrderCustomization,
-  {
-    type: orderCustomizationReducerActionTypes;
-    payload: {
-      fieldName: "popularity" | "title" | "price";
-      newState: IOrderCustomizationPropertyValues | IOrderCustomizationProperty;
-      debouncingExecution?: boolean;
-    };
-  }
+  IOrderCustomizationReducer
 > = function (state, action) {
   const { fieldName, debouncingExecution = false, newState } = action.payload;
   const debouncedFieldName = `debounced${fieldName.replace(
@@ -89,6 +93,7 @@ const orderCustomizationReducer: Reducer<
     : state[fieldName];
   switch (action.type) {
     case "CHANGE_PROPERTY_VALUE": {
+      console.log(state, action.payload);
       const removeStateProperty = newState === "";
       const usedStateProperties = [...Object.entries(state)].filter(
         (entry) =>
@@ -104,14 +109,12 @@ const orderCustomizationReducer: Reducer<
               )}`) &&
           !isNaN(entry[1].order)
       );
-      console.log(usedStateProperties);
       const orderedPropertiesToOverrideOldOnesIfRemovingProperty =
         Object.fromEntries(
           usedStateProperties
             .sort((a, b) => a[1].order - b[1].order)
             .map((entry, i) => [entry[0], { ...entry[1], order: i }])
         );
-      console.log(orderedPropertiesToOverrideOldOnesIfRemovingProperty);
       const newPropertyObj = {
         value: newState,
         order: removeStateProperty
@@ -144,6 +147,54 @@ const orderCustomizationReducer: Reducer<
   }
 };
 
+type ISelectedGenresProperty = string[];
+
+interface ISelectedGenres {
+  genres: ISelectedGenresProperty;
+  debouncedGenres: ISelectedGenresProperty;
+}
+
+type ISelectedGenresReducer =
+  | {
+      type: "CHANGE_DEBOUNCED_PROPERTY";
+      payload: {
+        newGenres: ISelectedGenresProperty;
+      };
+    }
+  | {
+      type: "ADD_GENRE" | "REMOVE_GENRE";
+      payload: {
+        genreName: string;
+      };
+    };
+
+const selectedGenresReducer: Reducer<ISelectedGenres, ISelectedGenresReducer> =
+  function (state, action) {
+    const { type, payload } = action;
+    console.log(type, payload);
+    switch (type) {
+      case "ADD_GENRE": {
+        const { genreName } = payload;
+        return state.genres.includes(genreName!)
+          ? state
+          : { ...state, genres: [...state.genres, genreName] };
+      }
+      case "REMOVE_GENRE": {
+        const { genreName } = payload;
+        return {
+          ...state,
+          genres: state.genres.filter((genre) => genre !== genreName),
+        };
+      }
+      case "CHANGE_DEBOUNCED_PROPERTY": {
+        const { newGenres } = payload;
+        return { ...state, debouncedGenres: [...newGenres!] };
+      }
+      default:
+        return state;
+    }
+  };
+
 export default function SearchCustomizationContextProvider({
   children,
 }: {
@@ -167,10 +218,18 @@ export default function SearchCustomizationContextProvider({
     });
 
   const [min, setMin] = useState<number>(
-    generateInitialStateFromSearchParams(NaN, searchParams.get("min"))
+    generateInitialStateFromSearchParamsOrSessionStorage(
+      NaN,
+      searchParams,
+      "min"
+    )
   );
   const [max, setMax] = useState<number>(
-    generateInitialStateFromSearchParams(NaN, searchParams.get("max"))
+    generateInitialStateFromSearchParamsOrSessionStorage(
+      NaN,
+      searchParams,
+      "max"
+    )
   );
   const {
     handleInputChange: handleMinChange,
@@ -190,43 +249,46 @@ export default function SearchCustomizationContextProvider({
     searchParamName: "max",
   });
 
-  const popularityParam = searchParams.get("popularity");
-  const priceParam = searchParams.get("price");
-  const titleParam = searchParams.get("title");
   const defaultOrderCustomizationProperty = {
     value: "",
     order: NaN,
   };
 
   const initialOrderCustomizationState: IOrderCustomization = {
-    popularity: generateInitialStateFromSearchParams(
+    popularity: generateInitialStateFromSearchParamsOrSessionStorage(
       defaultOrderCustomizationProperty,
-      popularityParam,
+      searchParams,
+      "popularity",
       true
     ),
-    price: generateInitialStateFromSearchParams(
+    price: generateInitialStateFromSearchParamsOrSessionStorage(
       defaultOrderCustomizationProperty,
-      priceParam,
+      searchParams,
+      "price",
       true
     ),
-    title: generateInitialStateFromSearchParams(
+    title: generateInitialStateFromSearchParamsOrSessionStorage(
       defaultOrderCustomizationProperty,
-      titleParam,
+      searchParams,
+      "title",
       true
     ),
-    debouncedPopularity: generateInitialStateFromSearchParams(
+    debouncedPopularity: generateInitialStateFromSearchParamsOrSessionStorage(
       defaultOrderCustomizationProperty,
-      popularityParam,
+      searchParams,
+      "popularity",
       true
     ),
-    debouncedPrice: generateInitialStateFromSearchParams(
+    debouncedPrice: generateInitialStateFromSearchParamsOrSessionStorage(
       defaultOrderCustomizationProperty,
-      priceParam,
+      searchParams,
+      "price",
       true
     ),
-    debouncedTitle: generateInitialStateFromSearchParams(
+    debouncedTitle: generateInitialStateFromSearchParamsOrSessionStorage(
       defaultOrderCustomizationProperty,
-      titleParam,
+      searchParams,
+      "title",
       true
     ),
   };
@@ -234,7 +296,6 @@ export default function SearchCustomizationContextProvider({
     orderCustomizationReducer,
     initialOrderCustomizationState
   );
-  console.log(orderCustomizationState);
 
   const {
     debouncedPopularity,
@@ -248,6 +309,8 @@ export default function SearchCustomizationContextProvider({
   const orderCustomizationHookData = {
     location,
     navigate,
+    idOfDeeperStateThatIsSentAndDispatchCanChangeIt: "orderCustomization",
+    provideSearchParamNameToDispatch: true,
   };
 
   const orderCustomizationHookCallback = useCallback(
@@ -286,6 +349,51 @@ export default function SearchCustomizationContextProvider({
     ...orderCustomizationHookData,
   });
 
+  const {
+    state: discountActive,
+    setStateWithSearchParams: setDiscountActive,
+    debouncingState: debouncedDiscountActive,
+  } = useStateWithSearchParams(0, "discount", location.pathname);
+
+  const initialSelectedGenresState: ISelectedGenres = {
+    genres: generateInitialStateFromSearchParamsOrSessionStorage(
+      [],
+      searchParams,
+      "genres"
+    ),
+    debouncedGenres: generateInitialStateFromSearchParamsOrSessionStorage(
+      [],
+      searchParams,
+      "genres"
+    ),
+  };
+
+  const [selectedGenresState, selectedGenresDispatch] = useReducer(
+    selectedGenresReducer,
+    initialSelectedGenresState
+  );
+
+  console.log(selectedGenresState);
+
+  const selectedGenresDispatchCallback = useCallback(
+    (newState: ISelectedGenresProperty) => {
+      selectedGenresDispatch({
+        type: "CHANGE_DEBOUNCED_PROPERTY",
+        payload: { newGenres: newState },
+      });
+    },
+    []
+  );
+
+  useChangeSearchParamsWhenUseReducerChanges({
+    stateNormalProperty: selectedGenresState.genres,
+    stateDebouncedProperty: selectedGenresState.debouncedGenres,
+    location,
+    navigate,
+    searchParamName: "genres",
+    dispatchCallbackFn: selectedGenresDispatchCallback,
+  });
+
   return (
     <SearchCustomizationContext.Provider
       value={{
@@ -299,6 +407,11 @@ export default function SearchCustomizationContextProvider({
         searchTermDebouncingState,
         orderCustomizationState,
         orderCustomizationDispatch,
+        discountActive,
+        setDiscountActive,
+        debouncedDiscountActive,
+        selectedGenresState,
+        selectedGenresDispatch,
       }}
     >
       {children}

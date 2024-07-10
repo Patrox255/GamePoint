@@ -44,7 +44,6 @@ export default function Input({
   const handleInputChange: ChangeEventHandler<HTMLInputElement> = (e) => {
     const value = e.currentTarget.value.replace(",", ".");
     const numberRegex = /\d*(,\d{1,2})?/;
-    console.log(value);
     const isValidNumberIfTypeNumber =
       type !== "number"
         ? true

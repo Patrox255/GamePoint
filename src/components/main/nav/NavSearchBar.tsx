@@ -12,7 +12,6 @@ import { actions } from "../../../store/mainSearchBarSlice";
 import GamesResults from "./GamesResults";
 
 export default function NavSearchBar({ placeholder }: { placeholder: string }) {
-  // const { searchTerm, setSearchTerm } = useContext(NavSearchBarContext);
   const searchTerm = useAppSelector(
     (state) => state.mainSearchBarSlice.searchTerm
   );

@@ -2,8 +2,12 @@ import { useEffect, useMemo } from "react";
 import { Location, NavigateFunction } from "react-router-dom";
 import createUrlWithCurrentSearchParams from "../helpers/createUrlWithCurrentSearchParams";
 
-import useCompareComplexForUseMemo from "./useCompareComplexForUseMemo";
-// import debounce from "lodash.debounce";
+import useCompareComplexForUseMemo, {
+  are2ObjectsEqualTopLevel,
+} from "./useCompareComplexForUseMemo";
+import debounce from "lodash.debounce";
+
+const idsOfDeeperStates: { [key: string]: { [key: string]: number } } = {};
 
 export default function useChangeSearchParamsWhenUseReducerChanges<T>({
   stateNormalProperty,
@@ -13,15 +17,54 @@ export default function useChangeSearchParamsWhenUseReducerChanges<T>({
   navigate,
   dispatchCallbackFn,
   timeToWait = 500,
+  idOfDeeperStateThatIsSentAndDispatchCanChangeIt,
+  provideSearchParamNameToDispatch = false,
 }: {
   stateNormalProperty: T;
   stateDebouncedProperty: T;
   searchParamName: string;
   location: Location;
   navigate: NavigateFunction;
-  dispatchCallbackFn: (newState: T, searchParamName: string) => void;
+  dispatchCallbackFn: (
+    newState: T,
+    searchParamName: string
+  ) => void | ((newState: T) => void);
   timeToWait?: number;
+  idOfDeeperStateThatIsSentAndDispatchCanChangeIt?: string;
+  provideSearchParamNameToDispatch?: boolean;
 }) {
+  // This is used when the provided dispatchCallback is able to perform an action which in result can also modify multiple state
+  // properties from different instances of this hook and then without this we would try to update our search params at the same
+  // time which simply would catch change of only one property and because of that I created such ID to make sure that in such
+  // case search params modifications are distributed over time
+  useEffect(() => {
+    if (!idOfDeeperStateThatIsSentAndDispatchCanChangeIt) return;
+
+    if (
+      idsOfDeeperStates[idOfDeeperStateThatIsSentAndDispatchCanChangeIt] !==
+      undefined
+    ) {
+      if (
+        idsOfDeeperStates[idOfDeeperStateThatIsSentAndDispatchCanChangeIt][
+          searchParamName
+        ] !== undefined
+      )
+        return;
+      const index = [
+        ...Object.entries(
+          idsOfDeeperStates[idOfDeeperStateThatIsSentAndDispatchCanChangeIt]
+        ),
+      ].length;
+      idsOfDeeperStates[idOfDeeperStateThatIsSentAndDispatchCanChangeIt][
+        searchParamName
+      ] = index;
+    } else {
+      idsOfDeeperStates[idOfDeeperStateThatIsSentAndDispatchCanChangeIt] = {
+        [searchParamName]: 0,
+      };
+    }
+  }, [idOfDeeperStateThatIsSentAndDispatchCanChangeIt, searchParamName]);
+
   const { search, pathname } = location;
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
 
@@ -40,35 +83,60 @@ export default function useChangeSearchParamsWhenUseReducerChanges<T>({
     [stableStateDebouncedProperty]
   );
 
-  console.log(stateNormalPropertyMemoized, stateDebouncedPropertyMemoized);
+  const debouncedUpdate = useMemo(
+    () =>
+      debounce((stateNormalPropertyMemoized: T) => {
+        provideSearchParamNameToDispatch
+          ? dispatchCallbackFn(stateNormalPropertyMemoized, searchParamName)
+          : (dispatchCallbackFn as (newState: T) => void)(
+              stateNormalPropertyMemoized
+            );
+        searchParams.set(
+          searchParamName,
+          JSON.stringify(stateNormalPropertyMemoized)
+        );
+        sessionStorage.setItem(
+          searchParamName,
+          JSON.stringify(stateNormalPropertyMemoized)
+        );
+        navigate(createUrlWithCurrentSearchParams({ searchParams, pathname }), {
+          replace: true,
+        });
+      }, timeToWait + (!idOfDeeperStateThatIsSentAndDispatchCanChangeIt || idsOfDeeperStates[idOfDeeperStateThatIsSentAndDispatchCanChangeIt] === undefined ? 0 : idsOfDeeperStates[idOfDeeperStateThatIsSentAndDispatchCanChangeIt!][searchParamName] * 50)),
+    [
+      timeToWait,
+      idOfDeeperStateThatIsSentAndDispatchCanChangeIt,
+      searchParamName,
+      provideSearchParamNameToDispatch,
+      dispatchCallbackFn,
+      searchParams,
+      navigate,
+      pathname,
+    ]
+  );
+
+  console.log(typeof stateNormalPropertyMemoized, stateNormalPropertyMemoized);
 
   useEffect(() => {
-    if (stateNormalPropertyMemoized === stateDebouncedPropertyMemoized) return;
-    console.log(
-      "CHANGED",
-      stateNormalPropertyMemoized,
-      stateDebouncedPropertyMemoized
-    );
-    const timer = setTimeout(() => {
-      dispatchCallbackFn(stateNormalPropertyMemoized, searchParamName);
-      searchParams.set(
-        searchParamName,
-        JSON.stringify(stateNormalPropertyMemoized)
-      );
-      navigate(createUrlWithCurrentSearchParams({ searchParams, pathname }), {
-        replace: true,
-      });
-    }, timeToWait);
-    return () => clearTimeout(timer);
+    if (
+      (typeof stateNormalPropertyMemoized === "object" &&
+        are2ObjectsEqualTopLevel(
+          stateNormalPropertyMemoized as object,
+          stateDebouncedPropertyMemoized as object
+        )) ||
+      (typeof stateNormalPropertyMemoized !== "object" &&
+        stateNormalPropertyMemoized === stateDebouncedPropertyMemoized)
+    ) {
+      return;
+    }
+    debouncedUpdate(stateNormalPropertyMemoized);
+    return () => {
+      debouncedUpdate.cancel();
+    };
   }, [
-    stateNormalPropertyMemoized,
+    debouncedUpdate,
     stateDebouncedPropertyMemoized,
-    searchParamName,
-    navigate,
-    pathname,
-    searchParams,
-    dispatchCallbackFn,
-    timeToWait,
+    stateNormalPropertyMemoized,
   ]);
 
   // const debouncedUpdate = useMemo(

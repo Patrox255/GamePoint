@@ -1,31 +1,37 @@
 import { useRef } from "react";
 
+export function are2ObjectsEqualTopLevel(obj1: object, obj2: object) {
+  let isSame = true;
+
+  if (Array.isArray(obj1) && Array.isArray(obj2)) {
+    if (obj1.length !== obj2.length) isSame = false;
+    obj1.forEach((arr1Elem) => {
+      if (!obj2.includes(arr1Elem)) isSame = false;
+    });
+  } else
+    [...Object.entries(obj1)].forEach((obj1Entry) => {
+      const obj2EquivalentOfObj1Entry = [...Object.entries(obj2)].find(
+        (obj2Entry) => obj2Entry[0] === obj1Entry[0]
+      );
+      if (
+        !obj2EquivalentOfObj1Entry ||
+        (!isNaN(obj2EquivalentOfObj1Entry[1]) &&
+          obj2EquivalentOfObj1Entry[1] !== obj1Entry[1]) ||
+        (isNaN(obj2EquivalentOfObj1Entry[1]) && !isNaN(obj1Entry[1]))
+      )
+        isSame = false;
+    });
+  return isSame;
+}
+
 export default function useCompareComplexForUseMemo<T>(val: T) {
   const ref = useRef<T>();
 
   if (!ref.current) ref.current = val;
-  else {
-    if (typeof val !== "object" && val !== ref) ref.current = val;
-    let isSame = true;
-    if (Array.isArray(val)) {
-      if ((val as unknown[]).length !== (ref.current as unknown[]).length)
-        isSame = false;
-      val.forEach((arrValue) => {
-        if (!(ref.current as unknown[])?.includes(arrValue)) isSame = false;
-      });
-    } else {
-      [...Object.entries(val as object)].forEach((valEntry) => {
-        const refEntryEquivalentOfValEntry = [
-          ...Object.entries(ref.current!),
-        ].find((refEntry) => refEntry[0] === valEntry[0]);
-        if (
-          !refEntryEquivalentOfValEntry ||
-          refEntryEquivalentOfValEntry[1] !== valEntry[1]
-        )
-          isSame = false;
-      });
-    }
-    if (!isSame) ref.current = val;
-  }
+  if (
+    (typeof val !== "object" && val !== ref) ||
+    !are2ObjectsEqualTopLevel(val as object, ref.current!)
+  )
+    ref.current = val;
   return ref.current;
 }

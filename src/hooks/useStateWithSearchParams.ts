@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import createUrlWithCurrentSearchParams from "../helpers/createUrlWithCurrentSearchParams";
 import useDebouncing from "./useDebouncing";
-import generateInitialStateFromSearchParams from "../helpers/generateInitialStateFromSearchParams";
+import generateInitialStateFromSearchParams from "../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
 
 export const useStateWithSearchParams = function <T>(
   initialState: T,
@@ -11,15 +11,23 @@ export const useStateWithSearchParams = function <T>(
 ) {
   const { search, pathname } = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
-  const searchParamValue = searchParams.get(searchParamName);
   const navigate = useNavigate();
 
-  const [state, setState] = useState<T>(
-    generateInitialStateFromSearchParams(initialState, searchParamValue)
+  const initialValueForUseState = generateInitialStateFromSearchParams(
+    initialState,
+    searchParams,
+    searchParamName
+  );
+
+  const [state, setState] = useState<T>(initialValueForUseState);
+  const [debouncingState, setDebouncingState] = useState<T>(
+    initialValueForUseState
   );
 
   const debouncingFn = useCallback(() => {
     searchParams.set(searchParamName, JSON.stringify(state));
+    sessionStorage.setItem(searchParamName, JSON.stringify(state));
+    setDebouncingState(state);
     navigate(
       createUrlWithCurrentSearchParams({
         searchParams,
@@ -28,12 +36,12 @@ export const useStateWithSearchParams = function <T>(
       { replace: true }
     );
   }, [searchParams, searchParamName, state, navigate, pathName, pathname]);
-  useDebouncing(debouncingFn, searchParamValue != state);
+  useDebouncing(debouncingFn, debouncingState != state, 500);
 
   const setStateWithSearchParams = useCallback((newState: T) => {
     console.log(newState);
     setState(newState);
   }, []);
 
-  return { state, setStateWithSearchParams, searchParams };
+  return { state, setStateWithSearchParams, searchParams, debouncingState };
 };

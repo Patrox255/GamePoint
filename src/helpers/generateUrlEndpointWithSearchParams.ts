@@ -4,7 +4,6 @@ export default function generateUrlEndpointWithSearchParams(
     [key: string]: unknown;
   }
 ) {
-  console.log(searchParams);
   return `${url}?${[...Object.entries(searchParams)]
     .filter((entry) => entry[1] !== undefined)
     .map(

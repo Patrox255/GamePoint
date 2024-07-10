@@ -1,16 +1,11 @@
-import { load10MostPopularGenres } from "../../lib/fetch";
 import LoadingFallback from "../UI/LoadingFallback";
 import Error from "../UI/Error";
 import TagsComponent from "../game/tags/TagsComponent";
-import { useQuery } from "@tanstack/react-query";
 import AnimatedAppearance from "../UI/AnimatedAppearance";
+import useQueryGetTheMostPopularGenres from "../../hooks/useQueryGetTheMostPopularGenres";
 
 export default function MostPopularGenres() {
-  const { isLoading, data, error, isError } = useQuery({
-    queryFn: ({ signal }) => load10MostPopularGenres(signal),
-    queryKey: ["games", "genres"],
-    staleTime: 2000,
-  });
+  const { isLoading, isError, error, data } = useQueryGetTheMostPopularGenres();
 
   return (
     <article className="popular-genres-container w-1/2 flex justify-center flex-col text-center gap-4">
@@ -19,7 +14,7 @@ export default function MostPopularGenres() {
           Browse some trending genres
         </h1>
         {isLoading && <LoadingFallback />}
-        {isError && <Error message={error.message} />}
+        {isError && <Error message={error?.message} />}
 
         {data && (
           <TagsComponent
