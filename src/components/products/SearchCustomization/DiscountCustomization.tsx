@@ -10,8 +10,6 @@ export default function DiscountCustomization() {
   const { isLoading, games } = useContext(ProductsContext);
   const areThereGamesOnSale = games.some((game) => game.discount > 0);
 
-  console.log(games);
-
   if (!areThereGamesOnSale && discountActive && !isLoading)
     setDiscountActive(0);
 

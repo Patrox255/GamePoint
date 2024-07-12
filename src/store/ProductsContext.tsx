@@ -40,7 +40,10 @@ export default function ProductsContextProvider({
     searchTermDebouncingState,
     orderCustomizationState,
     debouncedDiscountActive,
-    selectedGenresState: { debouncedGenres },
+    selectedGenresState: { debouncedStateArr: debouncedGenres },
+    selectedPlatformsState: { debouncedStateArr: debouncedPlatforms },
+    selectedPublishersState: { debouncedStateArr: debouncedPublishers },
+    selectedDevelopersState: { debouncedStateArr: debouncedDevelopers },
   } = useContext(SearchCustomizationContext);
   const { state: pageNr, setStateWithSearchParams: setPageNr } =
     useStateWithSearchParams(0, "page", "/products");
@@ -52,14 +55,29 @@ export default function ProductsContextProvider({
     isLoading: countGamesIsLoading,
   } = useQuery({
     queryFn: ({ signal, queryKey }) => {
-      const [, , , searchTerm, min, max, discount, genres] = queryKey;
+      const [
+        ,
+        ,
+        ,
+        searchTerm,
+        min,
+        max,
+        discount,
+        genres,
+        platforms,
+        developers,
+        publishers,
+      ] = queryKey;
       return retrieveAmountOfGamesByQuery(
         searchTerm as string,
         signal,
         min as number,
         max as number,
         discount as number,
-        genres as string[]
+        genres as string[],
+        platforms as string[],
+        developers as string[],
+        publishers as string[]
       );
     },
     queryKey: [
@@ -71,6 +89,9 @@ export default function ProductsContextProvider({
       maxQueryDebouncingState,
       debouncedDiscountActive,
       debouncedGenres,
+      debouncedPlatforms,
+      debouncedDevelopers,
+      debouncedPublishers,
     ],
     enabled: pageNr !== null,
   });
@@ -105,6 +126,9 @@ export default function ProductsContextProvider({
         debouncedTitle,
         discount,
         genres,
+        platforms,
+        developers,
+        publishers,
       ] = queryKey;
       return load10GamesByQuery(
         searchTerm as string,
@@ -116,7 +140,10 @@ export default function ProductsContextProvider({
         debouncedPrice as IOrderCustomizationProperty,
         debouncedTitle as IOrderCustomizationProperty,
         discount as number,
-        genres as string[]
+        genres as string[],
+        platforms as string[],
+        developers as string[],
+        publishers as string[]
       );
     },
     queryKey: [
@@ -131,6 +158,9 @@ export default function ProductsContextProvider({
       debouncedTitle,
       debouncedDiscountActive,
       debouncedGenres,
+      debouncedPlatforms,
+      debouncedDevelopers,
+      debouncedPublishers,
     ],
     enabled:
       !countGamesIsLoading &&

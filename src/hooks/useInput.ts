@@ -2,6 +2,7 @@ import {
   Dispatch,
   SetStateAction,
   useCallback,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -11,6 +12,10 @@ import { ActionCreatorWithPayload } from "@reduxjs/toolkit";
 import { useAppDispatch } from "./reduxStore";
 import useDebouncing from "./useDebouncing";
 
+const sameTimeOccurrenceIdsAndArrays: {
+  [key: string]: { [key: string]: number };
+} = {};
+
 export const useInput = function <T extends string | number>({
   stateValue,
   setStateValue,
@@ -18,6 +23,7 @@ export const useInput = function <T extends string | number>({
   searchParamName,
   debouncingTime = 500,
   saveDebouncedStateInSearchParamsAndSessionStorage = true,
+  sameTimeOccurrenceChanceId,
 }: {
   stateValue?: T;
   setStateValue?:
@@ -28,6 +34,7 @@ export const useInput = function <T extends string | number>({
   searchParamName: string;
   debouncingTime?: number;
   saveDebouncedStateInSearchParamsAndSessionStorage?: boolean;
+  sameTimeOccurrenceChanceId?: string;
 }) {
   const dispatch = useAppDispatch();
   const { pathname, search } = useLocation();
@@ -36,6 +43,32 @@ export const useInput = function <T extends string | number>({
   const [queryDebouncingState, setQueryDebouncingState] = useState<T>(
     stateValue!
   );
+
+  useEffect(() => {
+    if (!sameTimeOccurrenceChanceId) return;
+
+    if (
+      sameTimeOccurrenceIdsAndArrays[sameTimeOccurrenceChanceId] !== undefined
+    ) {
+      if (
+        sameTimeOccurrenceIdsAndArrays[sameTimeOccurrenceChanceId][
+          searchParamName
+        ]
+      )
+        return;
+      sameTimeOccurrenceIdsAndArrays[sameTimeOccurrenceChanceId][
+        searchParamName
+      ] = [
+        ...Object.entries(
+          sameTimeOccurrenceIdsAndArrays[sameTimeOccurrenceChanceId]
+        ),
+      ].length;
+    } else {
+      sameTimeOccurrenceIdsAndArrays[sameTimeOccurrenceChanceId] = {
+        [searchParamName]: 0,
+      };
+    }
+  }, [sameTimeOccurrenceChanceId, searchParamName]);
 
   const debouncingFn = useCallback(() => {
     setQueryDebouncingState(stateValue!);
@@ -54,7 +87,21 @@ export const useInput = function <T extends string | number>({
     saveDebouncedStateInSearchParamsAndSessionStorage,
   ]);
 
-  useDebouncing(debouncingFn, stateValue !== undefined, debouncingTime);
+  useDebouncing(
+    debouncingFn,
+    stateValue !== undefined,
+    debouncingTime +
+      (sameTimeOccurrenceChanceId &&
+      sameTimeOccurrenceIdsAndArrays[sameTimeOccurrenceChanceId] !==
+        undefined &&
+      sameTimeOccurrenceIdsAndArrays[sameTimeOccurrenceChanceId][
+        searchParamName
+      ] !== undefined
+        ? sameTimeOccurrenceIdsAndArrays[sameTimeOccurrenceChanceId][
+            searchParamName
+          ] * 50
+        : 0)
+  );
 
   function handleInputChange(newValue: string) {
     stateValue !== undefined &&

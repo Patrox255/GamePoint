@@ -1,6 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
 import { IGame } from "../models/game.model";
-import { IGenre } from "../models/genre.model";
 import { API_URL } from "./config";
 import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
 import { IOrderCustomizationProperty } from "../store/SearchCustomizationContext";
@@ -49,7 +48,10 @@ export const load10GamesByQuery = async (
   priceOrder?: IOrderCustomizationProperty,
   titleOrder?: IOrderCustomizationProperty,
   discount?: number,
-  genres?: string[]
+  genres?: string[],
+  platforms?: string[],
+  developers?: string[],
+  publishers?: string[]
 ) => {
   const data = await getJSON<IGame[]>(
     generateUrlEndpointWithSearchParams(`${API_URL}/products`, {
@@ -63,6 +65,9 @@ export const load10GamesByQuery = async (
       titleOrder,
       discount,
       genres,
+      platforms,
+      developers,
+      publishers,
     }),
     signal
   );
@@ -75,7 +80,10 @@ export const retrieveAmountOfGamesByQuery = async (
   priceMin?: number,
   priceMax?: number,
   discount?: number,
-  genres?: string[]
+  genres?: string[],
+  platforms?: string[],
+  developers?: string[],
+  publishers?: string[]
 ) => {
   const data = await getJSON<number>(
     generateUrlEndpointWithSearchParams(`${API_URL}/products`, {
@@ -85,32 +93,37 @@ export const retrieveAmountOfGamesByQuery = async (
       priceMin,
       discount,
       genres,
+      platforms,
+      developers,
+      publishers,
     }),
     signal
   );
   return data;
 };
 
-export const loadGenres = async ({
+export const loadTags = async <tagInterface>({
   signal,
   mostPopular,
   query,
   limit,
+  gameDocumentTagPropertyName,
 }: {
   signal?: AbortSignal;
   mostPopular?: number;
   query?: string;
   limit?: number;
+  gameDocumentTagPropertyName: string;
 }) => {
-  const data = await getJSON<IGenre[]>(
-    generateUrlEndpointWithSearchParams(`${API_URL}/genres`, {
+  const data = await getJSON<tagInterface[]>(
+    generateUrlEndpointWithSearchParams(`${API_URL}/tags`, {
       mostPopular,
       query,
       limit,
+      gameDocumentTagPropertyName,
     }),
     signal
   );
-  console.log(data);
   return data;
 };
 

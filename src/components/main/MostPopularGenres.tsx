@@ -2,7 +2,7 @@ import LoadingFallback from "../UI/LoadingFallback";
 import Error from "../UI/Error";
 import TagsComponent from "../game/tags/TagsComponent";
 import AnimatedAppearance from "../UI/AnimatedAppearance";
-import useQueryGetTheMostPopularGenres from "../../hooks/useQueryGetTheMostPopularGenres";
+import useQueryGetTheMostPopularGenres from "../../hooks/searchCustomizationRelated/useQueryGetTheMostPopularTags";
 
 export default function MostPopularGenres() {
   const { isLoading, isError, error, data } = useQueryGetTheMostPopularGenres();

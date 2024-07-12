@@ -117,6 +117,9 @@ const startServer = async () => {
             titleOrder,
             discount,
             genres,
+            platforms,
+            developers,
+            publishers,
           } = queries;
 
           await validateQueriesTypes([
@@ -132,9 +135,64 @@ const startServer = async () => {
             ["object", titleOrder],
             ["number", discount],
             ["array", genres],
+            ["array", platforms],
+            ["array", developers],
+            ["array", publishers],
           ]);
-          const genresObjs = await Genre.find({ name: { $in: genres } });
           const limitNr = limit;
+
+          const mapGamePropertyNameToMongooseModel = {
+            genres: Genre,
+            platforms: Platform,
+            publisher: Publisher,
+            developer: Developer,
+          };
+
+          type generateFilterTagEntryArgument = {
+            tags: string[];
+            gameDocumentTagPropertyName: keyof IGame;
+          };
+
+          const generateFilterTagEntry = async (
+            tagEntryObj: generateFilterTagEntryArgument
+          ) => {
+            const { tags, gameDocumentTagPropertyName } = tagEntryObj;
+            const documentsCorrespondingToProvidedTags =
+              await mapGamePropertyNameToMongooseModel[
+                gameDocumentTagPropertyName as keyof typeof mapGamePropertyNameToMongooseModel
+              ].find({ name: { $in: tags } });
+
+            return {
+              ...(tags &&
+                tags.length !== 0 && {
+                  [gameDocumentTagPropertyName]: {
+                    $in: documentsCorrespondingToProvidedTags.map(
+                      (documentCorrespondingToProvidedTags) =>
+                        documentCorrespondingToProvidedTags._id
+                    ),
+                  },
+                }),
+            };
+          };
+
+          const generateFilterTagsEntries = async (
+            tags: generateFilterTagEntryArgument[]
+          ) => {
+            const filterEntriesPromises = tags.map(async (tag) => {
+              const tagGeneratedFilterEntry = await generateFilterTagEntry(tag);
+              return Object.entries(tagGeneratedFilterEntry);
+            });
+            const filterEntries = await Promise.all(filterEntriesPromises);
+            return Object.fromEntries(filterEntries.flat());
+          };
+
+          const filterTagsEntries = await generateFilterTagsEntries([
+            { tags: genres, gameDocumentTagPropertyName: "genres" },
+            { tags: platforms, gameDocumentTagPropertyName: "platforms" },
+            { tags: developers, gameDocumentTagPropertyName: "developer" },
+            { tags: publishers, gameDocumentTagPropertyName: "publisher" },
+          ]);
+          console.table(filterTagsEntries);
 
           const filter = {
             ...(query && { title: { $regex: query, $options: "i" } }),
@@ -147,12 +205,7 @@ const startServer = async () => {
               },
             }),
             ...(discount === 1 && { discount: { $gt: 0 } }),
-            ...(genres &&
-              genresObjs.length !== 0 && {
-                genres: {
-                  $in: genresObjs.map((genreObj) => genreObj._id),
-                },
-              }),
+            ...filterTagsEntries,
           };
 
           if (count === 1) {
@@ -162,7 +215,6 @@ const startServer = async () => {
           }
 
           const mongooseQuery = Game.find(filter);
-          console.log(filter);
 
           mongooseQuery.populate([
             "genres",
@@ -247,51 +299,101 @@ const startServer = async () => {
     );
 
     app.get(
-      "/genres",
+      "/tags",
       async (req: Request, res: Response, next: NextFunction) => {
+        type availableTagPropertyNames =
+          | "genres"
+          | "platforms"
+          | "publisher"
+          | "developer";
+        type tagType<tagName extends availableTagPropertyNames> =
+          (tagName extends "genres"
+            ? IGenre
+            : tagName extends "platforms"
+            ? IPlatform
+            : tagName extends "publisher"
+            ? IPublisher
+            : tagName extends "developer"
+            ? IDeveloper
+            : undefined) & {
+            popularity?: number;
+          };
+
+        const tagModelBasedOnType = {
+          genres: Genre,
+          platforms: Platform,
+          publisher: Publisher,
+          developer: Developer,
+        };
+
+        interface IGameTag {
+          _id: mongoose.ObjectId;
+          name: string;
+        }
+
         try {
           const queries = await parseQueries(req);
-          const { mostPopular, query, limit } = queries;
+          const { mostPopular, query, limit, gameDocumentTagPropertyName } =
+            queries;
           await validateQueriesTypes([
             ["number", mostPopular],
             ["string", query],
             ["number", limit],
+            ["string", gameDocumentTagPropertyName],
           ]);
-          let genres: (IGenre & { popularity?: number })[] = [];
+          type tagsType = tagType<typeof gameDocumentTagPropertyName>[];
+          let tags: tagsType = [];
           if (mostPopular === 1) {
             const games = await Game.find()
               .populate(["genres", "developer", "publisher", "platforms"])
               .exec();
-            games.forEach((game) =>
-              game.genres.forEach((genre) => {
-                interface IGameGenre {
-                  _id: mongoose.ObjectId;
-                  name: string;
-                }
-                const foundGenreObj = genres.find(
-                  (genreObj) =>
-                    genreObj.name === (genre as unknown as IGameGenre).name
+            games.forEach((game) => {
+              const individualGameTagValue =
+                game[gameDocumentTagPropertyName as availableTagPropertyNames];
+              if (individualGameTagValue === undefined) return;
+
+              function handleModifyTagsArrWithNewTagFromGame(
+                tags: tagsType,
+                tag: IGameTag
+              ) {
+                const foundTagObj = tags.find(
+                  (tagObj) => tagObj.name === tag.name
                 );
 
-                if (foundGenreObj)
-                  foundGenreObj.popularity! += game.popularity!;
+                if (foundTagObj) foundTagObj.popularity! += game.popularity!;
                 else
-                  genres.push({
-                    name: (genre as unknown as IGameGenre).name,
+                  tags.push({
+                    name: tag.name,
                     popularity: game.popularity!,
                   });
-              })
-            );
+              }
 
-            genres.sort((a, b) => b.popularity! - a.popularity!);
-            genres = genres.slice(0, limit);
+              if (Array.isArray(individualGameTagValue))
+                return individualGameTagValue.forEach((tag) =>
+                  handleModifyTagsArrWithNewTagFromGame(
+                    tags,
+                    tag as unknown as IGameTag
+                  )
+                );
+              handleModifyTagsArrWithNewTagFromGame(
+                tags,
+                individualGameTagValue as unknown as IGameTag
+              );
+            });
+
+            tags.sort((a, b) => b.popularity! - a.popularity!);
+            tags = tags.slice(0, limit);
           } else {
-            genres = await Genre.find({
+            const findQuery = tagModelBasedOnType[
+              gameDocumentTagPropertyName as availableTagPropertyNames
+            ].find({
               name: { $regex: query, $options: "i" },
             });
+            if (limit) findQuery.limit(limit);
+            tags = await findQuery.exec();
           }
 
-          res.status(200).json(genres);
+          res.status(200).json(tags);
         } catch (err) {
           next(err);
         }

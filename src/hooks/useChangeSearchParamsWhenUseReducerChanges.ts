@@ -102,7 +102,7 @@ export default function useChangeSearchParamsWhenUseReducerChanges<T>({
         navigate(createUrlWithCurrentSearchParams({ searchParams, pathname }), {
           replace: true,
         });
-      }, timeToWait + (!idOfDeeperStateThatIsSentAndDispatchCanChangeIt || idsOfDeeperStates[idOfDeeperStateThatIsSentAndDispatchCanChangeIt] === undefined ? 0 : idsOfDeeperStates[idOfDeeperStateThatIsSentAndDispatchCanChangeIt!][searchParamName] * 50)),
+      }, timeToWait + (!idOfDeeperStateThatIsSentAndDispatchCanChangeIt || idsOfDeeperStates[idOfDeeperStateThatIsSentAndDispatchCanChangeIt] === undefined || idsOfDeeperStates[idOfDeeperStateThatIsSentAndDispatchCanChangeIt][searchParamName] === undefined ? 0 : idsOfDeeperStates[idOfDeeperStateThatIsSentAndDispatchCanChangeIt!][searchParamName] * 50)),
     [
       timeToWait,
       idOfDeeperStateThatIsSentAndDispatchCanChangeIt,
@@ -114,8 +114,6 @@ export default function useChangeSearchParamsWhenUseReducerChanges<T>({
       pathname,
     ]
   );
-
-  console.log(typeof stateNormalPropertyMemoized, stateNormalPropertyMemoized);
 
   useEffect(() => {
     if (
@@ -138,31 +136,4 @@ export default function useChangeSearchParamsWhenUseReducerChanges<T>({
     stateDebouncedPropertyMemoized,
     stateNormalPropertyMemoized,
   ]);
-
-  // const debouncedUpdate = useMemo(
-  //   () =>
-  //     debounce((stateNormalProperty: T) => {
-  //       dispatchCallbackFn(stateNormalProperty, searchParamName);
-  //       searchParams.set(searchParamName, JSON.stringify(stateNormalProperty));
-  //       navigate(createUrlWithCurrentSearchParams({ searchParams, pathname }), {
-  //         replace: true,
-  //       });
-  //     }, timeToWait),
-  //   [
-  //     dispatchCallbackFn,
-  //     navigate,
-  //     pathname,
-  //     searchParamName,
-  //     searchParams,
-  //     timeToWait,
-  //   ]
-  // );
-
-  // useEffect(() => {
-  //   if (stateNormalProperty === stateDebouncedProperty) return;
-
-  //   debouncedUpdate(stateNormalProperty);
-
-  //   return () => debouncedUpdate.cancel();
-  // }, [debouncedUpdate, stateDebouncedProperty, stateNormalProperty]);
 }

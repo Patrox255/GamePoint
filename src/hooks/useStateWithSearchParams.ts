@@ -39,7 +39,6 @@ export const useStateWithSearchParams = function <T>(
   useDebouncing(debouncingFn, debouncingState != state, 500);
 
   const setStateWithSearchParams = useCallback((newState: T) => {
-    console.log(newState);
     setState(newState);
   }, []);
 

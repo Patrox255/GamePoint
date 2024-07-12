@@ -78,6 +78,7 @@ export default function Input({
         step,
         onInput: handleInputChange,
       }) || { onChange: handleInputChange })}
+      layout
     />
   );
 }

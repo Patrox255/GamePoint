@@ -1,14 +1,14 @@
 import { useContext, useState } from "react";
-import useQueryGetTheMostPopularGenres from "../../../hooks/useQueryGetTheMostPopularGenres";
+
+import useQueryGetTheMostPopularGenres from "../../../hooks/searchCustomizationRelated/useQueryGetTheMostPopularTags";
 import TagsComponent from "../../game/tags/TagsComponent";
 import Input from "../../UI/Input";
 import { useInput } from "../../../hooks/useInput";
-import { useQuery } from "@tanstack/react-query";
 import LoadingFallback from "../../UI/LoadingFallback";
 import Error from "../../UI/Error";
-import { loadGenres } from "../../../lib/fetch";
 import { SearchCustomizationContext } from "../../../store/SearchCustomizationContext";
 import Button from "../../UI/Button";
+import useQueryGetGenresAccordingToQuery from "../../../hooks/searchCustomizationRelated/useQueryGetTagsAccordingToQuery";
 
 export default function GenresCustomization() {
   const {
@@ -25,29 +25,17 @@ export default function GenresCustomization() {
     saveDebouncedStateInSearchParamsAndSessionStorage: false,
   });
 
-  const {
-    data: queryGenresData,
-    isLoading: queryGenresIsLoading,
-    error: queryGenresError,
-  } = useQuery({
-    queryFn: ({ signal, queryKey }) => {
-      const [, , limit, query] = queryKey;
-      return loadGenres({
-        signal,
-        limit: limit as number,
-        query: query as string,
-      });
-    },
-    queryKey: ["games", "genres", 10, queryDebouncingState],
-  });
-
   const typedCustomQuery = queryDebouncingState !== "";
 
   const { selectedGenresState, selectedGenresDispatch } = useContext(
     SearchCustomizationContext
   );
 
-  console.log(selectedGenresState);
+  const {
+    data: queryGenresData,
+    isLoading: queryGenresIsLoading,
+    error: queryGenresError,
+  } = useQueryGetGenresAccordingToQuery(queryDebouncingState);
 
   let content;
   if (
@@ -81,14 +69,20 @@ export default function GenresCustomization() {
           <Button
             onClick={() =>
               selectedGenresDispatch({
-                type: selectedGenresState.genres.includes(tag)
-                  ? "REMOVE_GENRE"
-                  : "ADD_GENRE",
+                type: selectedGenresState.stateArr.includes(tag)
+                  ? "REMOVE_VALUE_FROM_ARR"
+                  : "ADD_VALUE_TO_ARR",
                 payload: {
-                  genreName: tag,
+                  value: tag,
                 },
               })
             }
+            disabled={
+              selectedGenresState.stateArr.includes(tag) !==
+              selectedGenresState.debouncedStateArr.includes(tag)
+            }
+            active={selectedGenresState.stateArr.includes(tag)}
+            canClickWhileActive
           >
             {tag}
           </Button>
@@ -100,16 +94,20 @@ export default function GenresCustomization() {
     <article className="flex flex-col justify-center items-center gap-3 py-2 w-full">
       <h2 className="text-highlightRed">Genres</h2>
       <div className="flex flex-col justify-center items-center gap-3">
-        <TagsComponent tags={selectedGenresState.genres}>
+        <TagsComponent tags={selectedGenresState.stateArr}>
           {(tag) => (
             <Button
               onClick={() =>
                 selectedGenresDispatch({
-                  type: "REMOVE_GENRE",
+                  type: "REMOVE_VALUE_FROM_ARR",
                   payload: {
-                    genreName: tag,
+                    value: tag,
                   },
                 })
+              }
+              disabled={
+                selectedGenresState.stateArr.includes(tag) !==
+                selectedGenresState.debouncedStateArr.includes(tag)
               }
             >
               {tag}

@@ -23,6 +23,8 @@ export default function TagComponent({
           translateX: "0",
         },
       }}
+      exit={{ opacity: 0, transition: { duration: 0.5, type: "spring" } }}
+      layout
     >
       {children}
     </motion.li>

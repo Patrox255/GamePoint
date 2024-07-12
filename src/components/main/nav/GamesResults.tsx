@@ -56,7 +56,7 @@ export default function GamesResults({
             animate="normal"
             exit="disappear"
             whileHover="highlighted"
-            layout
+            layout="size"
           >
             <Link
               className="w-full grid grid-cols-gameSearchBarResult items-center gap-2 px-6"
