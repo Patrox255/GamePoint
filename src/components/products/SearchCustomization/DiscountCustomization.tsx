@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import Button from "../../UI/Button";
-import { SearchCustomizationContext } from "../../../store/SearchCustomizationContext";
-import { ProductsContext } from "../../../store/ProductsContext";
+import { SearchCustomizationContext } from "../../../store/products/SearchCustomizationContext";
+import { ProductsContext } from "../../../store/products/ProductsContext";
 
 export default function DiscountCustomization() {
   const { discountActive, setDiscountActive } = useContext(

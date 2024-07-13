@@ -8,7 +8,7 @@ import Error from "../../UI/Error";
 import {
   ISearchCustomizationContext,
   SearchCustomizationContext,
-} from "../../../store/SearchCustomizationContext";
+} from "../../../store/products/SearchCustomizationContext";
 import Button from "../../UI/Button";
 import {
   ISelectedTags,

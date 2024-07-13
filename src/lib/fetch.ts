@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { IGame } from "../models/game.model";
 import { API_URL } from "./config";
 import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
-import { IOrderCustomizationProperty } from "../store/SearchCustomizationContext";
+import { IOrderCustomizationProperty } from "../store/products/SearchCustomizationContext";
 
 export const queryClient = new QueryClient();
 // queryClient.invalidateQueries({ queryKey: ["games"], exact: false });
@@ -16,11 +16,13 @@ export const getJSON = async function <dataInterface>(
   });
   const data = await res.json();
   if (!res.ok)
-    throw new Error(
-      `${(data as { message?: string }).message || "Failed to fetch data."}, ${
-        res.status
-      }`
-    );
+    throw {
+      message: `${
+        (data && (data as { message?: string }).message) ||
+        "Failed to fetch data."
+      }`,
+      status: res.status,
+    };
 
   return { data } as { data: dataInterface };
 };
@@ -132,6 +134,20 @@ export const retrieveMinAndMaxOfExistingPrices = async (
 ) => {
   const data = await getJSON<{ min: number; max: number }>(
     `${API_URL}/products/price`,
+    signal
+  );
+  return data;
+};
+
+export const getGameData = async ({
+  signal,
+  productSlug,
+}: {
+  signal?: AbortSignal;
+  productSlug: string;
+}) => {
+  const data = await getJSON<IGame>(
+    `${API_URL}/products/${productSlug}`,
     signal
   );
   return data;

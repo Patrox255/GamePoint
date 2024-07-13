@@ -9,16 +9,16 @@ import {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { useInput } from "../hooks/useInput";
-import { useAppSelector } from "../hooks/reduxStore";
-import { actions } from "./mainSearchBarSlice";
-import generateInitialStateFromSearchParamsOrSessionStorage from "../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
-import useChangeSearchParamsWhenUseReducerChanges from "../hooks/useChangeSearchParamsWhenUseReducerChanges";
-import { useStateWithSearchParams } from "../hooks/useStateWithSearchParams";
+import { useInput } from "../../hooks/useInput";
+import { useAppSelector } from "../../hooks/reduxStore";
+import { actions } from "../mainSearchBarSlice";
+import generateInitialStateFromSearchParamsOrSessionStorage from "../../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
+import useChangeSearchParamsWhenUseReducerChanges from "../../hooks/useChangeSearchParamsWhenUseReducerChanges";
+import { useStateWithSearchParams } from "../../hooks/useStateWithSearchParams";
 import useCreateUseReducerStateForCustomizationComponentWithInputAndTags, {
   ISelectedTags,
   ISelectedTagsReducer,
-} from "../hooks/searchCustomizationRelated/useCreateUseReducerStateForCustomizationComponentWithInputAndTags";
+} from "../../hooks/searchCustomizationRelated/useCreateUseReducerStateForCustomizationComponentWithInputAndTags";
 
 type IOrderCustomizationPropertyValues = "" | "1" | "-1";
 

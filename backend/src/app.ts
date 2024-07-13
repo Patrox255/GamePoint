@@ -67,9 +67,12 @@ const corsOptions = {
   allowedHeaders: ["Content-Type"],
 };
 
-const parseQueries = async (req: Request) => {
+const parseQueries = async (
+  req: Request,
+  type: "query" | "params" = "query"
+) => {
   return Object.fromEntries(
-    [...Object.entries(req.query)].map((entry) => [
+    [...Object.entries(req[type])].map((entry) => [
       entry[0],
       entry[1] ? JSON.parse(entry[1] as string) : undefined,
     ])
@@ -273,8 +276,30 @@ const startServer = async () => {
           if (limitNr) mongooseQuery.limit(limitNr);
 
           const games = await mongooseQuery.exec();
+          const gamesToSend = games.map((game) => {
+            const {
+              price,
+              discount,
+              finalPrice,
+              _id,
+              title,
+              artworks,
+              genres,
+              summary,
+            } = game;
+            return {
+              price,
+              discount,
+              finalPrice,
+              _id: _id.toString(),
+              title,
+              artworks,
+              genres,
+              summary,
+            };
+          });
 
-          res.status(200).json([...games]);
+          res.status(200).json([...gamesToSend]);
         } catch (err) {
           next(err);
         }
@@ -294,6 +319,25 @@ const startServer = async () => {
           });
         } catch (e) {
           next(e);
+        }
+      }
+    );
+
+    app.get(
+      "/products/:productSlug",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { productSlug } = req.params;
+          const game = await Game.findOne({
+            slug: { $regex: productSlug, $options: "i" },
+          }).populate(["genres", "publisher", "developer", "platforms"]);
+          if (game === null)
+            return res
+              .status(404)
+              .json({ message: "No such a game has been found!" });
+          res.status(200).json(game);
+        } catch (err) {
+          next(err);
         }
       }
     );
@@ -506,7 +550,7 @@ const startServer = async () => {
               );
             if ((game as { artworks: number[] }).artworks)
               artworksToFetch.push(
-                ...(game as { artworks: number[] }).artworks.slice(0, 5)
+                ...(game as { artworks: number[] }).artworks
               );
             return {
               ...game,
@@ -751,6 +795,7 @@ const startServer = async () => {
               publisher?: string;
               developer?: string;
               hypes?: number;
+              storyline?: string;
             }) => {
               let releaseDate = undefined;
               if (game.release_dates) {
@@ -796,6 +841,7 @@ const startServer = async () => {
                     )?._id
                   : undefined,
                 popularity: game.hypes || 0,
+                storyLine: game.storyline,
               };
             }
           );

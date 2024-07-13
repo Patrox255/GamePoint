@@ -10,6 +10,9 @@ import { queryClient } from "./lib/fetch.ts";
 import ProductsPage from "./pages/ProductsPage.tsx";
 import { Provider } from "react-redux";
 import store from "./store/index.ts";
+import ProductPage, {
+  loader as productPageLoader,
+} from "./pages/ProductPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -30,6 +33,11 @@ const router = createBrowserRouter([
       {
         path: "/products",
         element: <ProductsPage />,
+      },
+      {
+        path: "/products/:productSlug",
+        element: <ProductPage />,
+        loader: productPageLoader,
       },
     ],
   },

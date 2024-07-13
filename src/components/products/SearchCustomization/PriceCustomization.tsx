@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { retrieveMinAndMaxOfExistingPrices } from "../../../lib/fetch";
 import LoadingFallback from "../../UI/LoadingFallback";
 import Error from "../../UI/Error";
-import { SearchCustomizationContext } from "../../../store/SearchCustomizationContext";
+import { SearchCustomizationContext } from "../../../store/products/SearchCustomizationContext";
 import Button from "../../UI/Button";
 
 export default function PriceCustomization() {

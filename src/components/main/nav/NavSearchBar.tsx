@@ -32,15 +32,26 @@ export default function NavSearchBar({ placeholder }: { placeholder: string }) {
 
   const [showResults, setShowResults] = useState<boolean>(false);
 
-  function handleInputBlur() {
+  async function handleInputBlur() {
+    await new Promise((resolve) => setTimeout(resolve, 50));
     setShowResults(false);
   }
   function handleInputFocus() {
     setShowResults(true);
   }
+  function mouseEnterSearchResults() {
+    setShowResults(true);
+  }
+  function mouseLeaveSearchResults() {
+    setShowResults(false);
+  }
 
   return (
-    <div className="flex w-2/5 justify-end flex-col relative">
+    <div
+      className="flex w-2/5 justify-end flex-col relative"
+      onMouseEnter={mouseEnterSearchResults}
+      onMouseLeave={mouseLeaveSearchResults}
+    >
       <Input
         placeholder={placeholder}
         value={searchTerm}
@@ -48,11 +59,14 @@ export default function NavSearchBar({ placeholder }: { placeholder: string }) {
         onBlur={handleInputBlur}
         onFocus={handleInputFocus}
       />
-      {(data || isLoading || isError) && showResults && (
+      {(data || isLoading || isError) && (
         <motion.div
-          className="bg-darkerBg py-5 absolute bottom-0 w-full translate-y-[100%] flex justify-center overflow-y-scroll overflow-x-clip max-h-[70vh]"
+          className="bg-darkerBg py-5 absolute bottom-0 translate-y-[100%] flex justify-center overflow-y-scroll overflow-x-clip max-h-[40vh] z-100 w-full"
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          animate={{
+            opacity: showResults ? 1 : 0,
+          }}
+          exit={{ opacity: 0 }}
         >
           {data && data.data.length !== 0 && searchTerm !== "" && (
             <GamesResults games={data.data} />

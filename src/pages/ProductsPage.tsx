@@ -2,8 +2,8 @@ import FetchedGames from "../components/products/FetchedGames";
 import MainSearchBar from "../components/products/MainSearchBar";
 import SearchCustomization from "../components/products/SearchCustomization/main";
 import MainWrapper from "../components/structure/MainWrapper";
-import ProductsContextProvider from "../store/ProductsContext";
-import SearchCustomizationContextProvider from "../store/SearchCustomizationContext";
+import ProductsContextProvider from "../store/products/ProductsContext";
+import SearchCustomizationContextProvider from "../store/products/SearchCustomizationContext";
 
 export default function ProductsPage() {
   return (

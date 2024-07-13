@@ -16,4 +16,6 @@ export interface IGame {
   artworks: string[];
   summary: string;
   finalPrice: number;
+  slug?: string;
+  storyLine?: string;
 }

@@ -1,9 +1,12 @@
 import { createContext, ReactNode, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { IGame } from "../models/game.model";
-import { load10GamesByQuery, retrieveAmountOfGamesByQuery } from "../lib/fetch";
-import { useStateWithSearchParams } from "../hooks/useStateWithSearchParams";
+import { IGame } from "../../models/game.model";
+import {
+  load10GamesByQuery,
+  retrieveAmountOfGamesByQuery,
+} from "../../lib/fetch";
+import { useStateWithSearchParams } from "../../hooks/useStateWithSearchParams";
 import {
   IOrderCustomizationProperty,
   SearchCustomizationContext,

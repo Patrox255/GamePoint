@@ -2,10 +2,11 @@ import LoadingFallback from "../UI/LoadingFallback";
 import Error from "../UI/Error";
 import TagsComponent from "../game/tags/TagsComponent";
 import AnimatedAppearance from "../UI/AnimatedAppearance";
-import useQueryGetTheMostPopularGenres from "../../hooks/searchCustomizationRelated/useQueryGetTheMostPopularTags";
+import useQueryGetTheMostPopularTags from "../../hooks/searchCustomizationRelated/useQueryGetTheMostPopularTags";
 
 export default function MostPopularGenres() {
-  const { isLoading, isError, error, data } = useQueryGetTheMostPopularGenres();
+  const { isLoading, isError, error, data } =
+    useQueryGetTheMostPopularTags("genres");
 
   return (
     <article className="popular-genres-container w-1/2 flex justify-center flex-col text-center gap-4">

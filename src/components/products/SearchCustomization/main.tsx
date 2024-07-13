@@ -4,7 +4,7 @@ import CustomizationComponentWithInputAndTags from "./CustomizationComponentWith
 import DiscountCustomization from "./DiscountCustomization";
 import PriceCustomization from "./PriceCustomization";
 import { useContext } from "react";
-import { SearchCustomizationContext } from "../../../store/SearchCustomizationContext";
+import { SearchCustomizationContext } from "../../../store/products/SearchCustomizationContext";
 
 export default function SearchCustomization() {
   const navigate = useNavigate();

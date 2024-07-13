@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import triangularArrowSVG from "../../../assets/triangular-arrow.svg";
 import { useContext } from "react";
-import { SearchCustomizationContext } from "../../../store/SearchCustomizationContext";
+import { SearchCustomizationContext } from "../../../store/products/SearchCustomizationContext";
 
 export default function OrderCustomization() {
   const paragraphClasses =

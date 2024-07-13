@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Link } from "react-router-dom";
 import slugify from "slugify";
 import PriceTag from "../../game/PriceTag";
 import { IGame } from "../../../models/game.model";
 import { ReactNode } from "react";
+import LinkToDifferentPageWithCurrentPageInformation from "../../UI/LinkToDifferentPageWithCurrentPageInformation";
 
 export default function GamesResults({
   games,
@@ -58,7 +58,7 @@ export default function GamesResults({
             whileHover="highlighted"
             layout="size"
           >
-            <Link
+            <LinkToDifferentPageWithCurrentPageInformation
               className="w-full grid grid-cols-gameSearchBarResult items-center gap-2 px-6"
               to={`/products/${slugify(game.title, { lower: true })}`}
             >
@@ -98,7 +98,7 @@ export default function GamesResults({
                   removeOriginalPriceAfterAnimation: true,
                 })}
               />
-            </Link>
+            </LinkToDifferentPageWithCurrentPageInformation>
           </motion.li>
         ))}
       </AnimatePresence>
