@@ -1,3 +1,5 @@
-export interface IGenre {
+import { IMongooseDocument } from "./mongooseDocument.model";
+
+export interface IGenre extends IMongooseDocument {
   name: string;
 }

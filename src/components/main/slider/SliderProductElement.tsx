@@ -1,4 +1,4 @@
-import { Dispatch, SetStateAction, createContext, useContext } from "react";
+import { createContext, useContext } from "react";
 
 import { IGame } from "../../../models/game.model";
 import { SliderContext } from "./DataSlider";
@@ -9,9 +9,9 @@ import SliderProductElementContent from "./SliderProductElementContent";
 
 export const SliderProductElementArtworkContext = createContext<{
   artworkIndex: number;
-  setArtworkIndex: Dispatch<SetStateAction<number>>;
+  setArtworkIndex: (newArtworkIndex: number) => void;
 }>({
-  artworkIndex: 0,
+  artworkIndex: -1,
   setArtworkIndex: () => {},
 });
 

@@ -1,4 +1,6 @@
-export interface IAddress extends Document {
+import { IMongooseDocument } from "./mongooseDocument.model";
+
+export interface IAddress extends IMongooseDocument {
   firstName: string;
   surname: string;
   street: string;

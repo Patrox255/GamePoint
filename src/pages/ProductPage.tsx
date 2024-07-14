@@ -9,10 +9,7 @@ import {
 import { getGameData, queryClient } from "../lib/fetch";
 import MainWrapper from "../components/structure/MainWrapper";
 import Error from "../components/UI/Error";
-import SliderProductElementContent from "../components/main/slider/SliderProductElementContent";
-import Button from "../components/UI/Button";
-import PagesElement from "../components/UI/PagesElement";
-import { useState } from "react";
+import ExtendedGamePreview from "../components/products/ExtendedGamePreview";
 
 export default function ProductPage() {
   const { productSlug } = useParams();
@@ -22,56 +19,18 @@ export default function ProductPage() {
     queryKey: ["games", productSlug],
   });
 
-  const [pageNr, setPageNr] = useState<number>(0);
-
   let content;
   if (error) content = <Error message={error.message} />;
   if (data && data.data) {
     const game = data.data;
-    console.log(game);
-    content = (
-      <SliderProductElementContent
-        element={game}
-        showTags={false}
-        showSummary={false}
-        sliderImageOverviewFn={(
-          SliderImageOverviewPrepared,
-          pageNr,
-          setPageNr
-        ) => (
-          <>
-            <SliderImageOverviewPrepared
-              pageNr={pageNr}
-              setPageNr={setPageNr}
-            />
-            <PagesElement
-              amountOfElementsPerPage={5}
-              totalAmountOfElementsToDisplayOnPages={game.artworks.length}
-              pageNr={pageNr!}
-              setPageNr={(newPageNr: number) => setPageNr!(newPageNr)}
-              insideSliderProductElementArtworkContext
-            />
-          </>
-        )}
-        pageNr={pageNr}
-        setPageNr={setPageNr}
-      >
-        {(element) => (
-          <Button
-            onClick={() => {
-              console.log(`${element.title} added to cart!`);
-            }}
-          >
-            Add to cart
-          </Button>
-        )}
-      </SliderProductElementContent>
-    );
+    content = <ExtendedGamePreview game={game} />;
   }
 
   return (
     <MainWrapper>
-      <div className="w-3/5">{content}</div>
+      <div className="w-3/5 flex flex-col justify-center items-center">
+        {content}
+      </div>
     </MainWrapper>
   );
 }
@@ -82,7 +41,6 @@ export const loader: LoaderFunction = async function ({ params, request }) {
   );
   const previousPagePathName = searchParams.get("previousPagePathName");
   const productSlug = params.productSlug;
-  console.log(previousPagePathName);
   try {
     const gameData = await queryClient.fetchQuery({
       queryFn: ({ signal }) =>

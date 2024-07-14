@@ -1,9 +1,10 @@
 import { IDeveloper } from "./devloper.model";
 import { IGenre } from "./genre.model";
+import { IMongooseDocument } from "./mongooseDocument.model";
 import { IPlatform } from "./platform.model";
 import { IPublisher } from "./publisher.model";
 
-export interface IGame {
+export interface IGame extends IMongooseDocument {
   title: string;
   price: number;
   discount: number;

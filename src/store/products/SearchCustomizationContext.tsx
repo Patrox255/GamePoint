@@ -112,7 +112,6 @@ const orderCustomizationReducer: Reducer<
     : state[fieldName];
   switch (action.type) {
     case "CHANGE_PROPERTY_VALUE": {
-      console.log(state, action.payload);
       const removeStateProperty = newState === "";
       const usedStateProperties = [...Object.entries(state)].filter(
         (entry) =>

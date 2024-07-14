@@ -5,7 +5,6 @@ import { load10GamesByQuery } from "../../../lib/fetch";
 import LoadingFallback from "../../UI/LoadingFallback";
 import Error from "../../UI/Error";
 import { motion } from "framer-motion";
-// import { NavSearchBarContext } from "../../UI/Nav";
 import { useInput } from "../../../hooks/useInput";
 import { useAppSelector } from "../../../hooks/reduxStore";
 import { actions } from "../../../store/mainSearchBarSlice";
@@ -22,7 +21,6 @@ export default function NavSearchBar({ placeholder }: { placeholder: string }) {
     searchParamName: "query",
     debouncingTime: 500,
   });
-  console.log(searchTerm);
 
   const { data, isLoading, error, isError } = useQuery({
     queryFn: ({ signal }) => load10GamesByQuery(queryDebouncingState, signal),

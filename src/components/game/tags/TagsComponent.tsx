@@ -3,20 +3,26 @@ import TagComponent from "./TagComponent";
 import { Link } from "react-router-dom";
 import Button from "../../UI/Button";
 import { AnimatePresence, motion } from "framer-motion";
-export default function TagsComponent({
+export default function TagsComponent<T>({
   tags,
   paramName,
-  children = (tag: string) => (
+  children = (tag: T) => (
     <Button>
-      <Link to={`/products?${paramName ? `${paramName}=${tag}` : ""}`}>
-        {tag}
+      <Link
+        to={`/products?${
+          paramName ? `${paramName}=${JSON.stringify(tag)}` : ""
+        }`}
+      >
+        {tag as string}
       </Link>
     </Button>
   ),
+  idGathererFn = (tag: T) => tag as string,
 }: {
-  tags: string[];
+  tags: T[];
   paramName?: string;
-  children?: (tag: string) => ReactNode;
+  children?: (tag: T) => ReactNode;
+  idGathererFn?: (tag: T) => string;
 }) {
   return (
     <AnimatePresence>
@@ -29,7 +35,7 @@ export default function TagsComponent({
         >
           <AnimatePresence>
             {tags.map((tag) => (
-              <TagComponent tag={tag} key={tag}>
+              <TagComponent tag={idGathererFn(tag)} key={idGathererFn(tag)}>
                 {children(tag)}
               </TagComponent>
             ))}

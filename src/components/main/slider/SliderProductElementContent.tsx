@@ -1,6 +1,6 @@
 import { AnimatePresence, AnimationProps, motion } from "framer-motion";
 import { IGame } from "../../../models/game.model";
-import { ReactNode, useCallback, useState } from "react";
+import { ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { useSlider } from "../../../hooks/useSlider";
 import AnimatedAppearance from "../../UI/AnimatedAppearance";
 import TagsComponent from "../../game/tags/TagsComponent";
@@ -11,6 +11,8 @@ import { SliderProductElementArtworkContext } from "./SliderProductElement";
 import SliderImageOverview from "./SliderImageOverview";
 import slugify from "slugify";
 import useCompareComplexForUseMemo from "../../../hooks/useCompareComplexForUseMemo";
+import ImageWithLoading from "../../UI/ImageWithLoading";
+import { SliderContext } from "./DataSlider";
 
 export default function SliderProductElementContent({
   element,
@@ -24,11 +26,9 @@ export default function SliderProductElementContent({
   showTags = true,
   showSummary = true,
   limitArtworks,
-  sliderImageOverviewFn = (SliderImageOverviewPrepared, pageNr, setPageNr) => (
-    <SliderImageOverviewPrepared pageNr={pageNr} setPageNr={setPageNr} />
+  sliderImageOverviewFn = (SliderImageOverviewPrepared) => (
+    <SliderImageOverviewPrepared />
   ),
-  pageNr,
-  setPageNr,
 }: {
   element: IGame;
   activeElementIndex?: number;
@@ -37,18 +37,10 @@ export default function SliderProductElementContent({
   showSummary?: boolean;
   limitArtworks?: number;
   sliderImageOverviewFn?: (
-    SliderImageOverviewPrepared: ({
-      pageNr,
-      setPageNr,
-    }: {
-      pageNr?: number;
-      setPageNr?: (newPageNr: number) => void;
-    }) => JSX.Element,
+    SliderImageOverviewPrepared: () => JSX.Element,
     pageNr?: number,
     setPageNr?: (newPageNr: number) => void
   ) => ReactNode;
-  pageNr?: number;
-  setPageNr?: (newPageNr: number) => void;
 }) {
   const sliderProductElementsAnimation: AnimationProps = {
     initial: { transform: "scale(0.2)", opacity: 0 },
@@ -62,28 +54,53 @@ export default function SliderProductElementContent({
     useState<boolean>(false);
 
   const {
+    activeElementIndex,
+    setCanCountProductChange,
+    CanCountProductChange,
+  } = useContext(SliderContext);
+  const usesProductChangeContext = activeElementIndex !== -1;
+  const setCanCountProductChangeStable = useCallback(
+    (newCanCount: boolean) => setCanCountProductChange(newCanCount),
+    [setCanCountProductChange]
+  );
+
+  useEffect(() => {
+    !hasArtworks &&
+      usesProductChangeContext &&
+      !CanCountProductChange &&
+      setCanCountProductChangeStable(true);
+  }, [
+    hasArtworks,
+    setCanCountProductChangeStable,
+    usesProductChangeContext,
+    CanCountProductChange,
+  ]);
+
+  const stableElementArtworks = useCompareComplexForUseMemo(
+    element.artworks.slice(0, limitArtworks)
+  );
+
+  const {
     activeElementIndex: artworkIndex,
     setActiveElementIndex: setArtworkIndex,
-  } = useSlider(element.artworks.slice(0, limitArtworks), 4000);
-
-  const stableElementArtworks = useCompareComplexForUseMemo(element.artworks);
+    setCanCount,
+  } = useSlider(
+    stableElementArtworks,
+    4000,
+    true,
+    usesProductChangeContext && hasArtworks
+      ? () => setCanCountProductChangeStable(false)
+      : undefined
+  );
 
   const SliderImageOverviewPrepared = useCallback(
-    ({
-      pageNr,
-      setPageNr,
-    }: {
-      pageNr?: number;
-      setPageNr?: (newPageNr: number) => void;
-    }) => (
+    () => (
       <SliderImageOverview
-        imagesArr={stableElementArtworks.slice(0, limitArtworks)}
+        imagesArr={stableElementArtworks}
         key={`slider-image-overview-${element.title}`}
-        pageNr={pageNr}
-        setPageNr={setPageNr}
       />
     ),
-    [stableElementArtworks, element.title, limitArtworks]
+    [stableElementArtworks, element.title]
   );
 
   return (
@@ -99,11 +116,22 @@ export default function SliderProductElementContent({
             </motion.p>
           ) : (
             <>
-              <motion.img
+              {/* <motion.img
                 src={element.artworks[artworkIndex]}
                 className="w-[1280px] rounded-xl"
                 {...sliderProductElementsAnimation}
                 key={`artwork-${artworkIndex}-${element.artworks[artworkIndex]}`}
+              /> */}
+              <ImageWithLoading
+                src={element.artworks[artworkIndex]}
+                className="w-[1280px] rounded-xl"
+                motionAnimation={sliderProductElementsAnimation}
+                key={`artwork-${artworkIndex}-${element.artworks[artworkIndex]}`}
+                additionalActionOnLoadFn={() => {
+                  setCanCount(true);
+                  usesProductChangeContext &&
+                    setCanCountProductChangeStable(true);
+                }}
               />
             </>
           )}
@@ -112,11 +140,7 @@ export default function SliderProductElementContent({
           <SliderProductElementArtworkContext.Provider
             value={{ artworkIndex, setArtworkIndex }}
           >
-            {sliderImageOverviewFn(
-              SliderImageOverviewPrepared,
-              pageNr,
-              setPageNr
-            )}
+            {sliderImageOverviewFn(SliderImageOverviewPrepared)}
           </SliderProductElementArtworkContext.Provider>
         )}
       </div>

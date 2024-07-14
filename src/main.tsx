@@ -7,7 +7,9 @@ import MainPage, { loader as mainPageLoader } from "./pages/MainPage.tsx";
 import ErrorPage from "./pages/ErrorPage.tsx";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/fetch.ts";
-import ProductsPage from "./pages/ProductsPage.tsx";
+import ProductsPage, {
+  loader as ProductsPageLoader,
+} from "./pages/ProductsPage.tsx";
 import { Provider } from "react-redux";
 import store from "./store/index.ts";
 import ProductPage, {
@@ -33,6 +35,7 @@ const router = createBrowserRouter([
       {
         path: "/products",
         element: <ProductsPage />,
+        loader: ProductsPageLoader,
       },
       {
         path: "/products/:productSlug",

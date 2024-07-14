@@ -29,8 +29,8 @@ export default function FetchedGames() {
         </GamesResults>
         <nav className="pages py-8">
           <PagesElement
-            pageNr={pageNr}
-            setPageNr={setPageNr}
+            propPageNr={pageNr}
+            propSetPageNr={setPageNr}
             totalAmountOfElementsToDisplayOnPages={totalGamesAmountForQuery}
             amountOfElementsPerPage={10}
           />

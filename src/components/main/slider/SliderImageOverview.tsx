@@ -1,22 +1,22 @@
-import { memo, useContext, useMemo } from "react";
+import { memo, useContext, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 
 import Button from "../../UI/Button";
 import { SliderProductElementArtworkContext } from "./SliderProductElement";
 import useCompareComplexForUseMemo from "../../../hooks/useCompareComplexForUseMemo";
+import { PagesManagerContext } from "../../../store/products/PagesManagerContext";
 
 const SliderImageOverview = memo(function ({
   imagesArr,
-  pageNr,
-  setPageNr,
 }: {
   imagesArr: string[];
-  pageNr?: number;
-  setPageNr?: (newPageNr: number) => void;
 }) {
   const { artworkIndex, setArtworkIndex } = useContext(
     SliderProductElementArtworkContext
   );
+
+  const { pageNr, setPageNr } = useContext(PagesManagerContext);
+  const insidePagesManagerContext = pageNr !== -1;
 
   const generateSubsetsOf5 = (imagesArr: string[]) => {
     const subsets: string[][] = [];
@@ -26,7 +26,6 @@ const SliderImageOverview = memo(function ({
         ? (subsets[subsetIndex] = [image])
         : subsets[subsetIndex].push(image);
     });
-    console.log(subsets);
     return subsets;
   };
 
@@ -37,16 +36,11 @@ const SliderImageOverview = memo(function ({
     [stableImagesArr]
   );
 
-  console.log(setPageNr);
-
-  if (
-    pageNr !== undefined &&
-    setPageNr !== undefined &&
-    Math.trunc(artworkIndex) !== pageNr
-  )
-    setPageNr!(Math.trunc(artworkIndex / 5));
-
-  console.log(pageNr);
+  useEffect(() => {
+    if (!insidePagesManagerContext || Math.trunc(artworkIndex) === pageNr)
+      return;
+    setPageNr(Math.trunc(artworkIndex / 5));
+  }, [insidePagesManagerContext, artworkIndex, pageNr, setPageNr]);
 
   return (
     <nav className="slider-image-navigation w-full py-10 overflow-hidden flex justify-center items-center">
@@ -64,7 +58,9 @@ const SliderImageOverview = memo(function ({
               translateX: `${subsetIndex * 100}%`,
             }}
             animate={{
-              translateX: `${(subsetIndex - (pageNr ? pageNr : 0)) * 100}%`,
+              translateX: `${
+                (subsetIndex - (insidePagesManagerContext ? pageNr : 0)) * 100
+              }%`,
             }}
           >
             {subsetOf5.map((imageUrl, i) => {
