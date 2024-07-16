@@ -16,6 +16,13 @@ interface ICriterion {
   rating: number | null;
 }
 
+type currentlyHoveredCriterionState =
+  | {
+      index: number;
+      rating: number;
+    }
+  | undefined;
+
 export const AddReviewContext = createContext<{
   content: string;
   debouncedContent: string;
@@ -23,6 +30,10 @@ export const AddReviewContext = createContext<{
   criteria: ICriterion[];
   debouncedCriteria: ICriterion[];
   criteriaDispatch: React.Dispatch<IAddReviewCriteriaAction>;
+  currentlyHoveredCriterion: currentlyHoveredCriterionState;
+  setCurrentlyHoveredCriterion: React.Dispatch<
+    React.SetStateAction<currentlyHoveredCriterionState>
+  >;
 }>({
   content: "",
   debouncedContent: "",
@@ -30,6 +41,8 @@ export const AddReviewContext = createContext<{
   criteria: [],
   debouncedCriteria: [],
   criteriaDispatch: () => {},
+  currentlyHoveredCriterion: undefined,
+  setCurrentlyHoveredCriterion: () => {},
 });
 
 type AddReviewCriteriaReducerActionTypes =
@@ -134,6 +147,7 @@ export default function AddReviewContextProvider({
     searchParamName: "reviewContent",
     stateValue: reviewContent,
     setStateValue: setReviewContent,
+    debouncingTime: 300,
   });
 
   const initialCriteriaProperty =
@@ -166,7 +180,11 @@ export default function AddReviewContextProvider({
     location,
     navigate,
     dispatchCallbackFn: criteriaDispatchHookCallback,
+    timeToWait: 300,
   });
+
+  const [currentlyHoveredCriterion, setCurrentlyHoveredCriterion] =
+    useState<currentlyHoveredCriterionState>(undefined);
 
   return (
     <AddReviewContext.Provider
@@ -177,6 +195,8 @@ export default function AddReviewContextProvider({
         criteriaDispatch,
         criteria: criteriaState.criteria,
         debouncedCriteria: criteriaState.debouncedCriteria,
+        currentlyHoveredCriterion,
+        setCurrentlyHoveredCriterion,
       }}
     >
       {children}

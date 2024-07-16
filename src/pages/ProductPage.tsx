@@ -28,7 +28,6 @@ export default function ProductPage() {
   let content;
   if (error) content = <Error message={error.message} />;
   if (data && data.data) {
-    const game = data.data;
     content = <ExtendedGamePreview game={gameStable as IGame} />;
   }
 

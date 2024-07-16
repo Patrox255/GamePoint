@@ -32,9 +32,8 @@ export default function useCompareComplexForUseMemo<T>(val: T) {
   if (
     (typeof val !== "object" && val !== ref) ||
     !isEqual(val as object, ref.current!)
-  ) {
-    console.log(ref.current, val);
+  )
     ref.current = val;
-  }
+
   return ref.current;
 }

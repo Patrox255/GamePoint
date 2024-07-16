@@ -7,12 +7,15 @@ import Button from "../UI/Button";
 import PagesElement from "../UI/PagesElement";
 import { IGame } from "../../models/game.model";
 import TagsComponent from "../game/tags/TagsComponent";
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useCallback, useMemo, useState } from "react";
 import HeaderMedium from "../UI/headers/HeaderMedium";
 import HeaderLink from "../UI/headers/HeaderLink";
 import AddReviewContextProvider from "../../store/product/AddReviewContext";
 import AddReview from "../product/AddReview";
 import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
+import { IGenre } from "../../models/genre.model";
+import { IPublisher } from "../../models/publisher.model";
+import { IDeveloper } from "../../models/devloper.model";
 
 export default function ExtendedGamePreview({ game }: { game: IGame }) {
   type IAdditionalInformationGatherer = {
@@ -26,9 +29,33 @@ export default function ExtendedGamePreview({ game }: { game: IGame }) {
     };
   };
 
-  const tagEntryLinkSearchParamMap = new Map([
-    ["genres", "genre"],
-    ["platforms", "platform"],
+  const tagGenresEntryContentGeneratorFnStable = useCallback(
+    ({ gameDocumentKeyValue }: { gameDocumentKeyValue: IGenre[] }) => (
+      <TagsComponent
+        tags={gameDocumentKeyValue.map(
+          (tagObj: { name: string }) => tagObj.name
+        )}
+        paramName="genre"
+      />
+    ),
+    []
+  );
+
+  const tagPlatformsEntryContentGeneratorFnStable = useCallback(
+    ({ gameDocumentKeyValue }: { gameDocumentKeyValue: IGenre[] }) => (
+      <TagsComponent
+        tags={gameDocumentKeyValue.map(
+          (tagObj: { name: string }) => tagObj.name
+        )}
+        paramName="genre"
+      />
+    ),
+    []
+  );
+
+  const tagEntryGameDocumentKeyGeneratorFnStableMap = new Map([
+    ["genres", tagGenresEntryContentGeneratorFnStable],
+    ["platforms", tagPlatformsEntryContentGeneratorFnStable],
   ]);
 
   const tagEntryGeneratorForGathererObj = (
@@ -37,49 +64,49 @@ export default function ExtendedGamePreview({ game }: { game: IGame }) {
   ) => ({
     [tagGameDocumentKeyName]: {
       additionalInformationEntryVisibleName: tagVisisbleName,
-      AdditionalInformationEntryContentGeneratorFn: ({
-        gameDocumentKeyValue,
-      }: {
-        gameDocumentKeyValue: IGame[typeof tagGameDocumentKeyName];
-      }) => (
-        <TagsComponent
-          tags={gameDocumentKeyValue.map(
-            (tagObj: { name: string }) => tagObj.name
-          )}
-          paramName={tagEntryLinkSearchParamMap.get(tagGameDocumentKeyName)}
-        />
-      ),
+      AdditionalInformationEntryContentGeneratorFn:
+        tagEntryGameDocumentKeyGeneratorFnStableMap.get(tagGameDocumentKeyName),
     },
   });
+
+  const publisherEntryContentGeneratorFnStable = ({
+    gameDocumentKeyValue: publisher,
+  }: {
+    gameDocumentKeyValue: IPublisher | undefined;
+  }) => (
+    <HeaderLink
+      href={`/products`}
+      searchParams={{ publisher: publisher?.name }}
+    >
+      <HeaderMedium>{publisher?.name}</HeaderMedium>
+    </HeaderLink>
+  );
+
+  const developerEntryContentGeneratorFnStable = ({
+    gameDocumentKeyValue: developer,
+  }: {
+    gameDocumentKeyValue: IDeveloper | undefined;
+  }) => (
+    <HeaderLink
+      href={`/products`}
+      searchParams={{ developer: developer?.name }}
+    >
+      <HeaderMedium>{developer?.name}</HeaderMedium>
+    </HeaderLink>
+  );
 
   const additionalInformationGathererObj: IAdditionalInformationGatherer = {
     ...tagEntryGeneratorForGathererObj("genres", "Genres"),
     ...tagEntryGeneratorForGathererObj("platforms", "Platforms"),
     publisher: {
       additionalInformationEntryVisibleName: "Publisher",
-      AdditionalInformationEntryContentGeneratorFn: ({
-        gameDocumentKeyValue: publisher,
-      }) => (
-        <HeaderLink
-          href={`/products`}
-          searchParams={{ publisher: publisher?.name }}
-        >
-          <HeaderMedium>{publisher?.name}</HeaderMedium>
-        </HeaderLink>
-      ),
+      AdditionalInformationEntryContentGeneratorFn:
+        publisherEntryContentGeneratorFnStable,
     },
     developer: {
       additionalInformationEntryVisibleName: "Developer",
-      AdditionalInformationEntryContentGeneratorFn: ({
-        gameDocumentKeyValue: developer,
-      }) => (
-        <HeaderLink
-          href={`/products`}
-          searchParams={{ developer: developer?.name }}
-        >
-          <HeaderMedium>{developer?.name}</HeaderMedium>
-        </HeaderLink>
-      ),
+      AdditionalInformationEntryContentGeneratorFn:
+        developerEntryContentGeneratorFnStable,
     },
   };
 
