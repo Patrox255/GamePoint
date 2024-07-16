@@ -43,9 +43,13 @@ export default function SliderProductElementContent({
   ) => ReactNode;
 }) {
   const sliderProductElementsAnimation: AnimationProps = {
-    initial: { transform: "scale(0.2)", opacity: 0 },
-    animate: { transform: "scale(1)", opacity: 1 },
-    transition: { duration: 1 },
+    initial: { transform: "scale(0.2)", opacity: 0, height: 0 },
+    animate: {
+      transform: "scale(1)",
+      opacity: 1,
+      height: "auto",
+    },
+    transition: { height: { duration: 0 }, duration: 1 },
   };
 
   const hasArtworks = element.artworks.length !== 0;

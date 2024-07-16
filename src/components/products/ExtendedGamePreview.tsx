@@ -7,12 +7,14 @@ import Button from "../UI/Button";
 import PagesElement from "../UI/PagesElement";
 import { IGame } from "../../models/game.model";
 import TagsComponent from "../game/tags/TagsComponent";
-import { ReactNode, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
+import HeaderMedium from "../UI/headers/HeaderMedium";
+import HeaderLink from "../UI/headers/HeaderLink";
+import AddReviewContextProvider from "../../store/product/AddReviewContext";
+import AddReview from "../product/AddReview";
+import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
 
 export default function ExtendedGamePreview({ game }: { game: IGame }) {
-  const detailsHeaderTailwindClasses =
-    "text-xl text-highlightRed pb-2 font-bold";
-
   type IAdditionalInformationGatherer = {
     [T in keyof IGame]?: {
       additionalInformationEntryVisibleName: string;
@@ -23,6 +25,11 @@ export default function ExtendedGamePreview({ game }: { game: IGame }) {
       }) => ReactNode;
     };
   };
+
+  const tagEntryLinkSearchParamMap = new Map([
+    ["genres", "genre"],
+    ["platforms", "platform"],
+  ]);
 
   const tagEntryGeneratorForGathererObj = (
     tagGameDocumentKeyName: "genres" | "platforms",
@@ -39,6 +46,7 @@ export default function ExtendedGamePreview({ game }: { game: IGame }) {
           tags={gameDocumentKeyValue.map(
             (tagObj: { name: string }) => tagObj.name
           )}
+          paramName={tagEntryLinkSearchParamMap.get(tagGameDocumentKeyName)}
         />
       ),
     },
@@ -51,23 +59,76 @@ export default function ExtendedGamePreview({ game }: { game: IGame }) {
       additionalInformationEntryVisibleName: "Publisher",
       AdditionalInformationEntryContentGeneratorFn: ({
         gameDocumentKeyValue: publisher,
-      }) => <h2 className={detailsHeaderTailwindClasses}>{publisher?.name}</h2>,
+      }) => (
+        <HeaderLink
+          href={`/products`}
+          searchParams={{ publisher: publisher?.name }}
+        >
+          <HeaderMedium>{publisher?.name}</HeaderMedium>
+        </HeaderLink>
+      ),
     },
     developer: {
       additionalInformationEntryVisibleName: "Developer",
       AdditionalInformationEntryContentGeneratorFn: ({
         gameDocumentKeyValue: developer,
-      }) => <h2 className={detailsHeaderTailwindClasses}>{developer?.name}</h2>,
+      }) => (
+        <HeaderLink
+          href={`/products`}
+          searchParams={{ developer: developer?.name }}
+        >
+          <HeaderMedium>{developer?.name}</HeaderMedium>
+        </HeaderLink>
+      ),
     },
   };
+
   const additionalInformationGatherer = [
     ...Object.entries(additionalInformationGathererObj),
   ];
+  const additionalInformationGathererStable = useCompareComplexForUseMemo(
+    additionalInformationGatherer
+  );
 
   const [
     activeAdditionalInformationBlock,
     setActiveAdditionalInformationBlock,
   ] = useState<keyof IGame>("genres");
+
+  const additionalInformationBlocksContent = useMemo(
+    () =>
+      additionalInformationGathererStable.map(
+        (additionalInformationGathererEntry) => {
+          const { AdditionalInformationEntryContentGeneratorFn } =
+            additionalInformationGathererEntry[1];
+          const gameKey = additionalInformationGathererEntry[0] as keyof IGame;
+          return gameKey === activeAdditionalInformationBlock ? (
+            <motion.article
+              initial={{ opacity: 0, height: 0, translateY: "2rem" }}
+              animate={{
+                opacity: 1,
+                height: "auto",
+                translateY: 0,
+              }}
+              exit={{ opacity: 0, height: 0 }}
+              key={`additional-information-${gameKey}`}
+            >
+              <AdditionalInformationEntryContentGeneratorFn
+                gameDocumentKeyValue={game[gameKey] as never}
+                key={gameKey}
+              />
+            </motion.article>
+          ) : (
+            ""
+          );
+        }
+      ),
+    [
+      activeAdditionalInformationBlock,
+      additionalInformationGathererStable,
+      game,
+    ]
+  );
 
   return (
     <>
@@ -107,14 +168,14 @@ export default function ExtendedGamePreview({ game }: { game: IGame }) {
       >
         <AnimatedAppearance>
           <motion.section className="product-details-summary">
-            <h2 className={detailsHeaderTailwindClasses}>Summary</h2>
+            <HeaderMedium>Summary</HeaderMedium>
             <p>{game.summary}</p>
           </motion.section>
         </AnimatedAppearance>
         {game.storyLine && (
           <AnimatedAppearance>
             <motion.section className="product-details-storyline">
-              <h2 className={detailsHeaderTailwindClasses}>Storyline</h2>
+              <HeaderMedium>Storyline</HeaderMedium>
               <p>{game.storyLine}</p>
             </motion.section>
           </AnimatedAppearance>
@@ -145,35 +206,17 @@ export default function ExtendedGamePreview({ game }: { game: IGame }) {
             </AnimatedAppearance>
           </section>
           <section className="additional-information-blocks">
-            {additionalInformationGatherer.map(
-              (additionalInformationGathererEntry) => {
-                const { AdditionalInformationEntryContentGeneratorFn } =
-                  additionalInformationGathererEntry[1];
-                const gameKey =
-                  additionalInformationGathererEntry[0] as keyof IGame;
-                return (
-                  <motion.article
-                    initial={{ opacity: 0, height: 0, translateY: "2rem" }}
-                    animate={{
-                      ...(gameKey === activeAdditionalInformationBlock && {
-                        opacity: 1,
-                        height: "auto",
-                        translateY: 0,
-                      }),
-                    }}
-                    exit={{ opacity: 0, height: 0 }}
-                    key={`additional-information-${gameKey}`}
-                  >
-                    <AdditionalInformationEntryContentGeneratorFn
-                      gameDocumentKeyValue={game[gameKey] as never}
-                      key={gameKey}
-                    />
-                  </motion.article>
-                );
-              }
-            )}
+            {additionalInformationBlocksContent}
           </section>
         </motion.section>
+        <AnimatedAppearance>
+          <section className="product-details-reviews w-full">
+            <HeaderMedium>Reviews</HeaderMedium>
+            <AddReviewContextProvider>
+              <AddReview />
+            </AddReviewContextProvider>
+          </section>
+        </AnimatedAppearance>
       </motion.article>
     </>
   );

@@ -37,8 +37,6 @@ export const useSlider = function <T>(
     changeElementInterval
   );
 
-  console.log(currentInterval);
-
   useEffect(() => {
     if (elements.length <= 1) return;
     const timer = setInterval(() => {

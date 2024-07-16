@@ -5,6 +5,7 @@ import SearchCustomization from "../components/products/SearchCustomization/main
 import MainWrapper from "../components/structure/MainWrapper";
 import ProductsContextProvider from "../store/products/ProductsContext";
 import SearchCustomizationContextProvider from "../store/products/SearchCustomizationContext";
+import applySearchParamsSessionStorageEntryUpdateInLoader from "../helpers/applySearchParamsSessionStorageEntryUpdateInLoader";
 
 export default function ProductsPage() {
   return (
@@ -28,29 +29,33 @@ export default function ProductsPage() {
   );
 }
 
-const applyGenreFromProvidedSearchParams: LoaderFunction = ({ request }) => {
+const updateSessionStorageBasedOnSearchParams: LoaderFunction = ({
+  request,
+}) => {
   if (request.url.indexOf("?") === -1) return null;
   const searchParams = new URLSearchParams(
     request.url.slice(request.url.indexOf("?") + 1)
   );
-  const searchParamsGenreValue = searchParams.get("genre");
-  let searchParamsGenre;
-  try {
-    searchParamsGenre = JSON.parse(searchParamsGenreValue!);
-  } catch (e) {
-    return null;
-  }
-  if (!searchParamsGenre) return null;
-  const genresFromSession = sessionStorage.getItem("genres");
-  const currentGenres = genresFromSession
-    ? (JSON.parse(genresFromSession) as string[])
-    : [];
-  searchParams.delete("genre");
-  if (currentGenres.indexOf(searchParamsGenre) !== -1)
-    return redirect(`/products?${searchParams.toString()}`);
-  currentGenres.push(searchParamsGenre);
-  sessionStorage.setItem("genres", JSON.stringify(currentGenres));
-  return redirect(`/products?${searchParams.toString()}`);
+  const updateURL = applySearchParamsSessionStorageEntryUpdateInLoader(
+    searchParams,
+    [
+      { searchParamName: "genre", sessionStorageEntryToUpdateName: "genres" },
+      {
+        searchParamName: "platform",
+        sessionStorageEntryToUpdateName: "platforms",
+      },
+      {
+        searchParamName: "developer",
+        sessionStorageEntryToUpdateName: "developers",
+      },
+      {
+        searchParamName: "publisher",
+        sessionStorageEntryToUpdateName: "publishers",
+      },
+    ]
+  );
+  if (updateURL) return redirect(`/products?${searchParams.toString()}`);
+  return null;
 };
 
-export { applyGenreFromProvidedSearchParams as loader };
+export { updateSessionStorageBasedOnSearchParams as loader };

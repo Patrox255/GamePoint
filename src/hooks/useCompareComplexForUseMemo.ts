@@ -1,3 +1,4 @@
+import { isEqual } from "lodash";
 import { useRef } from "react";
 
 export function are2ObjectsEqualTopLevel(obj1: object, obj2: object) {
@@ -30,8 +31,10 @@ export default function useCompareComplexForUseMemo<T>(val: T) {
   if (!ref.current) ref.current = val;
   if (
     (typeof val !== "object" && val !== ref) ||
-    !are2ObjectsEqualTopLevel(val as object, ref.current!)
-  )
+    !isEqual(val as object, ref.current!)
+  ) {
+    console.log(ref.current, val);
     ref.current = val;
+  }
   return ref.current;
 }

@@ -17,16 +17,24 @@ export default function ImageWithLoading({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isError, setIsError] = useState<boolean>(false);
 
+  const motionAnimationEdited = {
+    ...motionAnimation,
+    animate:
+      isLoading || !motionAnimation?.animate ? {} : motionAnimation.animate,
+  };
+
   return (
     <>
-      {isLoading && <LoadingFallback customText="Loading an image..." />}
+      {isLoading && !isError && (
+        <LoadingFallback customText="Loading an image..." />
+      )}
       {isError ? (
         <Error message="Failed to load an image!" />
       ) : (
         <motion.img
           src={src}
           className={className}
-          {...motionAnimation}
+          {...motionAnimationEdited}
           key={src}
           onError={() => setIsError(true)}
           onLoad={() => {

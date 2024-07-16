@@ -1,20 +1,24 @@
 export default function generateUrlEndpointWithSearchParams(
   url: string,
-  searchParams: {
+  searchParams?: {
     [key: string]: unknown;
   }
 ) {
-  return `${url}?${[...Object.entries(searchParams)]
-    .filter((entry) => entry[1] !== undefined)
-    .map(
-      (entry) =>
-        `${entry[0]}=${
-          typeof entry[1] === "number"
-            ? isNaN(entry[1])
-              ? ""
-              : JSON.stringify(entry[1])
-            : JSON.stringify(entry[1])
-        }`
-    )
-    .join("&")}`;
+  return `${url}${
+    searchParams
+      ? `?${[...Object.entries(searchParams)]
+          .filter((entry) => entry[1] !== undefined)
+          .map(
+            (entry) =>
+              `${entry[0]}=${
+                typeof entry[1] === "number"
+                  ? isNaN(entry[1])
+                    ? ""
+                    : JSON.stringify(entry[1])
+                  : JSON.stringify(entry[1])
+              }`
+          )
+          .join("&")}`
+      : ""
+  }`;
 }

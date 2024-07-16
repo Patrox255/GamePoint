@@ -1,11 +1,11 @@
-const validateJSONValue = <T>(
-  JSONValue: string,
+export const validateJSONValue = <T>(
+  JSONValue: string | null,
   initialState: T,
-  stateIsAnObjectWithPossibleNaNPropertyValues: boolean
+  stateIsAnObjectWithPossibleNaNPropertyValues: boolean = false
 ) => {
   let result;
   try {
-    result = JSON.parse(JSONValue);
+    result = JSON.parse(JSONValue!);
     if (
       typeof result !== typeof initialState ||
       (typeof initialState === "object" && result === null)

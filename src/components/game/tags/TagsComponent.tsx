@@ -28,7 +28,7 @@ export default function TagsComponent<T>({
     <AnimatePresence>
       {tags.length !== 0 && (
         <motion.ul
-          className="flex flex-row flex-wrap w-full justify-center items-center gap-x-1 gap-y-2"
+          className="flex flex-row flex-wrap justify-center items-center gap-x-1 gap-y-2"
           exit={{ opacity: 0, height: 0 }}
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}

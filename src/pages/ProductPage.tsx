@@ -10,6 +10,8 @@ import { getGameData, queryClient } from "../lib/fetch";
 import MainWrapper from "../components/structure/MainWrapper";
 import Error from "../components/UI/Error";
 import ExtendedGamePreview from "../components/products/ExtendedGamePreview";
+import useCompareComplexForUseMemo from "../hooks/useCompareComplexForUseMemo";
+import { IGame } from "../models/game.model";
 
 export default function ProductPage() {
   const { productSlug } = useParams();
@@ -19,11 +21,15 @@ export default function ProductPage() {
     queryKey: ["games", productSlug],
   });
 
+  const gameStable = useCompareComplexForUseMemo(
+    data && data.data ? data.data : {}
+  );
+
   let content;
   if (error) content = <Error message={error.message} />;
   if (data && data.data) {
     const game = data.data;
-    content = <ExtendedGamePreview game={game} />;
+    content = <ExtendedGamePreview game={gameStable as IGame} />;
   }
 
   return (

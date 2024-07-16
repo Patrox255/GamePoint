@@ -2,10 +2,9 @@ import { useEffect, useMemo } from "react";
 import { Location, NavigateFunction } from "react-router-dom";
 import createUrlWithCurrentSearchParams from "../helpers/createUrlWithCurrentSearchParams";
 
-import useCompareComplexForUseMemo, {
-  are2ObjectsEqualTopLevel,
-} from "./useCompareComplexForUseMemo";
+import useCompareComplexForUseMemo from "./useCompareComplexForUseMemo";
 import debounce from "lodash.debounce";
+import { isEqual } from "lodash";
 
 const idsOfDeeperStates: { [key: string]: { [key: string]: number } } = {};
 
@@ -118,7 +117,7 @@ export default function useChangeSearchParamsWhenUseReducerChanges<T>({
   useEffect(() => {
     if (
       (typeof stateNormalPropertyMemoized === "object" &&
-        are2ObjectsEqualTopLevel(
+        isEqual(
           stateNormalPropertyMemoized as object,
           stateDebouncedPropertyMemoized as object
         )) ||
