@@ -3,6 +3,7 @@ import { IGame } from "../models/game.model";
 import { API_URL } from "./config";
 import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
 import { IOrderCustomizationProperty } from "../store/products/SearchCustomizationContext";
+import { IReview } from "../models/review.model";
 
 export const queryClient = new QueryClient();
 // queryClient.invalidateQueries({ queryKey: ["games"], exact: false });
@@ -139,16 +140,37 @@ export const retrieveMinAndMaxOfExistingPrices = async (
   return data;
 };
 
-export const getGameData = async ({
+export const getGameData = async <T = IGame>({
   signal,
   productSlug,
+  onlyReviews,
+  reviewsPageNr,
+  maxReviewsPerPage,
 }: {
   signal?: AbortSignal;
   productSlug: string;
+  onlyReviews?: boolean;
+  reviewsPageNr?: number;
+  maxReviewsPerPage?: number;
 }) => {
   const data = await getJSON<IGame>(
-    `${API_URL}/products/${productSlug}`,
+    generateUrlEndpointWithSearchParams(`${API_URL}/products/${productSlug}`, {
+      onlyReviews,
+      reviewsPageNr,
+      maxReviewsPerPage,
+    }),
     signal
   );
-  return data;
+  const releaseDate = data.data.releaseDate;
+  if (releaseDate) data.data.releaseDate = new Date(releaseDate);
+  const reviews = data.data.reviews;
+  if (reviews && reviews.length > 0)
+    reviews.forEach((review) => (review.date = new Date(review.date)));
+  const reviewsArr = data.data;
+  if (Array.isArray(reviewsArr))
+    (data.data as unknown as IReview[]) = reviewsArr.map((review) => ({
+      ...review,
+      date: new Date(review.date),
+    }));
+  return data as { data: T };
 };

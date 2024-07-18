@@ -16,6 +16,7 @@ export interface IGame {
   finalPrice?: number;
   slug?: string;
   storyLine?: string;
+  reviews?: Types.ObjectId[];
 }
 
 const GameSchema = new Schema<IGame>({
@@ -33,6 +34,7 @@ const GameSchema = new Schema<IGame>({
   finalPrice: { type: Number },
   slug: { type: String },
   storyLine: { type: String },
+  reviews: [{ type: Schema.Types.ObjectId, ref: "Review" }],
 });
 
 GameSchema.pre("save", function (next) {

@@ -1,6 +1,4 @@
-import { IMongooseDocument } from "./mongooseDocument.model";
-
-export interface IUser extends IMongooseDocument {
+export interface IUser {
   login: string;
   password: string;
   email: string;

@@ -1,4 +1,4 @@
-import { memo, useContext, useEffect, useMemo } from "react";
+import { memo, useContext, useMemo } from "react";
 import { motion } from "framer-motion";
 
 import Button from "../../UI/Button";
@@ -15,7 +15,7 @@ const SliderImageOverview = memo(function ({
     SliderProductElementArtworkContext
   );
 
-  const { pageNr, setPageNr } = useContext(PagesManagerContext);
+  const { pageNr } = useContext(PagesManagerContext);
   const insidePagesManagerContext = pageNr !== -1;
 
   const generateSubsetsOf5 = (imagesArr: string[]) => {
@@ -36,11 +36,11 @@ const SliderImageOverview = memo(function ({
     [stableImagesArr]
   );
 
-  useEffect(() => {
-    if (!insidePagesManagerContext || Math.trunc(artworkIndex) === pageNr)
-      return;
-    setPageNr(Math.trunc(artworkIndex / 5));
-  }, [insidePagesManagerContext, artworkIndex, pageNr, setPageNr]);
+  // useEffect(() => {
+  //   if (!insidePagesManagerContext || Math.trunc(artworkIndex / 5) === pageNr)
+  //     return;
+  //   setPageNr(Math.trunc(artworkIndex / 5));
+  // }, [insidePagesManagerContext, artworkIndex, pageNr, setPageNr]);
 
   return (
     <nav className="slider-image-navigation w-full py-10 overflow-hidden flex justify-center items-center">

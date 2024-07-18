@@ -4,7 +4,9 @@ export const useSlider = function <T>(
   elements: T[],
   changeElementInterval: number,
   programaticallyStartTimer: boolean = false,
-  additionalActionsAfterChangingElementFn?: () => void
+  additionalActionsAfterChangingElementFn?: (
+    newArtworkIndex: number
+  ) => void | (() => void)
 ) {
   const [activeElementIndex, setActiveElementIndex] = useState<number>(0);
   const [canCount, setCanCount] = useState<boolean>(
@@ -13,18 +15,20 @@ export const useSlider = function <T>(
 
   const changeActiveElementIndex = useCallback(
     (operation: "increment" | "decrement" = "increment") => {
-      setActiveElementIndex((curActiveElementIndex) =>
-        operation === "increment"
-          ? curActiveElementIndex === elements.length - 1
-            ? 0
-            : curActiveElementIndex + 1
-          : curActiveElementIndex === 0
-          ? elements.length - 1
-          : curActiveElementIndex - 1
-      );
-      programaticallyStartTimer && setCanCount(false);
-      additionalActionsAfterChangingElementFn &&
-        additionalActionsAfterChangingElementFn();
+      setActiveElementIndex((curActiveElementIndex) => {
+        const newArtworkIndex =
+          operation === "increment"
+            ? curActiveElementIndex === elements.length - 1
+              ? 0
+              : curActiveElementIndex + 1
+            : curActiveElementIndex === 0
+            ? elements.length - 1
+            : curActiveElementIndex - 1;
+        programaticallyStartTimer && setCanCount(false);
+        additionalActionsAfterChangingElementFn &&
+          additionalActionsAfterChangingElementFn(newArtworkIndex);
+        return newArtworkIndex;
+      });
     },
     [
       additionalActionsAfterChangingElementFn,
@@ -64,7 +68,7 @@ export const useSlider = function <T>(
           setCanCount(false);
           setActiveElementIndex(newActiveElementIndex);
           additionalActionsAfterChangingElementFn &&
-            additionalActionsAfterChangingElementFn();
+            additionalActionsAfterChangingElementFn(newActiveElementIndex);
         }
       : setActiveElementIndex,
     changeActiveElementIndex,

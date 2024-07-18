@@ -13,6 +13,7 @@ import slugify from "slugify";
 import useCompareComplexForUseMemo from "../../../hooks/useCompareComplexForUseMemo";
 import ImageWithLoading from "../../UI/ImageWithLoading";
 import { SliderContext } from "./DataSlider";
+import { PagesManagerContext } from "../../../store/products/PagesManagerContext";
 
 export default function SliderProductElementContent({
   element,
@@ -84,18 +85,22 @@ export default function SliderProductElementContent({
     element.artworks.slice(0, limitArtworks)
   );
 
+  const { pageNr, setPageNr } = useContext(PagesManagerContext);
+  const insidePagesManagerContext = pageNr !== -1;
+
   const {
     activeElementIndex: artworkIndex,
     setActiveElementIndex: setArtworkIndex,
     setCanCount,
-  } = useSlider(
-    stableElementArtworks,
-    4000,
-    true,
-    usesProductChangeContext && hasArtworks
-      ? () => setCanCountProductChangeStable(false)
-      : undefined
-  );
+  } = useSlider(stableElementArtworks, 4000, true, (artworkIndex) => {
+    usesProductChangeContext &&
+      hasArtworks &&
+      setCanCountProductChangeStable(false);
+    insidePagesManagerContext &&
+      Math.trunc(artworkIndex / 5) !== pageNr &&
+      setPageNr(Math.trunc(artworkIndex / 5));
+    console.log(artworkIndex, pageNr, Math.trunc(artworkIndex / 5) !== pageNr);
+  });
 
   const SliderImageOverviewPrepared = useCallback(
     () => (
@@ -128,7 +133,7 @@ export default function SliderProductElementContent({
               /> */}
               <ImageWithLoading
                 src={element.artworks[artworkIndex]}
-                className="w-[1280px] rounded-xl"
+                className="w-[1024px] h-auto max-h-[576px] rounded-xl object-contain overflow-hidden"
                 motionAnimation={sliderProductElementsAnimation}
                 key={`artwork-${artworkIndex}-${element.artworks[artworkIndex]}`}
                 additionalActionOnLoadFn={() => {

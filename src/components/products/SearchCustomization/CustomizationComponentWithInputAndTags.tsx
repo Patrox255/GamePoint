@@ -124,6 +124,9 @@ export default function CustomizationComponentWithInputAndTags({
             }
             active={selectedTagsState.stateArr.includes(tag)}
             canClickWhileActive
+            passedKey={`search-customization-tag-btn-${paramName}-${tag}${
+              selectedTagsState.stateArr.includes(tag) ? "-active" : ""
+            }`}
           >
             {tag}
           </Button>

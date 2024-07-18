@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useState } from "react";
+import { createContext, memo, ReactNode, useState } from "react";
 
 export const PagesManagerContext = createContext<{
   pageNr: number;
@@ -8,16 +8,16 @@ export const PagesManagerContext = createContext<{
   setPageNr: () => {},
 });
 
-export default function PagesManagerContextProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const [pageNr, setPageNr] = useState<number>(0);
+const PagesManagerContextProvider = memo(
+  ({ children }: { children: ReactNode }) => {
+    const [pageNr, setPageNr] = useState<number>(0);
 
-  return (
-    <PagesManagerContext.Provider value={{ pageNr, setPageNr }}>
-      {children}
-    </PagesManagerContext.Provider>
-  );
-}
+    return (
+      <PagesManagerContext.Provider value={{ pageNr, setPageNr }}>
+        {children}
+      </PagesManagerContext.Provider>
+    );
+  }
+);
+
+export default PagesManagerContextProvider;

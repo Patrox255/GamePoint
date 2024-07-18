@@ -28,7 +28,12 @@ export default function ProductPage() {
   let content;
   if (error) content = <Error message={error.message} />;
   if (data && data.data) {
-    content = <ExtendedGamePreview game={gameStable as IGame} />;
+    content = (
+      <ExtendedGamePreview
+        game={gameStable as IGame & { reviews: number }}
+        key={`product-${(gameStable as IGame).slug}`}
+      />
+    );
   }
 
   return (

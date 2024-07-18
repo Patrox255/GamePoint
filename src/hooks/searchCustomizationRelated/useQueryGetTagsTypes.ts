@@ -1,4 +1,4 @@
-import { IDeveloper } from "../../models/devloper.model";
+import { IDeveloper } from "../../models/developer.model";
 import { IGenre } from "../../models/genre.model";
 import { IPlatform } from "../../models/platform.model";
 import { IPublisher } from "../../models/publisher.model";

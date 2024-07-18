@@ -97,6 +97,9 @@ export default function PriceCustomization() {
         <Button
           disabled={!canSetToFreeToPlay}
           active={onlyFreeToPlay}
+          passedKey={`search-customization-only-free-btn${
+            onlyFreeToPlay ? "-active" : ""
+          }`}
           onClick={() => {
             handleMinChange("0");
             handleMaxChange("0");

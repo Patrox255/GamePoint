@@ -36,6 +36,8 @@ export default function PagesElement({
     ? ctxSetPageNr
     : undefined;
 
+  console.log(pageNr);
+
   const PageNrToSelect = function ({
     pageNr,
     active = false,

@@ -17,6 +17,9 @@ export default function DiscountCustomization() {
     <article className="my-[-0.5rem]">
       <Button
         active={discountActive === 1}
+        passedKey={`search-customization-discount-btn${
+          discountActive === 1 ? "-active" : ""
+        }`}
         disabled={!areThereGamesOnSale}
         onClick={() =>
           discountActive === 0 ? setDiscountActive(1) : setDiscountActive(0)

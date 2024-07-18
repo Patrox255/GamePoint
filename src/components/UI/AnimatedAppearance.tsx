@@ -4,9 +4,11 @@ import { ReactNode, useRef } from "react";
 export default function AnimatedAppearance({
   children,
   staggerChildren = true,
+  flexTailwindClass = "flex-col",
 }: {
   children: ReactNode;
   staggerChildren?: boolean;
+  flexTailwindClass?: "flex-col" | "flex-row";
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, amount: 0.2 });
@@ -14,7 +16,7 @@ export default function AnimatedAppearance({
   return (
     <motion.div
       ref={ref}
-      className="flex flex-col w-full justify-center items-center"
+      className={`flex ${flexTailwindClass} w-full justify-center items-center`}
       variants={{
         hidden: {
           opacity: 0,

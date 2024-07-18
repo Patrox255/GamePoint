@@ -1,8 +1,14 @@
-import { IMongooseDocument } from "./mongooseDocument.model";
+import { IUser } from "./user.model";
 
-export interface IReview extends IMongooseDocument {
-  userId: string;
-  gameId: string;
+export interface IReviewCriterion {
+  criterionName: string;
   rating: number;
+}
+
+export interface IReview {
+  userId: IUser;
+  criteria: IReviewCriterion[];
   content: string;
+  likes: number;
+  date: Date;
 }

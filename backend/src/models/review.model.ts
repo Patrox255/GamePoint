@@ -1,17 +1,29 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, Types } from "mongoose";
 
-export interface IReview extends Document {
-  userId: string;
-  gameId: string;
+export interface IReviewCriterion {
+  criterionName: string;
   rating: number;
-  content: string;
 }
+
+export interface IReview {
+  userId: Types.ObjectId;
+  criteria: IReviewCriterion[];
+  content: string;
+  date?: Date;
+  likes?: number;
+}
+
+const ReviewCriterionSchema: Schema = new Schema({
+  criterionName: { type: String, required: true },
+  rating: { type: Number, required: true },
+});
 
 const ReviewSchema: Schema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  gameId: { type: Schema.Types.ObjectId, ref: "Game", required: true },
-  rating: { type: Number, required: true },
+  criteria: [ReviewCriterionSchema],
   content: { type: String, required: true },
+  likes: { type: Number, default: 0 },
+  date: { type: Date, default: Date.now },
 });
 
 const Review = mongoose.model<IReview>("Review", ReviewSchema);

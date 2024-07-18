@@ -1,8 +1,9 @@
-import { IDeveloper } from "./devloper.model";
+import { IDeveloper } from "./developer.model";
 import { IGenre } from "./genre.model";
 import { IMongooseDocument } from "./mongooseDocument.model";
 import { IPlatform } from "./platform.model";
 import { IPublisher } from "./publisher.model";
+import { IReview } from "./review.model";
 
 export interface IGame extends IMongooseDocument {
   title: string;
@@ -19,4 +20,5 @@ export interface IGame extends IMongooseDocument {
   finalPrice: number;
   slug?: string;
   storyLine?: string;
+  reviews: IReview[];
 }
