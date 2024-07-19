@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 
-import PagesManagerContextProvider from "../../store/products/PagesManagerContext";
 import SliderProductElementContent from "../main/slider/SliderProductElementContent";
 import AnimatedAppearance from "../UI/AnimatedAppearance";
 import Button from "../UI/Button";
@@ -13,40 +12,44 @@ import ReviewContent from "../product/ReviewContent";
 import ReviewsWrapper from "../product/ReviewsWrapper";
 import ProductAdditionalInformation from "../product/ProductAdditionalInformation";
 import { MAX_REVIEWS_PER_PAGE } from "../../helpers/config";
+import PagesManagerContextProvider from "../../store/products/PagesManagerContext";
 
 const ExtendedGamePreview = memo(
   ({ game }: { game: IGame & { reviews: number } }) => {
     console.log(game);
 
+    const stableSliderImageOverviewFn = useCallback(
+      (SliderImageOverviewPrepared: () => JSX.Element) => (
+        <AnimatedAppearance>
+          <SliderImageOverviewPrepared />
+          <PagesElement
+            amountOfElementsPerPage={5}
+            totalAmountOfElementsToDisplayOnPages={game.artworks.length}
+          />
+        </AnimatedAppearance>
+      ),
+      [game.artworks.length]
+    );
+
     return (
       <>
         <article className="product-overview">
-          <PagesManagerContextProvider>
-            <SliderProductElementContent
-              element={game}
-              showTags={false}
-              showSummary={false}
-              sliderImageOverviewFn={(SliderImageOverviewPrepared) => (
-                <AnimatedAppearance>
-                  <SliderImageOverviewPrepared />
-                  <PagesElement
-                    amountOfElementsPerPage={5}
-                    totalAmountOfElementsToDisplayOnPages={game.artworks.length}
-                  />
-                </AnimatedAppearance>
-              )}
-            >
-              {(element) => (
-                <Button
-                  onClick={() => {
-                    console.log(`${element.title} added to cart!`);
-                  }}
-                >
-                  Add to cart
-                </Button>
-              )}
-            </SliderProductElementContent>
-          </PagesManagerContextProvider>
+          <SliderProductElementContent
+            element={game}
+            showTags={false}
+            showSummary={false}
+            sliderImageOverviewFn={stableSliderImageOverviewFn}
+          >
+            {(element) => (
+              <Button
+                onClick={() => {
+                  console.log(`${element.title} added to cart!`);
+                }}
+              >
+                Add to cart
+              </Button>
+            )}
+          </SliderProductElementContent>
         </article>
         <motion.article
           className="product-details flex flex-col text-center bg-darkerBg p-8 rounded-xl gap-4"

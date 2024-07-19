@@ -6,17 +6,30 @@ import { IOrderCustomizationProperty } from "../store/products/SearchCustomizati
 import { IReview } from "../models/review.model";
 
 export const queryClient = new QueryClient();
-// queryClient.invalidateQueries({ queryKey: ["games"], exact: false });
 
-export const getJSON = async function <dataInterface>(
-  url: string,
-  signal?: AbortSignal
-) {
+export const getJSON = async function <dataInterface>({
+  url,
+  signal,
+  method,
+  body,
+}: {
+  url: string;
+  signal?: AbortSignal;
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  body?: unknown;
+}) {
   const res = await fetch(url, {
     ...(signal && { signal }),
+    ...(method && { method }),
+    ...(body !== undefined && {
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+    credentials: "include",
   });
   const data = await res.json();
-  if (!res.ok)
+  if (!res.ok) {
+    if (res.status === 422 && data.errors) throw data.errors;
     throw {
       message: `${
         (data && (data as { message?: string }).message) ||
@@ -24,6 +37,7 @@ export const getJSON = async function <dataInterface>(
       }`,
       status: res.status,
     };
+  }
 
   return { data } as { data: dataInterface };
 };
@@ -34,10 +48,10 @@ export interface ILoaderResult<resultInterface> {
 }
 
 export const load10MostPopularGames = async (signal?: AbortSignal) => {
-  const data = await getJSON<IGame[]>(
-    `${API_URL}/products?most_popular=1&limit=10`,
-    signal
-  );
+  const data = await getJSON<IGame[]>({
+    url: `${API_URL}/products?most_popular=1&limit=10`,
+    signal,
+  });
   return data;
 };
 
@@ -56,8 +70,8 @@ export const load10GamesByQuery = async (
   developers?: string[],
   publishers?: string[]
 ) => {
-  const data = await getJSON<IGame[]>(
-    generateUrlEndpointWithSearchParams(`${API_URL}/products`, {
+  const data = await getJSON<IGame[]>({
+    url: generateUrlEndpointWithSearchParams(`${API_URL}/products`, {
       query,
       page: pageNr,
       priceMin,
@@ -72,8 +86,8 @@ export const load10GamesByQuery = async (
       developers,
       publishers,
     }),
-    signal
-  );
+    signal,
+  });
   return data;
 };
 
@@ -88,8 +102,8 @@ export const retrieveAmountOfGamesByQuery = async (
   developers?: string[],
   publishers?: string[]
 ) => {
-  const data = await getJSON<number>(
-    generateUrlEndpointWithSearchParams(`${API_URL}/products`, {
+  const data = await getJSON<number>({
+    url: generateUrlEndpointWithSearchParams(`${API_URL}/products`, {
       count: 1,
       query,
       priceMax,
@@ -100,8 +114,8 @@ export const retrieveAmountOfGamesByQuery = async (
       developers,
       publishers,
     }),
-    signal
-  );
+    signal,
+  });
   return data;
 };
 
@@ -118,25 +132,25 @@ export const loadTags = async <tagInterface>({
   limit?: number;
   gameDocumentTagPropertyName: string;
 }) => {
-  const data = await getJSON<tagInterface[]>(
-    generateUrlEndpointWithSearchParams(`${API_URL}/tags`, {
+  const data = await getJSON<tagInterface[]>({
+    url: generateUrlEndpointWithSearchParams(`${API_URL}/tags`, {
       mostPopular,
       query,
       limit,
       gameDocumentTagPropertyName,
     }),
-    signal
-  );
+    signal,
+  });
   return data;
 };
 
 export const retrieveMinAndMaxOfExistingPrices = async (
   signal?: AbortSignal
 ) => {
-  const data = await getJSON<{ min: number; max: number }>(
-    `${API_URL}/products/price`,
-    signal
-  );
+  const data = await getJSON<{ min: number; max: number }>({
+    url: `${API_URL}/products/price`,
+    signal,
+  });
   return data;
 };
 
@@ -153,14 +167,17 @@ export const getGameData = async <T = IGame>({
   reviewsPageNr?: number;
   maxReviewsPerPage?: number;
 }) => {
-  const data = await getJSON<IGame>(
-    generateUrlEndpointWithSearchParams(`${API_URL}/products/${productSlug}`, {
-      onlyReviews,
-      reviewsPageNr,
-      maxReviewsPerPage,
-    }),
-    signal
-  );
+  const data = await getJSON<IGame>({
+    url: generateUrlEndpointWithSearchParams(
+      `${API_URL}/products/${productSlug}`,
+      {
+        onlyReviews,
+        reviewsPageNr,
+        maxReviewsPerPage,
+      }
+    ),
+    signal,
+  });
   const releaseDate = data.data.releaseDate;
   if (releaseDate) data.data.releaseDate = new Date(releaseDate);
   const reviews = data.data.reviews;
@@ -173,4 +190,13 @@ export const getGameData = async <T = IGame>({
       date: new Date(review.date),
     }));
   return data as { data: T };
+};
+
+export const login = async (userData: { login: string; password: string }) => {
+  const data = await getJSON<string>({
+    url: `${API_URL}/login`,
+    method: "POST",
+    body: userData,
+  });
+  return data;
 };

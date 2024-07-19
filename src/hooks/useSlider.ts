@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export const useSlider = function <T>(
   elements: T[],
@@ -37,39 +37,44 @@ export const useSlider = function <T>(
     ]
   );
 
-  const [currentInterval, setCurrentInterval] = useState<number>(
-    changeElementInterval
-  );
+  const currentInterval = useRef<number>(changeElementInterval);
 
   useEffect(() => {
     if (elements.length <= 1) return;
     const timer = setInterval(() => {
-      canCount &&
-        setCurrentInterval((oldCurrentInterval) => oldCurrentInterval - 200);
+      if (!canCount) return;
+      currentInterval.current -= 200;
+      if (currentInterval.current === 0) {
+        changeActiveElementIndex();
+        currentInterval.current = changeElementInterval;
+      }
     }, 200);
     return () => clearInterval(timer);
-  }, [changeElementInterval, canCount, elements.length]);
+  }, [
+    changeElementInterval,
+    canCount,
+    elements.length,
+    changeActiveElementIndex,
+  ]);
 
   useEffect(() => {
-    setCurrentInterval(changeElementInterval);
+    currentInterval.current = changeElementInterval;
   }, [activeElementIndex, changeElementInterval]);
 
-  useEffect(() => {
-    if (currentInterval === 0) {
-      changeActiveElementIndex();
-      setCurrentInterval(changeElementInterval);
-    }
-  }, [changeActiveElementIndex, changeElementInterval, currentInterval]);
+  const setActiveElementStableFnIfManualTimer = useCallback(
+    (newActiveElementIndex: number) => {
+      setCanCount(false);
+      setActiveElementIndex(newActiveElementIndex);
+      additionalActionsAfterChangingElementFn &&
+        additionalActionsAfterChangingElementFn(newActiveElementIndex);
+    },
+    [additionalActionsAfterChangingElementFn]
+  );
 
   return {
     activeElementIndex,
     setActiveElementIndex: programaticallyStartTimer
-      ? (newActiveElementIndex: number) => {
-          setCanCount(false);
-          setActiveElementIndex(newActiveElementIndex);
-          additionalActionsAfterChangingElementFn &&
-            additionalActionsAfterChangingElementFn(newActiveElementIndex);
-        }
+      ? setActiveElementStableFnIfManualTimer
       : setActiveElementIndex,
     changeActiveElementIndex,
     setCanCount,

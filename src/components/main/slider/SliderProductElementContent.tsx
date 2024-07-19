@@ -13,6 +13,7 @@ import slugify from "slugify";
 import useCompareComplexForUseMemo from "../../../hooks/useCompareComplexForUseMemo";
 import ImageWithLoading from "../../UI/ImageWithLoading";
 import { SliderContext } from "./DataSlider";
+import usePages from "../../../hooks/usePages";
 import { PagesManagerContext } from "../../../store/products/PagesManagerContext";
 
 export default function SliderProductElementContent({
@@ -85,22 +86,40 @@ export default function SliderProductElementContent({
     element.artworks.slice(0, limitArtworks)
   );
 
-  const { pageNr, setPageNr } = useContext(PagesManagerContext);
-  const insidePagesManagerContext = pageNr !== -1;
+  const { pageNr, setPageNr } = usePages();
+
+  const stableUseSliderActionsAfterChangingElementFn = useCallback(
+    (artworkIndex: number) => {
+      usesProductChangeContext &&
+        hasArtworks &&
+        setCanCountProductChangeStable(false);
+      Math.trunc(artworkIndex / 5) !== pageNr &&
+        setPageNr(Math.trunc(artworkIndex / 5));
+      console.log(
+        artworkIndex,
+        pageNr,
+        Math.trunc(artworkIndex / 5) !== pageNr
+      );
+    },
+    [
+      hasArtworks,
+      pageNr,
+      setCanCountProductChangeStable,
+      setPageNr,
+      usesProductChangeContext,
+    ]
+  );
 
   const {
     activeElementIndex: artworkIndex,
     setActiveElementIndex: setArtworkIndex,
     setCanCount,
-  } = useSlider(stableElementArtworks, 4000, true, (artworkIndex) => {
-    usesProductChangeContext &&
-      hasArtworks &&
-      setCanCountProductChangeStable(false);
-    insidePagesManagerContext &&
-      Math.trunc(artworkIndex / 5) !== pageNr &&
-      setPageNr(Math.trunc(artworkIndex / 5));
-    console.log(artworkIndex, pageNr, Math.trunc(artworkIndex / 5) !== pageNr);
-  });
+  } = useSlider(
+    stableElementArtworks,
+    4000,
+    true,
+    stableUseSliderActionsAfterChangingElementFn
+  );
 
   const SliderImageOverviewPrepared = useCallback(
     () => (
@@ -114,79 +133,75 @@ export default function SliderProductElementContent({
 
   return (
     <figure className="w-full flex gap-3 justify-center items-center py-24">
-      <div className="figure-image-container w-3/5 flex justify-center items-center flex-col min-h-[24rem]">
-        <AnimatePresence mode="wait">
-          {!hasArtworks ? (
-            <motion.p
-              {...sliderProductElementsAnimation}
-              key={`img-error-${element.title}`}
-            >
-              No artworks have been found for this game :(.
-            </motion.p>
-          ) : (
-            <>
-              {/* <motion.img
-                src={element.artworks[artworkIndex]}
-                className="w-[1280px] rounded-xl"
+      <PagesManagerContext.Provider value={{ pageNr, setPageNr }}>
+        <div className="figure-image-container w-3/5 flex justify-center items-center flex-col min-h-[24rem]">
+          <AnimatePresence mode="wait">
+            {!hasArtworks ? (
+              <motion.p
                 {...sliderProductElementsAnimation}
-                key={`artwork-${artworkIndex}-${element.artworks[artworkIndex]}`}
-              /> */}
-              <ImageWithLoading
-                src={element.artworks[artworkIndex]}
-                className="w-[1024px] h-auto max-h-[576px] rounded-xl object-contain overflow-hidden"
-                motionAnimation={sliderProductElementsAnimation}
-                key={`artwork-${artworkIndex}-${element.artworks[artworkIndex]}`}
-                additionalActionOnLoadFn={() => {
-                  setCanCount(true);
-                  usesProductChangeContext &&
-                    setCanCountProductChangeStable(true);
-                }}
-              />
-            </>
-          )}
-        </AnimatePresence>
-        {hasArtworks && element.artworks.length > 1 && (
-          <SliderProductElementArtworkContext.Provider
-            value={{ artworkIndex, setArtworkIndex }}
-          >
-            {sliderImageOverviewFn(SliderImageOverviewPrepared)}
-          </SliderProductElementArtworkContext.Provider>
-        )}
-      </div>
-      <AnimatePresence mode="wait">
-        <motion.figcaption
-          className={`w-2/5 flex justify-between items-center flex-col gap-6 text-center mb-6 ${
-            showSummary && showTags ? "self-stretch" : ""
-          }`}
-          {...sliderProductElementsAnimation}
-          key={`figcaption-${element.title}`}
-          onAnimationComplete={() => setFinishedLoadingDescription(true)}
-        >
-          <div className="flex flex-col gap-3">
-            <h2 className="text-2xl text-highlightRed font-bold">
-              {element.title}
-            </h2>
-            {showTags && (
-              <AnimatedAppearance>
-                <TagsComponent
-                  tags={element.genres.map((genre) => genre.name)}
-                  paramName="genre"
+                key={`img-error-${element.title}`}
+              >
+                No artworks have been found for this game :(.
+              </motion.p>
+            ) : (
+              <>
+                <ImageWithLoading
+                  src={element.artworks[artworkIndex]}
+                  className="w-[1024px] h-auto max-h-[576px] rounded-xl object-contain overflow-hidden"
+                  motionAnimation={sliderProductElementsAnimation}
+                  key={`artwork-${artworkIndex}-${element.artworks[artworkIndex]}`}
+                  additionalActionOnLoadFn={() => {
+                    setCanCount(true);
+                    usesProductChangeContext &&
+                      setCanCountProductChangeStable(true);
+                  }}
                 />
-              </AnimatedAppearance>
+              </>
             )}
-            {showSummary && <p className="text-sm">{element.summary}</p>}
-          </div>
-          <div className="price-product-page-container w-full flex justify-around">
-            <PriceTag
-              price={element.price}
-              discount={element.discount}
-              startAnimation={finishedLoadingDescription}
-              finalPrice={element.finalPrice}
-            />
-            {children(element)}
-          </div>
-        </motion.figcaption>
-      </AnimatePresence>
+          </AnimatePresence>
+          {hasArtworks && element.artworks.length > 1 && (
+            <SliderProductElementArtworkContext.Provider
+              value={{ artworkIndex, setArtworkIndex }}
+            >
+              {sliderImageOverviewFn(SliderImageOverviewPrepared)}
+            </SliderProductElementArtworkContext.Provider>
+          )}
+        </div>
+        <AnimatePresence mode="wait">
+          <motion.figcaption
+            className={`w-2/5 flex justify-between items-center flex-col gap-6 text-center mb-6 ${
+              showSummary && showTags ? "self-stretch" : ""
+            }`}
+            {...sliderProductElementsAnimation}
+            key={`figcaption-${element.title}`}
+            onAnimationComplete={() => setFinishedLoadingDescription(true)}
+          >
+            <div className="flex flex-col gap-3">
+              <h2 className="text-2xl text-highlightRed font-bold">
+                {element.title}
+              </h2>
+              {showTags && (
+                <AnimatedAppearance>
+                  <TagsComponent
+                    tags={element.genres.map((genre) => genre.name)}
+                    paramName="genre"
+                  />
+                </AnimatedAppearance>
+              )}
+              {showSummary && <p className="text-sm">{element.summary}</p>}
+            </div>
+            <div className="price-product-page-container w-full flex justify-around">
+              <PriceTag
+                price={element.price}
+                discount={element.discount}
+                startAnimation={finishedLoadingDescription}
+                finalPrice={element.finalPrice}
+              />
+              {children(element)}
+            </div>
+          </motion.figcaption>
+        </AnimatePresence>
+      </PagesManagerContext.Provider>
     </figure>
   );
 }

@@ -12,6 +12,7 @@ export default function Button({
   useBgColor = true,
   disabled = false, // only to leave this button greyed out and disable onclick if some feature is not available
   canClickWhileActive = false,
+  type,
   ...props // sadly it is not supported in TS so I add each prop individually
 }: {
   children?: ReactNode;
@@ -26,6 +27,7 @@ export default function Button({
   useBgColor?: boolean;
   disabled?: boolean;
   canClickWhileActive?: boolean;
+  type?: "submit" | "reset" | "button";
 }) {
   const initialClasses = {
     opacity: 0.5,
@@ -61,6 +63,7 @@ export default function Button({
   return (
     <AnimatePresence mode="wait">
       <motion.button
+        type={type}
         {...props}
         className={`${
           useBorder ? "border-highlightRed border-2" : ""

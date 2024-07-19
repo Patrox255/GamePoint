@@ -12,10 +12,12 @@ export default function HeaderLink({
   href,
   children,
   searchParams,
+  additionalTailwindClasses = "",
 }: {
   href: string;
   children: ReactNode;
   searchParams?: { [key: string]: unknown };
+  additionalTailwindClasses?: string;
 }) {
   return (
     <HeaderLinkContext.Provider
@@ -26,7 +28,10 @@ export default function HeaderLink({
         },
       }}
     >
-      <Link to={generateUrlEndpointWithSearchParams(href, searchParams)}>
+      <Link
+        to={generateUrlEndpointWithSearchParams(href, searchParams)}
+        className={additionalTailwindClasses}
+      >
         {children}
       </Link>
     </HeaderLinkContext.Provider>

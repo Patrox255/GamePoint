@@ -1,6 +1,7 @@
 import express, { NextFunction, Request, Response } from "express";
 import { connectDB } from "./db";
-import { CLIENT_ID, SECRET } from "./secret";
+import { CLIENT_ID, JWTSECRET, SECRET } from "./secret";
+import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import Platform, { IPlatform } from "./models/platform.model";
 import Genre, { IGenre } from "./models/genre.model";
@@ -8,6 +9,7 @@ import Game, { IGame } from "./models/game.model";
 import Publisher, { IPublisher } from "./models/publisher.model";
 import Developer, { IDeveloper } from "./models/developer.model";
 import User, { IUser } from "./models/user.model";
+import jwt from "jsonwebtoken";
 import {
   corsOptions,
   createDocumentsOfObjsAndInsert,
@@ -22,6 +24,7 @@ import {
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
+import cookieParser from "cookie-parser";
 
 const app = express();
 const port = 3000;
@@ -33,6 +36,12 @@ interface Error {
   status?: number;
 }
 
+interface IJwtPayload {
+  userId: string;
+  iat?: number;
+  exp?: number;
+}
+
 const startServer = async () => {
   const errorHandler = (err: Error, req: Request, res: Response) => {
     console.error(err);
@@ -42,6 +51,9 @@ const startServer = async () => {
   };
   try {
     app.use(cors(corsOptions));
+
+    app.use(express.json());
+    app.use(cookieParser());
 
     app.options("*", cors(corsOptions));
     await connectDB();
@@ -139,7 +151,6 @@ const startServer = async () => {
             { tags: developers, gameDocumentTagPropertyName: "developer" },
             { tags: publishers, gameDocumentTagPropertyName: "publisher" },
           ]);
-          console.table(filterTagsEntries);
 
           const filter = {
             ...(query && { title: { $regex: query, $options: "i" } }),
@@ -677,15 +688,19 @@ const startServer = async () => {
             "test",
             [4, 10]
           );
-          const sampleUsersToSave: IUser[] = Array.from(
-            { length: 10 },
-            (_, i) => {
+          const salt = await bcrypt.genSalt(10);
+          const sampleUsersToSave: IUser[] = await Promise.all(
+            Array.from({ length: 10 }, async (_, i) => {
+              const passwordHash = await bcrypt.hash(
+                sampleUsersLogins[i],
+                salt
+              );
               return {
                 login: sampleUsersLogins[i],
                 email: `${sampleUsersLogins[i]}@gamepoint.pl`,
-                password: sampleUsersLogins[i],
+                password: passwordHash,
               };
-            }
+            })
           );
           const { newObjs: sampleUsers } = await createDocumentsOfObjsAndInsert(
             sampleUsersToSave,
@@ -940,6 +955,146 @@ const startServer = async () => {
           });
         } catch (err) {
           next(err);
+        }
+      }
+    );
+
+    const jwtVerifyPromisified = (token: string, secretKey: string) =>
+      new Promise<string | jwt.JwtPayload | undefined>((resolve, reject) => {
+        jwt.verify(token, secretKey, (err, decoded) => {
+          if (err) reject(err);
+          resolve(decoded);
+        });
+      });
+
+    const verifyJwt = async (
+      req: Request,
+      res: Response,
+      next: NextFunction
+    ) => {
+      const token = req.cookies.token;
+      if (!token)
+        return res.status(401).json({ message: "Could not authorize" });
+
+      try {
+        const decodedJwt = (await jwtVerifyPromisified(
+          token,
+          JWTSECRET
+        )) as IJwtPayload;
+        const decodedUserId = decodedJwt.userId;
+        next();
+      } catch (e) {
+        return res.status(403).json({
+          message: "You are not allowed to access the requested content",
+        });
+      }
+    };
+
+    app.post(
+      "/login",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { login, password } = req.body;
+          console.log(Object.entries(req.body));
+
+          interface IValidateBodyEntry<T> {
+            type: string;
+            name: string;
+            validateFn?: (val: T) => { message: string } | boolean;
+            optional?: boolean;
+            requestBodyName: string;
+          }
+          const validateBodyEntries = function <T>(
+            entries: IValidateBodyEntry<T>[],
+            request: Request
+          ) {
+            const errors: { message: string }[] = [];
+            entries.forEach((entry) => {
+              const {
+                type,
+                name,
+                validateFn,
+                optional = false,
+                requestBodyName,
+              } = entry;
+
+              const value = request.body[requestBodyName];
+              const createBodyEntryErr = (message: string) => ({
+                message,
+                errInputName: requestBodyName,
+              });
+              if (typeof value !== type)
+                errors.push(
+                  createBodyEntryErr(`Please write a correct ${name}`)
+                );
+              if (typeof value !== "object" && !optional && value === "")
+                errors.push(createBodyEntryErr(`${name} can't be empty!`));
+              if (
+                typeof value === "object" &&
+                Array.isArray(value) &&
+                value.length === 0 &&
+                !optional
+              )
+                errors.push(createBodyEntryErr(`${name} can't be empty!`));
+              if (validateFn && validateFn(value) !== true)
+                errors.push(
+                  createBodyEntryErr(
+                    (validateFn(value) as { message: string }).message
+                  )
+                );
+            });
+            return errors;
+          };
+          const stringBodyEntries: IValidateBodyEntry<string>[] = [
+            {
+              name: "Login",
+              type: "string",
+              requestBodyName: "login",
+            },
+            {
+              name: "Password",
+              type: "string",
+              requestBodyName: "password",
+              validateFn: (val) =>
+                val.length >= 8 || {
+                  message: "Password must consist of at least 8 characters!",
+                },
+            },
+          ];
+          const stringBodyEntriesErrors = validateBodyEntries(
+            stringBodyEntries,
+            req
+          );
+          const errors = [...stringBodyEntriesErrors];
+          if (errors.length > 0) return res.status(422).json({ errors });
+          const foundUser = await User.findOne({
+            login: { $eq: login },
+          });
+          if (!foundUser)
+            return res
+              .status(200)
+              .json({ message: "A user with such login does not exist!" });
+          const validPassword = await bcrypt.compare(
+            password,
+            foundUser!.password
+          );
+          if (!validPassword)
+            return res
+              .status(200)
+              .json({ message: "Provided password is invalid!" });
+          const token = jwt.sign(
+            { userId: foundUser._id.toString() },
+            JWTSECRET,
+            { expiresIn: "1min" }
+          );
+          res.cookie("token", token, {
+            httpOnly: true,
+            secure: true,
+            maxAge: 60000,
+          });
+          return res.status(200).json(token);
+        } catch (e) {
+          next(e);
         }
       }
     );

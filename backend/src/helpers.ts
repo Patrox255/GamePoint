@@ -48,8 +48,9 @@ export const random = (min: number, max: number) =>
 
 export const corsOptions = {
   origin: FRONTEND_URL,
-  methods: ["GET"],
+  methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type"],
+  credentials: true,
 };
 
 export const parseQueries = async (
