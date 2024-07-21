@@ -1,6 +1,6 @@
 import express, { NextFunction, Request, Response } from "express";
 import { connectDB } from "./db";
-import { CLIENT_ID, JWTSECRET, SECRET } from "./secret";
+import { CLIENT_ID, JWTREFRESHSECRET, JWTSECRET, SECRET } from "./secret";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import Platform, { IPlatform } from "./models/platform.model";
@@ -9,11 +9,12 @@ import Game, { IGame } from "./models/game.model";
 import Publisher, { IPublisher } from "./models/publisher.model";
 import Developer, { IDeveloper } from "./models/developer.model";
 import User, { IUser } from "./models/user.model";
-import jwt from "jsonwebtoken";
+import jwt, { JsonWebTokenError } from "jsonwebtoken";
 import {
   corsOptions,
   createDocumentsOfObjsAndInsert,
   dropCollectionsIfTheyExist,
+  generateAndSaveAccessToken,
   generateUniqueRandomStrs,
   getJSON,
   parseQueries,
@@ -25,6 +26,7 @@ import {
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
 import cookieParser from "cookie-parser";
+import RefreshToken from "./models/refreshToken.model";
 
 const app = express();
 const port = 3000;
@@ -967,23 +969,59 @@ const startServer = async () => {
         });
       });
 
+    interface IRequestAdditionAfterVerifyJwtfMiddleware {
+      token: { isAdmin?: boolean; expDate?: Date; login?: string };
+    }
+
     const verifyJwt = async (
       req: Request,
       res: Response,
       next: NextFunction
     ) => {
-      const token = req.cookies.token;
-      if (!token)
+      const refreshToken = req.cookies.refreshToken;
+      if (!refreshToken)
         return res.status(401).json({ message: "Could not authorize" });
 
       try {
         const decodedJwt = (await jwtVerifyPromisified(
-          token,
-          JWTSECRET
+          refreshToken,
+          JWTREFRESHSECRET
         )) as IJwtPayload;
-        const decodedUserId = decodedJwt.userId;
+        const userId = decodedJwt.userId;
+        let accessToken = req.cookies.accessToken;
+        if (!accessToken) {
+          accessToken = generateAndSaveAccessToken(res, userId);
+        }
+        let decodedJwtAccessToken: jwt.JwtPayload = {};
+        try {
+          decodedJwtAccessToken = (await jwtVerifyPromisified(
+            accessToken,
+            JWTSECRET
+          )) as IJwtPayload;
+        } catch (e) {
+          if ((e as JsonWebTokenError).name === "TokenExpiredError") {
+            generateAndSaveAccessToken(res, userId);
+            decodedJwtAccessToken.userId = userId;
+          } else {
+            throw e;
+          }
+        }
+        if (decodedJwtAccessToken.userId !== userId)
+          return res.status(401).json({ message: "Misleading tokens data!" });
+
+        const correspondingUserDocument = await User.findOne({ _id: userId });
+        if (!correspondingUserDocument)
+          return res
+            .status(401)
+            .json({ messsage: "Could not authorize as such user!" });
+        (req as Request & IRequestAdditionAfterVerifyJwtfMiddleware).token = {
+          isAdmin: correspondingUserDocument?.isAdmin,
+          expDate: decodedJwt.exp as unknown as Date,
+          login: correspondingUserDocument.login,
+        };
         next();
       } catch (e) {
+        console.log(e);
         return res.status(403).json({
           message: "You are not allowed to access the requested content",
         });
@@ -1082,22 +1120,42 @@ const startServer = async () => {
             return res
               .status(200)
               .json({ message: "Provided password is invalid!" });
-          const token = jwt.sign(
-            { userId: foundUser._id.toString() },
-            JWTSECRET,
-            { expiresIn: "1min" }
+
+          const foundUserIdStr = foundUser._id.toString();
+          const refreshToken = jwt.sign(
+            { userId: foundUserIdStr },
+            JWTREFRESHSECRET,
+            { expiresIn: "1d" }
           );
-          res.cookie("token", token, {
+          res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: true,
-            maxAge: 60000,
+            maxAge: 1000 * 3600 * 24,
           });
-          return res.status(200).json(token);
+          const accessToken = generateAndSaveAccessToken(res, foundUserIdStr);
+
+          await new RefreshToken({ content: refreshToken }).save();
+
+          return res.status(200).json(accessToken);
         } catch (e) {
           next(e);
         }
       }
     );
+
+    app.get("/auth", verifyJwt, (req: Request, res: Response) => {
+      const { token } = req as Request & {
+        token: { isAdmin?: boolean; expDate?: Date };
+      };
+      return res.status(200).json(token);
+    });
+
+    app.get("/logout", verifyJwt, async (req: Request, res: Response) => {
+      await RefreshToken.deleteOne({ content: req.cookies.refreshToken });
+      res.clearCookie("refreshToken");
+      res.clearCookie("accessToken");
+      res.status(200).json("Successfully logged out!");
+    });
 
     const server = app.listen(port);
 

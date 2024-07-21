@@ -1,13 +1,20 @@
 import { Link, useLocation } from "react-router-dom";
-import { memo, useContext } from "react";
+import { memo, useCallback, useContext, useEffect, useMemo } from "react";
+import { useMutation } from "@tanstack/react-query";
 
 import Button from "./Button";
 import NavSearchBar from "../main/nav/NavSearchBar";
 import { actions } from "../../store/mainSearchBarSlice";
-import { useAppDispatch } from "../../hooks/reduxStore";
+import { useAppDispatch, useAppSelector } from "../../hooks/reduxStore";
 import generateInitialStateFromSearchParamsOrSessionStorage from "../../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
 import { ModalContext } from "../../store/ModalContext";
 import Logo from "./Logo";
+import { logout } from "../../lib/fetch";
+import { userAuthSliceActions } from "../../store/userAuthSlice";
+import DropDownMenuWrapper from "./DropDownMenu/DropDownMenuWrapper";
+import UserSVG from "./svg/UserSVG";
+import DropDownMenuDroppedElementsContainer from "./DropDownMenu/DropDownMenuDroppedElementsContainer";
+import NavUserPanelLink from "../main/nav/NavUserPanelLink";
 
 let initialRender = true;
 
@@ -22,12 +29,43 @@ const Nav = memo(() => {
     null
   );
   const dispatch = useAppDispatch();
-  if (initialRender && query !== null) {
+
+  useEffect(() => {
+    if (!initialRender) return;
+    if (query === null) return;
     initialRender = false;
     dispatch(actions.setSearchTerm(query));
-  }
+  }, [dispatch, query]);
 
   const { setLoginModalOpen } = useContext(ModalContext);
+  const isLogged =
+    useAppSelector((state) => state.userAuthSlice.expDate) !== undefined;
+  const { mutate } = useMutation({
+    mutationFn: () => logout(),
+    onMutate: () => dispatch(userAuthSliceActions.resetAuthData()),
+    onError: () => window.location.reload(), // had to do this in case of an error related to logout because only invalidating userAuth key query won't do anything as
+    // when logout fails also result of this response doesn't change so that won't trigger any change in state nor reevaluation of the logic in RootLayout
+  });
+
+  const { login, isAdmin } = useAppSelector((state) => state.userAuthSlice);
+
+  interface IUserPanelLinkEntry {
+    header: string;
+    userPanelParam?: string;
+    enabled?: boolean;
+    actionOnClick?: () => void;
+  }
+
+  const stableMutateFn = useCallback(() => mutate(), [mutate]);
+
+  const userPanelLinks = useMemo<IUserPanelLinkEntry[]>(() => {
+    return [
+      { header: "Orders", userPanelParam: "orders" },
+      { header: "Contact Information", userPanelParam: "contact" },
+      { header: "Admin Panel", userPanelParam: "admin", enabled: isAdmin },
+      { header: "Log out", actionOnClick: stableMutateFn },
+    ].filter((entry) => entry.enabled === undefined || entry.enabled);
+  }, [isAdmin, stableMutateFn]);
 
   return (
     <nav
@@ -39,13 +77,46 @@ const Nav = memo(() => {
       <div className="px-6 flex justify-end gap-3 w-4/5 items-center h-full">
         {pathname !== "/products" && (
           <>
-            <NavSearchBar placeholder="Look for a game" />
+            <DropDownMenuWrapper>
+              <NavSearchBar placeholder="Look for a game" />
+            </DropDownMenuWrapper>
             <Link to="/products">
               <Button>Advanced Search</Button>
             </Link>
           </>
         )}
-        <Button onClick={() => setLoginModalOpen(true)}>Log in</Button>
+        {!isLogged && (
+          <Button onClick={() => setLoginModalOpen(true)}>Log in</Button>
+        )}
+        {isLogged && (
+          <DropDownMenuWrapper widthTailwindClass="w-auto">
+            <Button>
+              {/* <LinkToDifferentPageWithCurrentPageInformation
+                to="/user/panel"
+                className="w-full h-full block"
+              > */}
+              <div className="flex items-center justify-center">
+                <UserSVG className="w-8 h-8" />
+                {login}
+              </div>
+              {/* </LinkToDifferentPageWithCurrentPageInformation> */}
+            </Button>
+            <DropDownMenuDroppedElementsContainer
+              customPaddingsTailwindClasses={{ px: "0" }}
+            >
+              <ul className="user-panel-nav w-full flex flex-col gap-6 text-center">
+                {userPanelLinks.map((userPanelLink) => (
+                  <NavUserPanelLink
+                    header={userPanelLink.header}
+                    userPanelParam={userPanelLink.userPanelParam}
+                    key={userPanelLink.header}
+                    actionOnClick={userPanelLink.actionOnClick}
+                  />
+                ))}
+              </ul>
+            </DropDownMenuDroppedElementsContainer>
+          </DropDownMenuWrapper>
+        )}
       </div>
     </nav>
   );

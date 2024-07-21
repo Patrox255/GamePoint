@@ -1,6 +1,6 @@
 import { AnimationProps, motion } from "framer-motion";
 import { ReactNode, useContext } from "react";
-import { HeaderLinkContext } from "./HeaderLink";
+import { HeaderLinkContext } from "./HeaderLinkOrHeaderAnimation";
 
 export const defaultHeaderTailwindCSS = "pb-2 font-bold inline";
 
@@ -24,11 +24,15 @@ export default function Header({
   motionAnimationProperties,
   usePaddingBottom = true,
   size = "medium",
+  additionalTailwindClasses,
+  colorTailwindClass = "text-highlightRed",
 }: {
   children: ReactNode;
   motionAnimationProperties?: AnimationProps;
   usePaddingBottom?: boolean;
   size?: "small" | "medium" | "large";
+  additionalTailwindClasses?: string;
+  colorTailwindClass?: string;
 }) {
   const { headerAnimationProps } = useContext(HeaderLinkContext);
   const usesHeaderLinkContext = Object.keys(headerAnimationProps).length !== 0;
@@ -42,7 +46,9 @@ export default function Header({
         usePaddingBottom
           ? defaultHeaderTailwindCSS
           : defaultHeaderTailwindCSS.replace("pb-2", "")
-      } ${usesHeaderLinkContext ? "cursor-pointer" : "text-highlightRed"}`}
+      } ${
+        usesHeaderLinkContext ? "cursor-pointer" : colorTailwindClass
+      } ${additionalTailwindClasses}`}
       {...motionAnimationProperties}
       {...(usesHeaderLinkContext ? headerAnimationProps : {})}
     >

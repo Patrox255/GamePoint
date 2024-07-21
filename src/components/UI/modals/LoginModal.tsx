@@ -1,15 +1,17 @@
-import { FormEvent, useContext, useEffect, useRef } from "react";
+import { FormEvent, useContext, useEffect, useRef, useState } from "react";
 
 import Input from "../Input";
 import Button from "../Button";
 import { ModalContext } from "../../../store/ModalContext";
-import HeaderLink from "../headers/HeaderLink";
+import HeaderLinkOrHeaderAnimation from "../headers/HeaderLinkOrHeaderAnimation";
 import Header from "../headers/Header";
 import Logo from "../Logo";
 import { useMutation } from "@tanstack/react-query";
-import { login } from "../../../lib/fetch";
+import { login, queryClient } from "../../../lib/fetch";
 import LoadingFallback from "../LoadingFallback";
 import Error from "../Error";
+import CheckMarkSVG from "../svg/CheckMarkSVG";
+import TimedOutActionWithProgressBar from "../TimedOutActionWithProgressBar";
 
 type ValidationErrorsArr = { message: string; errInputName: string }[];
 
@@ -17,8 +19,6 @@ const generateValidationErrorsRelatedToAnInput = (
   errorsRelatedToValidationArr: ValidationErrorsArr | undefined,
   inputName: string
 ) => {
-  console.log(errorsRelatedToValidationArr, inputName);
-
   return (
     errorsRelatedToValidationArr &&
     errorsRelatedToValidationArr
@@ -38,6 +38,7 @@ const generateValidationErrorsRelatedToAnInput = (
 
 export default function LoginModal() {
   const { loginModalOpen, setLoginModalOpen } = useContext(ModalContext);
+  const [loginModalState, setLoginModalState] = useState<"" | "success">("");
   const loginRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -50,6 +51,9 @@ export default function LoginModal() {
     { login: string; password: string }
   >({
     mutationFn: login,
+    onSuccess: (data) =>
+      typeof data.data !== "object" &&
+      queryClient.invalidateQueries({ queryKey: ["userAuth"] }),
   });
 
   function handleFormSubmit(e: FormEvent<HTMLFormElement>) {
@@ -61,6 +65,11 @@ export default function LoginModal() {
     mutate(formDataObj);
   }
 
+  function handleCloseLoginModal() {
+    setLoginModalState("");
+    setLoginModalOpen(false);
+  }
+
   const hasErrorRelatedToWrongUserData =
     data && data.data && (data.data as { message?: string }).message;
   const errorsRelatedToValidation =
@@ -70,7 +79,7 @@ export default function LoginModal() {
   useEffect(() => {
     if (hasErrorRelatedToWrongUserData) return;
     if (errorsRelatedToValidation) return;
-    if (data && data.data) setLoginModalOpen(false);
+    if (data && data.data) setLoginModalState("success");
   }, [
     data,
     errorsRelatedToValidation,
@@ -78,8 +87,8 @@ export default function LoginModal() {
     setLoginModalOpen,
   ]);
 
-  return (
-    <div className="modal-login w-full self-stretch flex justify-center items-center flex-col text-defaultFont py-9">
+  let content = (
+    <>
       <header className="w-full flex justify-center pb-9">
         <Logo widthTailwindClass="w-1/4" />
       </header>
@@ -111,9 +120,12 @@ export default function LoginModal() {
           errorsRelatedToValidation,
           "password"
         )}
-        <HeaderLink href="/register" additionalTailwindClasses="self-start">
+        <HeaderLinkOrHeaderAnimation
+          href="/register"
+          additionalTailwindClasses="self-start"
+        >
           <Header size="small">Haven't got an account yet?</Header>
-        </HeaderLink>
+        </HeaderLinkOrHeaderAnimation>
         <div className="form-controls pt-6 w-full flex justify-between">
           <Button type="button" onClick={() => setLoginModalOpen(false)}>
             Close
@@ -130,6 +142,31 @@ export default function LoginModal() {
           )}
         </div>
       </form>
+    </>
+  );
+
+  if (loginModalState === "success")
+    content = (
+      <>
+        <CheckMarkSVG additionalTailwindClasses="w-48" />
+        <Header size="large" colorTailwindClass="text-highlightGreen">
+          Successfully logged in!
+        </Header>
+        <Button onClick={handleCloseLoginModal}>Close</Button>
+        <TimedOutActionWithProgressBar
+          action={handleCloseLoginModal}
+          timeBeforeFiringAnAction={3000}
+        />
+      </>
+    );
+
+  return (
+    <div
+      className={`modal-login w-full self-stretch flex justify-center items-center flex-col text-defaultFont py-9 ${
+        loginModalState === "success" ? "gap-3" : ""
+      }`}
+    >
+      {content}
     </div>
   );
 }

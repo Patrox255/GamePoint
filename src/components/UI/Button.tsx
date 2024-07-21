@@ -13,6 +13,7 @@ export default function Button({
   disabled = false, // only to leave this button greyed out and disable onclick if some feature is not available
   canClickWhileActive = false,
   type,
+  useRounded = true,
   ...props // sadly it is not supported in TS so I add each prop individually
 }: {
   children?: ReactNode;
@@ -28,6 +29,7 @@ export default function Button({
   disabled?: boolean;
   canClickWhileActive?: boolean;
   type?: "submit" | "reset" | "button";
+  useRounded?: boolean;
 }) {
   const initialClasses = {
     opacity: 0.5,
@@ -65,9 +67,9 @@ export default function Button({
       <motion.button
         type={type}
         {...props}
-        className={`${
-          useBorder ? "border-highlightRed border-2" : ""
-        } rounded-lg font-bold ${
+        className={`${useBorder ? "border-highlightRed border-2" : ""} ${
+          useRounded ? "rounded-lg" : ""
+        } font-bold ${
           additionalTailwindCSS &&
           Object.values(additionalTailwindCSS).join(" ")
         }`}

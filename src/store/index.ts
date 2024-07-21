@@ -1,7 +1,10 @@
 import { configureStore } from "@reduxjs/toolkit";
 import mainSearchBarSlice from "./mainSearchBarSlice";
+import userAuthSlice from "./userAuthSlice";
 
-const store = configureStore({ reducer: { mainSearchBarSlice } });
+const store = configureStore({
+  reducer: { mainSearchBarSlice, userAuthSlice },
+});
 
 export default store;
 

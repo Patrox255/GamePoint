@@ -330,6 +330,7 @@ export default function SearchCustomizationContextProvider({
     location,
     navigate,
     searchParams,
+    idOfDeeperStateThatIsSentAndDispatchCanChangeIt: "products-search-tags",
   };
 
   const {

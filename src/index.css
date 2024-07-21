@@ -150,3 +150,80 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   pointer-events: all;
 }
+
+.dropdown-menu-elements-container::-webkit-scrollbar-track {
+  @apply bg-darkerBg;
+}
+
+/* Checkmark styling */
+.check-path {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 0;
+  &.circle {
+    -webkit-animation: dash 0.9s ease-in-out;
+    animation: dash 0.9s ease-in-out;
+  }
+  &.check {
+    stroke-dashoffset: -100;
+    -webkit-animation: dash-check 0.9s 0.35s ease-in-out forwards;
+    animation: dash-check 0.9s 0.35s ease-in-out forwards;
+  }
+}
+
+@-webkit-keyframes dash {
+  0% {
+    stroke-dashoffset: 1000;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes dash {
+  0% {
+    stroke-dashoffset: 1000;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@-webkit-keyframes dash-check {
+  0% {
+    stroke-dashoffset: -100;
+  }
+  100% {
+    stroke-dashoffset: 900;
+  }
+}
+
+@keyframes dash-check {
+  0% {
+    stroke-dashoffset: -100;
+  }
+  100% {
+    stroke-dashoffset: 900;
+  }
+}
+
+/* Progress Bar */
+progress[value]::-webkit-progress-bar {
+  @apply bg-bodyBg;
+  border-radius: 2px;
+}
+
+progress[value]::-webkit-progress-value {
+  @apply bg-highlightGreen;
+}
+
+progress {
+  animation: progress-breathe 1s cubic-bezier(0.175, 0.885, 0.32, 1.275)
+    infinite;
+  transform: scale(1);
+}
+
+@keyframes progress-breathe {
+  50% {
+    transform: scaleY(1.5);
+  }
+}

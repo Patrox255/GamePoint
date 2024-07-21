@@ -200,3 +200,22 @@ export const login = async (userData: { login: string; password: string }) => {
   });
   return data;
 };
+
+export const getAuthData = async (signal: AbortSignal) => {
+  const data = await getJSON<{
+    isAdmin: boolean;
+    expDate: number;
+    login: string;
+  }>({
+    signal,
+    url: `${API_URL}/auth`,
+  });
+
+  return data;
+};
+
+export const logout = async () => {
+  const data = await getJSON<string>({ url: `${API_URL}/logout` });
+
+  return data;
+};

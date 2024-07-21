@@ -75,16 +75,17 @@ export const useInput = function <T extends string | number>({
     if (!saveDebouncedStateInSearchParamsAndSessionStorage) return;
     searchParams.set(searchParamName, JSON.stringify(stateValue));
     sessionStorage.setItem(searchParamName, JSON.stringify(stateValue));
-    navigate(createUrlWithCurrentSearchParams({ searchParams, pathname }), {
-      replace: true,
-    });
+    window.history.pushState(
+      null,
+      "",
+      createUrlWithCurrentSearchParams({ searchParams, pathname })
+    );
   }, [
     searchParams,
     stateValue,
-    pathname,
-    navigate,
     searchParamName,
     saveDebouncedStateInSearchParamsAndSessionStorage,
+    pathname,
   ]);
 
   useDebouncing(

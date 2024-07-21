@@ -2,7 +2,7 @@ import { ReactNode, useCallback, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 
 import { IGame } from "../../models/game.model";
-import HeaderLink from "../UI/headers/HeaderLink";
+import HeaderLinkOrHeaderAnimation from "../UI/headers/HeaderLinkOrHeaderAnimation";
 import Header from "../UI/headers/Header";
 import { IDeveloper } from "../../models/developer.model";
 import { IPublisher } from "../../models/publisher.model";
@@ -87,12 +87,12 @@ export default function ProductAdditionalInformation({
     }: {
       gameDocumentKeyValue: IPublisher | undefined;
     }) => (
-      <HeaderLink
+      <HeaderLinkOrHeaderAnimation
         href={`/products`}
         searchParams={{ publisher: publisher?.name }}
       >
         <Header>{publisher?.name}</Header>
-      </HeaderLink>
+      </HeaderLinkOrHeaderAnimation>
     ),
     []
   );
@@ -103,12 +103,12 @@ export default function ProductAdditionalInformation({
     }: {
       gameDocumentKeyValue: IDeveloper | undefined;
     }) => (
-      <HeaderLink
+      <HeaderLinkOrHeaderAnimation
         href={`/products`}
         searchParams={{ developer: developer?.name }}
       >
         <Header>{developer?.name}</Header>
-      </HeaderLink>
+      </HeaderLinkOrHeaderAnimation>
     ),
     []
   );

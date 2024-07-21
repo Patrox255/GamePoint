@@ -1,6 +1,7 @@
 import mongoose, { Types } from "mongoose";
-import { FRONTEND_URL } from "./secret";
-import { Request } from "express";
+import { FRONTEND_URL, JWTSECRET } from "./secret";
+import { Request, Response } from "express";
+import jwt from "jsonwebtoken";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -106,4 +107,14 @@ export const generateUniqueRandomStrs = (
     strs.push(randomStr);
   }
   return strs;
+};
+
+export const generateAndSaveAccessToken = (res: Response, userId: string) => {
+  const accessToken = jwt.sign({ userId }, JWTSECRET, { expiresIn: "5s" });
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: true,
+    maxAge: 5000,
+  });
+  return accessToken;
 };
