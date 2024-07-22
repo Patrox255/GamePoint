@@ -9,8 +9,10 @@ import ModalContainer from "../components/UI/modals/ModalContainer";
 import ModalOverlay from "../components/UI/modals/ModalOverlay";
 import { getAuthData } from "../lib/fetch";
 import { useQuery } from "@tanstack/react-query";
-import { useAppDispatch } from "../hooks/reduxStore";
+import { useAppDispatch, useAppSelector } from "../hooks/reduxStore";
 import { userAuthSliceActions } from "../store/userAuthSlice";
+import { isEqual } from "lodash";
+import useCompareComplexForUseMemo from "../hooks/useCompareComplexForUseMemo";
 
 const RootLayout = ({ children }: { children?: ReactNode }) => {
   const { pathname } = useLocation();
@@ -20,17 +22,21 @@ const RootLayout = ({ children }: { children?: ReactNode }) => {
     retry: false,
   });
   const dispatch = useAppDispatch();
+  const userAuthStateStable = useCompareComplexForUseMemo(
+    useAppSelector((state) => state.userAuthSlice)
+  );
 
   useEffect(() => {
-    if (data && data.data)
+    if (data && data.data && !isEqual(userAuthStateStable, data.data)) {
+      console.log(data.data);
       dispatch(
         userAuthSliceActions.setAuthData({
           ...data.data,
-          expDate: data.data.expDate * 1000,
         })
       );
+    }
     if (error) dispatch(userAuthSliceActions.resetAuthData());
-  }, [data, dispatch, error]);
+  }, [data, dispatch, error, userAuthStateStable]);
 
   return (
     <ModalContextProvider>

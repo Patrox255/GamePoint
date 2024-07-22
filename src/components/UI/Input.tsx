@@ -4,6 +4,10 @@ import { ChangeEventHandler, forwardRef } from "react";
 
 type inputValue = string | number;
 
+export interface IOtherValidationInputAttributes {
+  required?: boolean;
+}
+
 interface IInputProps {
   type?: string;
   placeholder?: string;
@@ -21,9 +25,7 @@ interface IInputProps {
   step?: number;
   belongToFormElement?: boolean;
   name?: string;
-  otherValidationInputAttributes?: {
-    required?: boolean;
-  };
+  otherValidationInputAttributes?: IOtherValidationInputAttributes;
 }
 
 const Input = forwardRef<HTMLInputElement, IInputProps>(

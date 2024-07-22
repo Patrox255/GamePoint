@@ -15,6 +15,7 @@ import store from "./store/index.ts";
 import ProductPage, {
   loader as productPageLoader,
 } from "./pages/ProductPage.tsx";
+import RegisterPage from "./pages/RegisterPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -33,15 +34,16 @@ const router = createBrowserRouter([
         loader: mainPageLoader,
       },
       {
-        path: "/products",
+        path: "products",
         element: <ProductsPage />,
         loader: ProductsPageLoader,
       },
       {
-        path: "/products/:productSlug",
+        path: "products/:productSlug",
         element: <ProductPage />,
         loader: productPageLoader,
       },
+      { path: "register", element: <RegisterPage /> },
     ],
   },
 ]);

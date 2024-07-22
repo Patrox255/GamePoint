@@ -204,7 +204,6 @@ export const login = async (userData: { login: string; password: string }) => {
 export const getAuthData = async (signal: AbortSignal) => {
   const data = await getJSON<{
     isAdmin: boolean;
-    expDate: number;
     login: string;
   }>({
     signal,
@@ -216,6 +215,21 @@ export const getAuthData = async (signal: AbortSignal) => {
 
 export const logout = async () => {
   const data = await getJSON<string>({ url: `${API_URL}/logout` });
+
+  return data;
+};
+
+export const register = async (formData: {
+  login: string;
+  password: string;
+  confirmedPassword: string;
+  email: string;
+}) => {
+  const data = await getJSON<string>({
+    url: `${API_URL}/register`,
+    method: "POST",
+    body: formData,
+  });
 
   return data;
 };

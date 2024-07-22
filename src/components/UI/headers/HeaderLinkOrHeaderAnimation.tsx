@@ -45,6 +45,7 @@ export default function HeaderLinkOrHeaderAnimation({
         <Link
           to={generateUrlEndpointWithSearchParams(href!, searchParams)}
           className={additionalTailwindClasses}
+          onClick={onClick}
         >
           {children}
         </Link>

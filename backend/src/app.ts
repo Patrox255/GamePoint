@@ -690,6 +690,7 @@ const startServer = async () => {
             "test",
             [4, 10]
           );
+          console.log(sampleUsersLogins);
           const salt = await bcrypt.genSalt(10);
           const sampleUsersToSave: IUser[] = await Promise.all(
             Array.from({ length: 10 }, async (_, i) => {
@@ -1016,7 +1017,6 @@ const startServer = async () => {
             .json({ messsage: "Could not authorize as such user!" });
         (req as Request & IRequestAdditionAfterVerifyJwtfMiddleware).token = {
           isAdmin: correspondingUserDocument?.isAdmin,
-          expDate: decodedJwt.exp as unknown as Date,
           login: correspondingUserDocument.login,
         };
         next();
@@ -1144,9 +1144,8 @@ const startServer = async () => {
     );
 
     app.get("/auth", verifyJwt, (req: Request, res: Response) => {
-      const { token } = req as Request & {
-        token: { isAdmin?: boolean; expDate?: Date };
-      };
+      const { token } = req as Request &
+        IRequestAdditionAfterVerifyJwtfMiddleware;
       return res.status(200).json(token);
     });
 
@@ -1165,7 +1164,8 @@ const startServer = async () => {
 
     app.use(errorHandler);
 
-    const closeServer = async () => {
+    const closeServer = async (e: unknown) => {
+      console.log(e);
       await mongoose.connection.close();
       server.close(() => process.exit(1));
     };

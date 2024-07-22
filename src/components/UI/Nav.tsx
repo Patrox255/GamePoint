@@ -9,8 +9,7 @@ import { useAppDispatch, useAppSelector } from "../../hooks/reduxStore";
 import generateInitialStateFromSearchParamsOrSessionStorage from "../../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
 import { ModalContext } from "../../store/ModalContext";
 import Logo from "./Logo";
-import { logout } from "../../lib/fetch";
-import { userAuthSliceActions } from "../../store/userAuthSlice";
+import { logout, queryClient } from "../../lib/fetch";
 import DropDownMenuWrapper from "./DropDownMenu/DropDownMenuWrapper";
 import UserSVG from "./svg/UserSVG";
 import DropDownMenuDroppedElementsContainer from "./DropDownMenu/DropDownMenuDroppedElementsContainer";
@@ -39,10 +38,10 @@ const Nav = memo(() => {
 
   const { setLoginModalOpen } = useContext(ModalContext);
   const isLogged =
-    useAppSelector((state) => state.userAuthSlice.expDate) !== undefined;
+    useAppSelector((state) => state.userAuthSlice.login) !== undefined;
   const { mutate } = useMutation({
     mutationFn: () => logout(),
-    onMutate: () => dispatch(userAuthSliceActions.resetAuthData()),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userAuth"] }),
     onError: () => window.location.reload(), // had to do this in case of an error related to logout because only invalidating userAuth key query won't do anything as
     // when logout fails also result of this response doesn't change so that won't trigger any change in state nor reevaluation of the logic in RootLayout
   });
