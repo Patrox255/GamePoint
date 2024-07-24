@@ -116,7 +116,7 @@ export default function SliderProductElementContent({
     setCanCount,
   } = useSlider(
     stableElementArtworks,
-    4000,
+    4050,
     true,
     stableUseSliderActionsAfterChangingElementFn
   );

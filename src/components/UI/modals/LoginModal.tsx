@@ -14,6 +14,7 @@ import FormWithErrorHandling, {
   FormActionBackendResponse,
   FormInputFields,
 } from "../FormWithErrorHandling";
+import inputFieldsObjs from "../../../lib/inputFieldsObjs";
 
 interface ILoginActionMutateArgs {
   login: string;
@@ -21,19 +22,22 @@ interface ILoginActionMutateArgs {
 }
 
 const inputFields: FormInputFields = [
+  inputFieldsObjs.login,
   {
-    name: "login",
-    placeholder: "Enter your account login",
-    otherValidationAttributes: { required: true },
+    ...inputFieldsObjs.password,
+    otherValidationAttributes: {
+      ...inputFieldsObjs.password.otherValidationAttributes,
+      pattern: undefined,
+    },
+    instructionStr: undefined,
   },
-  { name: "password", placeholder: "Enter your account password" },
 ];
 
 export default function LoginModal() {
   const { loginModalOpen, setLoginModalOpen } = useContext(ModalContext);
   const [loginModalState, setLoginModalState] = useState<"" | "success">("");
 
-  const { isPending, data, mutate, error } = useMutation<
+  const { isPending, data, mutate, error, reset } = useMutation<
     FormActionBackendResponse,
     FormActionBackendErrorResponse,
     ILoginActionMutateArgs
@@ -54,9 +58,8 @@ export default function LoginModal() {
   function handleCloseLoginModal() {
     setLoginModalState("");
     setLoginModalOpen(false);
+    reset();
   }
-
-  console.log(loginModalState, loginModalOpen);
 
   const formStableActionResponse = useMemo(
     () => ({

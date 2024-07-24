@@ -9,9 +9,10 @@ export const useSlider = function <T>(
   ) => void | (() => void)
 ) {
   const [activeElementIndex, setActiveElementIndex] = useState<number>(0);
-  const [canCount, setCanCount] = useState<boolean>(
-    programaticallyStartTimer ? false : true
-  );
+  const canCount = useRef<boolean>(programaticallyStartTimer ? false : true);
+  console.log(canCount.current);
+  const setCanCount = (newCanCount: boolean) =>
+    (canCount.current = newCanCount);
 
   const changeActiveElementIndex = useCallback(
     (operation: "increment" | "decrement" = "increment") => {
@@ -42,13 +43,14 @@ export const useSlider = function <T>(
   useEffect(() => {
     if (elements.length <= 1) return;
     const timer = setInterval(() => {
-      if (!canCount) return;
-      currentInterval.current -= 200;
+      console.log(canCount.current, currentInterval.current);
+      if (!canCount.current) return;
+      currentInterval.current -= 50;
       if (currentInterval.current === 0) {
         changeActiveElementIndex();
         currentInterval.current = changeElementInterval;
       }
-    }, 200);
+    }, 50);
     return () => clearInterval(timer);
   }, [
     changeElementInterval,
@@ -78,6 +80,6 @@ export const useSlider = function <T>(
       : setActiveElementIndex,
     changeActiveElementIndex,
     setCanCount,
-    canCount,
+    canCount: canCount.current,
   };
 };

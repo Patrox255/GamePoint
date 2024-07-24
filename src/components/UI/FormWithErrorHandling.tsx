@@ -1,7 +1,8 @@
-import { FormEvent, ReactNode, useEffect, useRef } from "react";
+import { createContext, FormEvent, ReactNode, useEffect, useRef } from "react";
 import Error from "./Error";
-import Input, { IOtherValidationInputAttributes } from "./Input";
+import { IOtherValidationInputAttributes } from "./Input";
 import LoadingFallback from "./LoadingFallback";
+import InputFieldElement from "./InputFieldElement";
 
 export interface IFormDataObj {
   [k: string]: FormDataEntryValue;
@@ -15,33 +16,18 @@ export type FormActionBackendResponse =
 
 export type FormActionBackendErrorResponse = Error | ValidationErrorsArr;
 
-export type FormInputFields = {
+export interface IFormInputField {
   type?: string;
   name: string;
   placeholder?: string;
   otherValidationAttributes?: IOtherValidationInputAttributes;
-}[];
+  renderLabel?: boolean;
+  instructionStr?: string;
+  active?: boolean;
+  selectOptions?: string[];
+}
 
-const generateValidationErrorsRelatedToAnInput = (
-  errorsRelatedToValidationArr: ValidationErrorsArr | undefined,
-  inputName: string
-) => {
-  return (
-    errorsRelatedToValidationArr &&
-    errorsRelatedToValidationArr
-      .filter(
-        (errorRelatedToValidation) =>
-          errorRelatedToValidation.errInputName === inputName
-      )
-      .map((errorRelatedToValidation) => (
-        <Error
-          smallVersion
-          message={errorRelatedToValidation.message}
-          key={`${errorRelatedToValidation.errInputName}-${errorRelatedToValidation.message}`}
-        />
-      ))
-  );
-};
+export type FormInputFields = IFormInputField[];
 
 interface IFormProps<T> {
   onSubmit: (formDataObj: T) => void;
@@ -54,7 +40,13 @@ interface IFormProps<T> {
   actionIfSuccess?: () => void;
   focusFirstField?: boolean;
   inputFields: FormInputFields;
+  inputFieldsToRender?: FormInputFields;
 }
+
+export const FormWithErrorHandlingContext = createContext<{
+  errorsRelatedToValidation: ValidationErrorsArr | undefined | null;
+  inputFields: FormInputFields;
+}>({ errorsRelatedToValidation: null, inputFields: [] });
 
 export default function FormWithErrorHandling<T>({
   onSubmit,
@@ -63,16 +55,13 @@ export default function FormWithErrorHandling<T>({
   actionIfSuccess,
   focusFirstField,
   inputFields,
+  inputFieldsToRender,
 }: IFormProps<T>) {
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     focusFirstField && firstFieldRef.current?.focus();
   }, [focusFirstField]);
-
-  useEffect(() => {
-    console.log(isPending, error, data);
-  }, [data, error, isPending]);
 
   const hasErrorRelatedToWrongUserData =
     data && data.data && (data.data as { message?: string }).message;
@@ -98,40 +87,37 @@ export default function FormWithErrorHandling<T>({
   }
 
   return (
-    <form
-      className="login-form w-3/4 h-full flex flex-col justify-center items-center gap-3"
-      method="post"
-      action=""
-      onSubmit={handleFormSubmit}
+    <FormWithErrorHandlingContext.Provider
+      value={{ errorsRelatedToValidation, inputFields }}
     >
-      {inputFields.map((inputFieldObj) => (
-        <div className="w-full flex flex-col gap-3" key={inputFieldObj.name}>
-          <Input
-            placeholder={inputFieldObj.placeholder}
-            ref={firstFieldRef}
-            belongToFormElement
-            otherValidationInputAttributes={
-              inputFieldObj.otherValidationAttributes
-            }
-            name={inputFieldObj.name}
-            type={inputFieldObj.type}
-          />
-          {generateValidationErrorsRelatedToAnInput(
-            errorsRelatedToValidation,
-            inputFieldObj.name
+      <form
+        className="login-form w-3/4 h-full flex flex-col justify-center items-center gap-3"
+        method="post"
+        action=""
+        onSubmit={handleFormSubmit}
+      >
+        {(inputFieldsToRender ? inputFieldsToRender : inputFields).map(
+          (inputFieldObj, i) => {
+            return (
+              <InputFieldElement
+                inputFieldObjFromProps={inputFieldObj}
+                ref={i === 0 ? firstFieldRef : undefined}
+                key={inputFieldObj.name}
+              />
+            );
+          }
+        )}
+        {children}
+        <div className="form-additional-information">
+          {isPending && <LoadingFallback />}
+          {hasErrorRelatedToWrongUserData && (
+            <Error
+              message={(data.data as { message: string }).message}
+              smallVersion
+            />
           )}
         </div>
-      ))}
-      {children}
-      <div className="form-additional-information">
-        {isPending && <LoadingFallback />}
-        {hasErrorRelatedToWrongUserData && (
-          <Error
-            message={(data.data as { message: string }).message}
-            smallVersion
-          />
-        )}
-      </div>
-    </form>
+      </form>
+    </FormWithErrorHandlingContext.Provider>
   );
 }

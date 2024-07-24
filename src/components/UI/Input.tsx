@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
 import properties from "../../styles/properties";
-import { ChangeEventHandler, forwardRef } from "react";
+import { ChangeEvent, ChangeEventHandler, forwardRef } from "react";
 
 type inputValue = string | number;
 
 export interface IOtherValidationInputAttributes {
   required?: boolean;
+  minLength?: number;
+  pattern?: string;
 }
 
 interface IInputProps {
@@ -26,6 +28,10 @@ interface IInputProps {
   belongToFormElement?: boolean;
   name?: string;
   otherValidationInputAttributes?: IOtherValidationInputAttributes;
+  onChangeCheckbox?: (newCheckboxState: boolean) => void;
+  imperativeActive?: boolean;
+  checkedCheckbox?: boolean;
+  options?: string[];
 }
 
 const Input = forwardRef<HTMLInputElement, IInputProps>(
@@ -48,6 +54,10 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       otherValidationInputAttributes = {},
       belongToFormElement = false,
       name,
+      onChangeCheckbox,
+      imperativeActive,
+      checkedCheckbox,
+      options,
     },
     ref
   ) => {
@@ -71,39 +81,69 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       isValidNumberIfTypeNumber && onChange && onChange(value);
     };
 
-    return (
-      <motion.input
-        type={type}
-        placeholder={placeholder}
-        className={`outline-none py-2 px-1 rounded-lg bg-darkerBg text-defaultFont border-2 ${width} ${
-          additionalTailwindClasses ? additionalTailwindClasses : ""
-        }`}
-        initial={{
+    const className = `outline-none py-2 px-1 rounded-lg bg-darkerBg text-defaultFont border-2 ${width} ${
+      additionalTailwindClasses ? additionalTailwindClasses : ""
+    }`;
+
+    const sharedPropsAcrossInputAndSelect = {
+      className,
+      name,
+      id: `input-${name}`,
+      variants: {
+        initial: {
           opacity: useOpacity ? 0.5 : undefined,
           borderColor: useBorder ? properties.bodyBg : undefined,
           boxShadow: useShadow ? "none" : undefined,
-        }}
-        whileHover={focusHoverStyleProperties}
-        whileFocus={focusHoverStyleProperties}
+        },
+        hover: focusHoverStyleProperties,
+      },
+      initial: imperativeActive ? "hover" : "initial",
+      whileHover: "hover",
+      whileFocus: "hover",
+      layout: true,
+      onFocus,
+      onBlur,
+    };
+
+    let content = (
+      <motion.input
+        {...sharedPropsAcrossInputAndSelect}
+        type={type}
+        placeholder={placeholder}
         {...(!belongToFormElement && {
           value: typeof value === "string" ? value : isNaN(value) ? "" : value,
         })}
-        onFocus={onFocus}
-        onBlur={onBlur}
         {...(((type === "number" || type === "range") && {
           min,
           max,
           step,
           onInput: handleInputChange,
         }) || {
-          onChange: !belongToFormElement ? handleInputChange : undefined,
+          onChange: onChangeCheckbox
+            ? (e: ChangeEvent<HTMLInputElement>) =>
+                onChangeCheckbox(e.currentTarget.checked)
+            : !belongToFormElement
+            ? handleInputChange
+            : undefined,
         })}
-        layout
         {...otherValidationInputAttributes}
         ref={ref}
-        name={name}
+        checked={checkedCheckbox}
       />
     );
+
+    if (type === "select")
+      content = (
+        <motion.select {...sharedPropsAcrossInputAndSelect}>
+          {options?.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </motion.select>
+      );
+
+    return content;
   }
 );
 

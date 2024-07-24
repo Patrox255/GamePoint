@@ -233,3 +233,13 @@ export const register = async (formData: {
 
   return data;
 };
+
+export const getCountries = async function (signal: AbortSignal) {
+  const data = await getJSON<object & { name: { common: string } }[]>({
+    url: "https://restcountries.com/v3.1/all",
+    signal,
+  });
+
+  console.log(data);
+  return data;
+};
