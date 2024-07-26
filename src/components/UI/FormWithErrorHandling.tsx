@@ -3,6 +3,7 @@ import Error from "./Error";
 import { IOtherValidationInputAttributes } from "./Input";
 import LoadingFallback from "./LoadingFallback";
 import InputFieldElement from "./InputFieldElement";
+import DatePickerInputFieldElement from "./DatePickerInputFieldElement";
 
 export interface IFormDataObj {
   [k: string]: FormDataEntryValue;
@@ -97,15 +98,19 @@ export default function FormWithErrorHandling<T>({
         onSubmit={handleFormSubmit}
       >
         {(inputFieldsToRender ? inputFieldsToRender : inputFields).map(
-          (inputFieldObj, i) => {
-            return (
+          (inputFieldObj, i) =>
+            inputFieldObj.type !== "date" ? (
               <InputFieldElement
                 inputFieldObjFromProps={inputFieldObj}
                 ref={i === 0 ? firstFieldRef : undefined}
                 key={inputFieldObj.name}
               />
-            );
-          }
+            ) : (
+              <DatePickerInputFieldElement
+                inputFieldObjFromProps={inputFieldObj}
+                key={inputFieldObj.name}
+              />
+            )
         )}
         {children}
         <div className="form-additional-information">

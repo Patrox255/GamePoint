@@ -15,6 +15,7 @@ import InputFieldElement, {
 } from "../components/UI/InputFieldElement";
 import LoadingFallback from "../components/UI/LoadingFallback";
 import Error from "../components/UI/Error";
+import DatePickerInputFieldElement from "../components/UI/DatePickerInputFieldElement";
 
 interface IActionMutateArgs {
   login: string;
@@ -28,9 +29,6 @@ const registerInputFields = [
   inputFieldsObjs.password,
   inputFieldsObjs.confirmPassword,
   inputFieldsObjs.email,
-  // inputFieldsObjs.firstName,
-  // inputFieldsObjs.surName,
-  // inputFieldsObjs.dateOfBirth,
 ].map((inputFieldObj) => ({ ...inputFieldObj, renderLabel: true }));
 
 export default function RegisterPage() {
@@ -98,7 +96,7 @@ export default function RegisterPage() {
                   inputFieldObjFromProps={inputFieldsObjs.surName}
                 />
               </InputFieldSingleRow>
-              <InputFieldElement
+              <DatePickerInputFieldElement
                 inputFieldObjFromProps={inputFieldsObjs.dateOfBirth}
               />
               <InputFieldElement

@@ -93,6 +93,7 @@ export default function SliderProductElementContent({
       usesProductChangeContext &&
         hasArtworks &&
         setCanCountProductChangeStable(false);
+      console.log(artworkIndex, pageNr);
       Math.trunc(artworkIndex / 5) !== pageNr &&
         setPageNr(Math.trunc(artworkIndex / 5));
       console.log(
@@ -110,16 +111,19 @@ export default function SliderProductElementContent({
     ]
   );
 
+  console.log(pageNr);
+
   const {
     activeElementIndex: artworkIndex,
     setActiveElementIndex: setArtworkIndex,
     setCanCount,
-  } = useSlider(
-    stableElementArtworks,
-    4050,
-    true,
-    stableUseSliderActionsAfterChangingElementFn
-  );
+  } = useSlider({
+    elements: stableElementArtworks,
+    changeElementInterval: 4050,
+    programaticallyStartTimer: true,
+    additionalActionsAfterChangingElementFn:
+      stableUseSliderActionsAfterChangingElementFn,
+  });
 
   const SliderImageOverviewPrepared = useCallback(
     () => (
@@ -151,6 +155,7 @@ export default function SliderProductElementContent({
                   motionAnimation={sliderProductElementsAnimation}
                   key={`artwork-${artworkIndex}-${element.artworks[artworkIndex]}`}
                   additionalActionOnLoadFn={() => {
+                    console.log(setCanCount, "A");
                     setCanCount(true);
                     usesProductChangeContext &&
                       setCanCountProductChangeStable(true);

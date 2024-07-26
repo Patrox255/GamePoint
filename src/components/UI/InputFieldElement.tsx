@@ -13,7 +13,7 @@ import {
   IFormInputField,
   ValidationErrorsArr,
 } from "./FormWithErrorHandling";
-import Input from "./Input";
+import Input, { inputOnChange, inputValue } from "./Input";
 import Error from "./Error";
 
 const generateValidationErrorsRelatedToAnInput = (
@@ -49,6 +49,16 @@ export const InputFieldSingleRow = ({ children }: { children: ReactNode }) => {
   );
 };
 
+export const InputFieldElementChildrenCtx = createContext<{
+  forceInputFieldBlur: () => void;
+  forceInputFieldFocus: () => void;
+  inputFieldObj?: IFormInputField;
+}>({
+  forceInputFieldBlur: () => {},
+  forceInputFieldFocus: () => {},
+  inputFieldObj: undefined,
+});
+
 const InputFieldElement = forwardRef<
   HTMLInputElement,
   {
@@ -56,6 +66,9 @@ const InputFieldElement = forwardRef<
     formWithErrorHandlingCtxInputFieldsName?: string;
     onChangeCheckbox?: (newCheckboxState: boolean) => void;
     checkedCheckbox?: boolean;
+    children?: ReactNode;
+    value?: inputValue;
+    onChange?: inputOnChange;
   }
 >(
   (
@@ -64,6 +77,9 @@ const InputFieldElement = forwardRef<
       formWithErrorHandlingCtxInputFieldsName,
       onChangeCheckbox,
       checkedCheckbox,
+      children,
+      value,
+      onChange,
     },
     inputRef
   ) => {
@@ -95,10 +111,6 @@ const InputFieldElement = forwardRef<
         </p>
       );
 
-    const samePropsAcrossBothSelectAndInput = {
-      name: inputFieldObj.name,
-    };
-
     const inputLabelElement = (
       <>
         {inputFieldObj.renderLabel && (
@@ -106,31 +118,40 @@ const InputFieldElement = forwardRef<
             {inputFieldObj.placeholder}
           </label>
         )}
-        {/* {inputFieldObj.type === "select" ? (
-          <Select
-            {...samePropsAcrossBothSelectAndInput}
-            options={inputFieldObj.selectOptions!}
+        <div className={`flex gap-3`}>
+          <Input
+            placeholder={
+              !inputFieldObj.renderLabel ? inputFieldObj.placeholder : undefined
+            }
+            ref={inputRef}
+            belongToFormElement
+            otherValidationInputAttributes={
+              inputFieldObj.otherValidationAttributes
+            }
+            name={inputFieldObj.name}
+            type={inputFieldObj.type}
+            onFocus={onInputFocus}
+            onBlur={onInputBlur}
+            width={inputFieldObj.type === "checkbox" ? "w-6" : undefined}
+            onChangeCheckbox={onChangeCheckbox}
+            checkedCheckbox={checkedCheckbox}
+            options={inputFieldObj.selectOptions}
+            value={value}
+            manuallyManageValueInsideForm={value !== undefined}
+            onChange={onChange}
           />
-        ) : ( */}
-        <Input
-          placeholder={
-            !inputFieldObj.renderLabel ? inputFieldObj.placeholder : undefined
-          }
-          ref={inputRef}
-          belongToFormElement
-          otherValidationInputAttributes={
-            inputFieldObj.otherValidationAttributes
-          }
-          {...samePropsAcrossBothSelectAndInput}
-          type={inputFieldObj.type}
-          onFocus={onInputFocus}
-          onBlur={onInputBlur}
-          width={inputFieldObj.type === "checkbox" ? "w-6" : undefined}
-          onChangeCheckbox={onChangeCheckbox}
-          checkedCheckbox={checkedCheckbox}
-          options={inputFieldObj.selectOptions}
-        />
-        {/* )} */}
+          {children && (
+            <InputFieldElementChildrenCtx.Provider
+              value={{
+                forceInputFieldBlur: onInputBlur,
+                forceInputFieldFocus: onInputFocus,
+                inputFieldObj,
+              }}
+            >
+              {children}
+            </InputFieldElementChildrenCtx.Provider>
+          )}
+        </div>
       </>
     );
 
@@ -140,7 +161,7 @@ const InputFieldElement = forwardRef<
           inputFieldObj.type === "checkbox" ? "auto" : "full"
         } flex flex-col gap-3 opacity-1 ${
           insideSingleRowCtx ? "self-end" : ""
-        }`}
+        } ${inputFieldObj.type === "date" ? "relative z-10" : ""}`}
         variants={{
           initial: { opacity: 0 },
           default: { opacity: 0.7 },

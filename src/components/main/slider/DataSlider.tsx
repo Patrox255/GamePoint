@@ -1,6 +1,10 @@
 import { ReactNode, createContext, useRef } from "react";
 
-import { useSlider } from "../../../hooks/useSlider";
+import {
+  additionalActionsAfterChangingElementFnForUseSlider,
+  manageExternalStateInsteadOfTheOneInUseSliderFn,
+  useSlider,
+} from "../../../hooks/useSlider";
 import AnimatedAppearance from "../../UI/AnimatedAppearance";
 import { isEqual } from "lodash";
 
@@ -16,12 +20,22 @@ export const SliderContext = createContext<{
   CanCountProductChange: false,
 });
 
-export default function DataSlider<ElementInterface>({
+export default function DataSlider<ElementInterface, Y>({
   elements,
   children,
+  additionalActionsAfterChangingElementFnForUseSlider,
+  manageExternalStateInsteadOfTheOneHereFn,
+  externalState,
+  findCurrentElementsIndexBasedOnCurrentExternalState,
 }: {
   elements: ElementInterface[];
   children: ReactNode;
+  additionalActionsAfterChangingElementFnForUseSlider?: additionalActionsAfterChangingElementFnForUseSlider;
+  manageExternalStateInsteadOfTheOneHereFn?: manageExternalStateInsteadOfTheOneInUseSliderFn;
+  externalState?: Y;
+  findCurrentElementsIndexBasedOnCurrentExternalState?: (
+    externalState: Y
+  ) => (element: ElementInterface, index?: number) => boolean;
 }) {
   const stableElements = useRef<ElementInterface[]>();
   if (!stableElements.current) stableElements.current = elements;
@@ -32,7 +46,18 @@ export default function DataSlider<ElementInterface>({
     changeActiveElementIndex,
     setCanCount: setCanCountProductChange,
     canCount: CanCountProductChange,
-  } = useSlider(stableElements.current, 20000, true);
+  } = useSlider({
+    elements: stableElements.current,
+    changeElementInterval: 20000,
+    programaticallyStartTimer: true,
+    additionalActionsAfterChangingElementFn:
+      additionalActionsAfterChangingElementFnForUseSlider,
+    manageExternalStateInsteadOfTheOneHereFn,
+    externalState,
+    findCurrentElementsIndexBasedOnCurrentExternalState,
+  });
+
+  console.log(activeElementIndex);
 
   return (
     <AnimatedAppearance>

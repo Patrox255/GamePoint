@@ -227,3 +227,7 @@ progress {
     transform: scaleY(1.5);
   }
 }
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}

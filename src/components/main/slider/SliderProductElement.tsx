@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, ReactNode, useContext } from "react";
 
 import { IGame } from "../../../models/game.model";
 import { SliderContext } from "./DataSlider";
@@ -15,14 +15,25 @@ export const SliderProductElementArtworkContext = createContext<{
   setArtworkIndex: () => {},
 });
 
-export default function SliderProductElement({
+export default function SliderProductElement<T, Y extends T[]>({
   elements,
+  children = (element, key) => (
+    <SliderProductElementContent
+      element={element as IGame}
+      key={key}
+      limitArtworks={5}
+    />
+  ),
+  lessInvasiveArrowAnimation = false,
 }: {
-  elements: IGame[];
+  elements: Y;
+  children?: (element: T, key: number) => ReactNode;
+  lessInvasiveArrowAnimation?: boolean;
 }) {
   const { activeElementIndex, changeActiveElementIndex } =
     useContext(SliderContext);
   const element = elements[activeElementIndex];
+  const arrowTranslateXVal = lessInvasiveArrowAnimation ? "0.5rem" : "2rem";
 
   return (
     <>
@@ -32,13 +43,10 @@ export default function SliderProductElement({
         onClick={() => {
           changeActiveElementIndex("decrement");
         }}
+        translateXVal={`-${arrowTranslateXVal}`}
       />
       <section className={`overflow-hidden w-3/5 h-auto`}>
-        <SliderProductElementContent
-          element={element}
-          key={activeElementIndex}
-          limitArtworks={5}
-        />
+        {children(element, activeElementIndex)}
       </section>
       <ArrowSVG
         arrowSrc={rightArrow}
@@ -46,7 +54,7 @@ export default function SliderProductElement({
         onClick={() => {
           changeActiveElementIndex("increment");
         }}
-        translateXVal="2rem"
+        translateXVal={arrowTranslateXVal}
       />
     </>
   );

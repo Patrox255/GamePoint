@@ -1,8 +1,13 @@
 import { motion } from "framer-motion";
 import properties from "../../styles/properties";
 import { ChangeEvent, ChangeEventHandler, forwardRef } from "react";
+import isoStringToDateInputValue from "../../helpers/isoStringToDateInputValue";
 
-type inputValue = string | number;
+export type inputValue = string | number | Date;
+
+export type inputOnChangeTypeDate = (val: Date | string) => void;
+
+export type inputOnChange = (val: string) => void | inputOnChangeTypeDate;
 
 export interface IOtherValidationInputAttributes {
   required?: boolean;
@@ -14,7 +19,7 @@ interface IInputProps {
   type?: string;
   placeholder?: string;
   value?: inputValue;
-  onChange?: (val: string) => void;
+  onChange?: inputOnChange;
   onFocus?: () => void;
   onBlur?: () => void;
   width?: string;
@@ -26,6 +31,7 @@ interface IInputProps {
   max?: number;
   step?: number;
   belongToFormElement?: boolean;
+  manuallyManageValueInsideForm?: boolean;
   name?: string;
   otherValidationInputAttributes?: IOtherValidationInputAttributes;
   onChangeCheckbox?: (newCheckboxState: boolean) => void;
@@ -53,6 +59,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       step,
       otherValidationInputAttributes = {},
       belongToFormElement = false,
+      manuallyManageValueInsideForm,
       name,
       onChangeCheckbox,
       imperativeActive,
@@ -110,8 +117,16 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
         {...sharedPropsAcrossInputAndSelect}
         type={type}
         placeholder={placeholder}
-        {...(!belongToFormElement && {
-          value: typeof value === "string" ? value : isNaN(value) ? "" : value,
+        {...((!belongToFormElement ||
+          (belongToFormElement && manuallyManageValueInsideForm)) && {
+          value:
+            typeof value === "string"
+              ? value
+              : type === "date"
+              ? isoStringToDateInputValue((value as Date).toISOString())
+              : isNaN(value as number)
+              ? ""
+              : (value as number),
         })}
         {...(((type === "number" || type === "range") && {
           min,
@@ -124,6 +139,15 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
                 onChangeCheckbox(e.currentTarget.checked)
             : !belongToFormElement
             ? handleInputChange
+            : manuallyManageValueInsideForm
+            ? (e) => {
+                const value = e.currentTarget.value;
+                if (type === "string") onChange?.(value);
+                if (type === "date")
+                  (onChange as inputOnChangeTypeDate)?.(
+                    value === "" ? value : new Date(value)
+                  );
+              }
             : undefined,
         })}
         {...otherValidationInputAttributes}
