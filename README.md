@@ -1,30 +1,90 @@
-# React + TypeScript + Vite
+# GamePoint
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+GamePoint is a project of computer games shop web application with various additional features such as games custom reviews system, admin panel (TODO) and so on.
 
-Currently, two official plugins are available:
+## Table of Contents
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- [Demo](#Demo)
+- [Installation](#installation)
 
-## Expanding the ESLint configuration
+## Demo
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+[Vercel Deploy](game-point-xi.vercel.app)
 
-- Configure the top-level `parserOptions` property like this:
 
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
+## Installation for development
+
+### Requirements
+
+Node.js
+
+npm
+
+git
+
+Visual Studio Code
+
+### Steps
+
+1. Clone my repository
+
+```sh
+git clone https://github.com/Patrox255/GamePoint.git
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+2. Open my project in Visual Studio Code
+
+Open Visual Studio Code application and the directory of the project by going 'File' -> 'Open Folder...' and selecting a directory where you cloned my repository.
+
+3. Open a terminal in Visual Studio Code
+
+- By clicking 'Terminal' -> 'New Terminal'
+- By using keyboard shortcut: Ctrl+Shift+`
+
+4. Navigate to the main directory in the terminal (if you aren't in it already)
+
+```sh
+cd GamePoint
+```
+
+5. Install dependencies for the front-end part of the app
+
+```sh
+npm install
+```
+
+6. Navigate to the back-end root directory
+
+```sh
+cd backend
+```
+
+7. Install dependencies for the back-end part of the app
+
+```sh
+npm install
+```
+
+8. Run back-end server
+
+```sh
+npm run dev
+```
+
+9. Open a new terminal for the front-end dev server
+
+- By clicking 'Terminal' -> 'New Terminal'
+- By using keyboard shortcut: Ctrl+Shift+`
+
+10. Navigate to the main directory in the terminal (if you aren't in it already)
+
+```sh
+cd GamePoint
+```
+
+11. Run front-end server
+
+```sh
+npm run dev
+```
+    

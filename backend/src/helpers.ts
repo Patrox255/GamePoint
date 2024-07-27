@@ -2,6 +2,7 @@ import mongoose, { Types } from "mongoose";
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { accessEnvironmentVariable } from "./app";
+import { CorsOptions } from "cors";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -47,13 +48,15 @@ export const createDocumentsOfObjsAndInsert = async <storedObjInterface>(
 export const random = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1) + min);
 
-const FRONTEND_URL = accessEnvironmentVariable("FRONTEND_URL");
+const FRONTEND_URLS = accessEnvironmentVariable("FRONTEND_URLS");
 
-export const corsOptions = {
-  origin: FRONTEND_URL,
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type"],
-  credentials: true,
+const allowedOrigins = FRONTEND_URLS.split(",");
+
+export const corsOptions: CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) callback(null, true);
+    callback(new Error("Rejected by CORS policy"));
+  },
 };
 
 export const parseQueries = async (

@@ -87,7 +87,6 @@ const startServer = async () => {
     app.use(express.json());
     app.use(cookieParser());
 
-    app.options("*", cors(corsOptions));
     await connectDB();
 
     app.get(

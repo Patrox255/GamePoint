@@ -4,7 +4,7 @@ export interface IProcessEnvVariables {
   JWTSECRET: string;
   SECRET: string;
   MONGO_URL: string;
-  FRONTEND_URL: string;
+  FRONTEND_URLS: string;
 }
 
 declare namespace NodeJS {
