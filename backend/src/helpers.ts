@@ -1,7 +1,7 @@
 import mongoose, { Types } from "mongoose";
-import { FRONTEND_URL, JWTSECRET } from "./secret";
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { accessEnvironmentVariable } from "./app";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -46,6 +46,8 @@ export const createDocumentsOfObjsAndInsert = async <storedObjInterface>(
 
 export const random = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1) + min);
+
+const FRONTEND_URL = accessEnvironmentVariable("FRONTEND_URL");
 
 export const corsOptions = {
   origin: FRONTEND_URL,
@@ -110,7 +112,10 @@ export const generateUniqueRandomStrs = (
 };
 
 export const generateAndSaveAccessToken = (res: Response, userId: string) => {
-  const accessToken = jwt.sign({ userId }, JWTSECRET, { expiresIn: "5s" });
+  const JWTSECRET = accessEnvironmentVariable("JWTSECRET");
+  const accessToken = jwt.sign({ userId }, JWTSECRET, {
+    expiresIn: "5s",
+  });
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     secure: true,

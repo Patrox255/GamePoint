@@ -1,6 +1,9 @@
+import dotenv from "dotenv";
+import path from "path";
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
 import express, { NextFunction, Request, Response } from "express";
 import { connectDB } from "./db";
-import { CLIENT_ID, JWTREFRESHSECRET, JWTSECRET, SECRET } from "./secret";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import Platform, { IPlatform } from "./models/platform.model";
@@ -27,11 +30,38 @@ import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
 import cookieParser from "cookie-parser";
 import RefreshToken from "./models/refreshToken.model";
+import { IProcessEnvVariables } from "../env";
 
 const app = express();
 const port = 3000;
 
 const cors = require("cors"); // eslint-disable-line
+
+export function accessEnvironmentVariable(
+  environmentVariable: keyof IProcessEnvVariables
+): string;
+export function accessEnvironmentVariable(
+  environmentVariable: (keyof IProcessEnvVariables)[]
+): string[];
+
+export function accessEnvironmentVariable(
+  environmentVariable:
+    | keyof IProcessEnvVariables
+    | (keyof IProcessEnvVariables)[]
+) {
+  const isArray = Array.isArray(environmentVariable);
+  const environmentVariablesArr = (
+    isArray ? environmentVariable : [environmentVariable]
+  ).map((environmentVariable) => {
+    const environmentVariableValue = process.env[environmentVariable];
+    if (environmentVariableValue === undefined)
+      throw new Error(
+        `Environment variable ${environmentVariable} is required for the app to function properly!`
+      );
+    return environmentVariableValue;
+  });
+  return isArray ? environmentVariablesArr : environmentVariablesArr[0];
+}
 
 interface Error {
   message?: string;
@@ -487,6 +517,11 @@ const startServer = async () => {
             );
             return multiQueriesResultObjs.flat() as T;
           };
+
+          const [CLIENT_ID, SECRET] = accessEnvironmentVariable([
+            "CLIENT_ID",
+            "SECRET",
+          ]);
 
           const { access_token } = await getJSON(
             `https://id.twitch.tv/oauth2/token?client_id=${CLIENT_ID}&client_secret=${SECRET}&grant_type=client_credentials`,
@@ -984,6 +1019,10 @@ const startServer = async () => {
         return res.status(401).json({ message: "Could not authorize" });
 
       try {
+        const [JWTREFRESHSECRET, JWTSECRET] = accessEnvironmentVariable([
+          "JWTREFRESHSECRET",
+          "JWTSECRET",
+        ]);
         const decodedJwt = (await jwtVerifyPromisified(
           refreshToken,
           JWTREFRESHSECRET
@@ -997,7 +1036,7 @@ const startServer = async () => {
         try {
           decodedJwtAccessToken = (await jwtVerifyPromisified(
             accessToken,
-            JWTSECRET
+            JWTSECRET!
           )) as IJwtPayload;
         } catch (e) {
           if ((e as JsonWebTokenError).name === "TokenExpiredError") {
@@ -1033,7 +1072,8 @@ const startServer = async () => {
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const { login, password } = req.body;
-          console.log(Object.entries(req.body));
+          const JWTREFRESHSECRET =
+            accessEnvironmentVariable("JWTREFRESHSECRET");
 
           interface IValidateBodyEntry<T> {
             type: string;

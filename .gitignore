@@ -25,3 +25,6 @@ dist-ssr
 
 backend/node_modules
 backend/src/secret.ts
+backend/.env
+
+.vercel
