@@ -48,8 +48,8 @@ interface IOrderCustomizationReducer {
 export interface ISearchCustomizationContext {
   minPrice: number;
   maxPrice: number;
-  handleMinChange: (newMinPrice: string) => void;
-  handleMaxChange: (newMaxPrice: string) => void;
+  handleMinChange: (newMinPrice: number) => void;
+  handleMaxChange: (newMaxPrice: number) => void;
   handleSearchTermChange: (newInputValue: string) => void;
   searchTermDebouncingState: string;
   minQueryDebouncingState: number;

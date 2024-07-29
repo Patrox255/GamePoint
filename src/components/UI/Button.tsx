@@ -2,11 +2,13 @@ import { MouseEventHandler, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import properties from "../../styles/properties";
 
+const defaultAdditionalTailwindCSS = { px: "px-6", py: "py-2" };
+
 export default function Button({
   children = "",
   active = false,
   passedKey = undefined,
-  additionalTailwindCSS = { px: "px-6", py: "py-2" },
+  additionalTailwindCSS = defaultAdditionalTailwindCSS,
   onClick = undefined,
   useBorder = true,
   useBgColor = true,
@@ -20,8 +22,9 @@ export default function Button({
   active?: boolean;
   passedKey?: string;
   additionalTailwindCSS?: {
-    px: string;
-    py: string;
+    px?: string;
+    py?: string;
+    width?: string;
   } | null;
   onClick?: MouseEventHandler<HTMLButtonElement>;
   useBorder?: boolean;
@@ -61,6 +64,17 @@ export default function Button({
     opacity: 0.3,
     cursor: "not-allowed",
   };
+
+  ["px", "py"].forEach((additionalTailwindCSSProperty) => {
+    const additionalTailwindCSSKey =
+      additionalTailwindCSSProperty as keyof typeof additionalTailwindCSS;
+    if (
+      additionalTailwindCSS &&
+      !additionalTailwindCSS[additionalTailwindCSSKey]
+    )
+      additionalTailwindCSS[additionalTailwindCSSKey] =
+        defaultAdditionalTailwindCSS[additionalTailwindCSSKey];
+  });
 
   return (
     <AnimatePresence mode="wait">

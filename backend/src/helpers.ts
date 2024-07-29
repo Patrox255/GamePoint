@@ -54,9 +54,11 @@ const allowedOrigins = FRONTEND_URLS.split(",");
 
 export const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) callback(null, true);
-    callback(new Error("Rejected by CORS policy"));
+    if (!origin || allowedOrigins.indexOf(origin) !== -1)
+      return callback(null, true);
+    return callback(new Error("Rejected by CORS policy"));
   },
+  credentials: true,
 };
 
 export const parseQueries = async (

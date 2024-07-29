@@ -16,7 +16,7 @@ const sameTimeOccurrenceIdsAndArrays: {
   [key: string]: { [key: string]: number };
 } = {};
 
-export const useInput = function <T extends string | number>({
+export const useInput = function <T extends string | number | (string | Date)>({
   stateValue,
   setStateValue,
   setStateAction,
@@ -89,7 +89,7 @@ export const useInput = function <T extends string | number>({
 
   useDebouncing(
     debouncingFn,
-    stateValue !== undefined,
+    stateValue !== undefined && stateValue !== queryDebouncingState,
     debouncingTime +
       (sameTimeOccurrenceChanceId &&
       sameTimeOccurrenceIdsAndArrays[sameTimeOccurrenceChanceId] !==
@@ -103,15 +103,16 @@ export const useInput = function <T extends string | number>({
         : 0)
   );
 
-  function handleInputChange(newValue: string) {
+  function handleInputChange(newValue: T) {
     stateValue !== undefined &&
       setStateValue &&
       setStateValue(
-        typeof stateValue === "string"
+        typeof stateValue === "string" || typeof stateValue === "object"
           ? (newValue as T)
-          : (parseFloat(newValue) as T)
+          : (parseFloat(newValue as string) as T)
       );
     stateValue !== undefined &&
+      typeof newValue === "string" &&
       setStateAction &&
       dispatch(setStateAction(newValue));
   }
@@ -122,5 +123,6 @@ export const useInput = function <T extends string | number>({
     navigate,
     searchParams,
     queryDebouncingState,
+    setQueryDebouncingState,
   };
 };

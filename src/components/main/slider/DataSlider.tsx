@@ -27,6 +27,8 @@ export default function DataSlider<ElementInterface, Y>({
   manageExternalStateInsteadOfTheOneHereFn,
   externalState,
   findCurrentElementsIndexBasedOnCurrentExternalState,
+  additionalActionUponReachingTheBeginningByGoingForwardInTheEnd,
+  additionalActionUponReachingTheEndByGoingBackwardsInTheBeginning,
 }: {
   elements: ElementInterface[];
   children: ReactNode;
@@ -36,6 +38,8 @@ export default function DataSlider<ElementInterface, Y>({
   findCurrentElementsIndexBasedOnCurrentExternalState?: (
     externalState: Y
   ) => (element: ElementInterface, index?: number) => boolean;
+  additionalActionUponReachingTheBeginningByGoingForwardInTheEnd?: () => void;
+  additionalActionUponReachingTheEndByGoingBackwardsInTheBeginning?: () => void;
 }) {
   const stableElements = useRef<ElementInterface[]>();
   if (!stableElements.current) stableElements.current = elements;
@@ -55,6 +59,8 @@ export default function DataSlider<ElementInterface, Y>({
     manageExternalStateInsteadOfTheOneHereFn,
     externalState,
     findCurrentElementsIndexBasedOnCurrentExternalState,
+    additionalActionUponReachingTheBeginningByGoingForwardInTheEnd,
+    additionalActionUponReachingTheEndByGoingBackwardsInTheBeginning,
   });
 
   console.log(activeElementIndex);

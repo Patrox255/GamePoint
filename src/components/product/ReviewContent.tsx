@@ -102,7 +102,7 @@ export default function ReviewContent({
                       value={criterionObj.criterionName}
                       placeholder="Criterion name"
                       width="w-1/4"
-                      onChange={(value) =>
+                      onChange={(value: string) =>
                         criteriaDispatch({
                           type: "CHANGE_CRITERION",
                           payload: {

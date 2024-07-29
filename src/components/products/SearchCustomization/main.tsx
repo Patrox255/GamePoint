@@ -5,6 +5,8 @@ import DiscountCustomization from "./DiscountCustomization";
 import PriceCustomization from "./PriceCustomization";
 import { useContext } from "react";
 import { SearchCustomizationContext } from "../../../store/products/SearchCustomizationContext";
+import { useAppDispatch } from "../../../hooks/reduxStore";
+import { actions as searchBarActions } from "../../../store/mainSearchBarSlice";
 
 export default function SearchCustomization() {
   const navigate = useNavigate();
@@ -17,6 +19,7 @@ export default function SearchCustomization() {
     selectedDevelopersDispatch,
     selectedPublishersDispatch,
   } = useContext(SearchCustomizationContext);
+  const dispatch = useAppDispatch();
 
   return (
     <div className="flex w-full h-full flex-col justify-start text-center gap-4">
@@ -73,9 +76,10 @@ export default function SearchCustomization() {
               ].forEach((sessionStorageEntry) =>
                 sessionStorage.removeItem(sessionStorageEntry)
               );
-              handleMinChange("");
-              handleMaxChange("");
+              handleMinChange(NaN);
+              handleMaxChange(NaN);
               setDiscountActive(0);
+              dispatch(searchBarActions.setSearchTerm(""));
               [
                 selectedDevelopersDispatch,
                 selectedGenresDispatch,

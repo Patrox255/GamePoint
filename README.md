@@ -4,13 +4,12 @@ GamePoint is a project of computer games shop web application with various addit
 
 ## Table of Contents
 
-- [Demo](#Demo)
-- [Installation](#installation)
+- [Demo](#demo)
+- [Installation](#installation-for-development)
 
 ## Demo
 
-[Vercel Deploy](game-point-xi.vercel.app)
-
+[Vercel Deploy](https://game-point-xi.vercel.app/)
 
 ## Installation for development
 
@@ -65,26 +64,40 @@ cd backend
 npm install
 ```
 
-8. Run back-end server
+8. Create a file containing environment back-end variables
+
+Create a file called '.env' inside the root directory of the back-end side of the app (/backend)
+
+9. Add the following environment variables to your '.env' file:
+
+```env
+ CLIENT_ID=your_igdb_api_client_id
+ SECRET=your_igdb_api_client_secret
+ JWTREFRESHSECRET=your_jwt_secret_for_refresh_tokens
+ JWTSECRET=your_jwt_secret_for_access_tokens
+ MONGO_URL=your_mongo_db_url
+ FRONTEND_URLS=your_frontend_urls_to_allow_in_cors (a string with each URL separated by a comma)
+```
+
+10. Run back-end server
 
 ```sh
 npm run dev
 ```
 
-9. Open a new terminal for the front-end dev server
+11. Open a new terminal for the front-end dev server
 
 - By clicking 'Terminal' -> 'New Terminal'
 - By using keyboard shortcut: Ctrl+Shift+`
 
-10. Navigate to the main directory in the terminal (if you aren't in it already)
+12. Navigate to the main directory in the terminal (if you aren't in it already)
 
 ```sh
 cd GamePoint
 ```
 
-11. Run front-end server
+13. Run front-end server
 
 ```sh
 npm run dev
 ```
-    

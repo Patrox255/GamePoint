@@ -7,7 +7,14 @@ export type inputValue = string | number | Date;
 
 export type inputOnChangeTypeDate = (val: Date | string) => void;
 
-export type inputOnChange = (val: string) => void | inputOnChangeTypeDate;
+export type inputOnChangeTypeText = (val: string) => void;
+
+export type inputOnChangeTypeNumber = (val: number) => void;
+
+export type inputOnChange =
+  | inputOnChangeTypeText
+  | inputOnChangeTypeDate
+  | inputOnChangeTypeNumber;
 
 export interface IOtherValidationInputAttributes {
   required?: boolean;
@@ -85,7 +92,11 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
               numberRegex.test(value) &&
               parseFloat(value) >= min! &&
               parseFloat(value) <= max!);
-      isValidNumberIfTypeNumber && onChange && onChange(value);
+      isValidNumberIfTypeNumber && onChange
+        ? type === "number"
+          ? (onChange as inputOnChangeTypeNumber)(parseFloat(value))
+          : (onChange as inputOnChangeTypeText)(value)
+        : undefined;
     };
 
     const className = `outline-none py-2 px-1 rounded-lg bg-darkerBg text-defaultFont border-2 ${width} ${
@@ -115,7 +126,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
     let content = (
       <motion.input
         {...sharedPropsAcrossInputAndSelect}
-        type={type}
+        type={type === "date" ? "text" : type}
         placeholder={placeholder}
         {...((!belongToFormElement ||
           (belongToFormElement && manuallyManageValueInsideForm)) && {
@@ -142,11 +153,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
             : manuallyManageValueInsideForm
             ? (e) => {
                 const value = e.currentTarget.value;
-                if (type === "string") onChange?.(value);
-                if (type === "date")
-                  (onChange as inputOnChangeTypeDate)?.(
-                    value === "" ? value : new Date(value)
-                  );
+                (onChange as inputOnChangeTypeText)?.(value);
               }
             : undefined,
         })}

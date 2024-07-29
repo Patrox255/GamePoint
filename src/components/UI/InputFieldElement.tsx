@@ -116,6 +116,13 @@ const InputFieldElement = forwardRef<
         {inputFieldObj.renderLabel && (
           <label htmlFor={`input-${inputFieldObj.name}`}>
             {inputFieldObj.placeholder}
+            {inputFieldObj.type === "date" ? (
+              <span>
+                (format <span className="font-bold">YYYY-MM-DD</span>)
+              </span>
+            ) : (
+              ""
+            )}
           </label>
         )}
         <div className={`flex gap-3`}>

@@ -13,13 +13,10 @@ export default function PriceCustomization() {
     SearchCustomizationContext
   );
 
-  function handleSetPriceValue(type: "min" | "max", inputString: string) {
-    const value = parseFloat(inputString);
-    type === "min"
-      ? handleMinChange(inputString)
-      : handleMaxChange(inputString);
-    type === "min" && value > maxPrice && handleMaxChange(inputString);
-    type === "max" && value < minPrice && handleMinChange(inputString);
+  function handleSetPriceValue(type: "min" | "max", inputValue: number) {
+    type === "min" ? handleMinChange(inputValue) : handleMaxChange(inputValue);
+    type === "min" && inputValue > maxPrice && handleMaxChange(inputValue);
+    type === "max" && inputValue < minPrice && handleMinChange(inputValue);
   }
 
   const { isLoading, data, error, isError } = useQuery({
@@ -33,8 +30,8 @@ export default function PriceCustomization() {
   else {
     const min = data?.data.min;
     const max = data?.data.max;
-    !isNaN(minPrice) && minPrice < min! && handleMinChange(min! + "");
-    !isNaN(maxPrice) && maxPrice > max! && handleMaxChange(max! + "");
+    !isNaN(minPrice) && minPrice < min! && handleMinChange(min!);
+    !isNaN(maxPrice) && maxPrice > max! && handleMaxChange(max!);
     const onlyFreeToPlay = minPrice === 0 && maxPrice === 0;
     const canSetToFreeToPlay = min === 0;
     content = (
@@ -48,7 +45,7 @@ export default function PriceCustomization() {
             max={max}
             step={0.01}
             value={minPrice}
-            onChange={(s) => handleSetPriceValue("min", s)}
+            onChange={(s: number) => handleSetPriceValue("min", s)}
           />
           <motion.div
             className="relative w-1/2 h-[10px] bg-darkerBg"
@@ -62,7 +59,7 @@ export default function PriceCustomization() {
               useShadow={false}
               useOpacity={true}
               additionalTailwindClasses="absolute top-0 left-0 z-1 !h-0"
-              onChange={(s) => handleSetPriceValue("min", s)}
+              onChange={(s: number) => handleSetPriceValue("min", s)}
               min={min}
               max={max}
               step={0.01}
@@ -75,7 +72,7 @@ export default function PriceCustomization() {
               useShadow={false}
               useOpacity={true}
               additionalTailwindClasses="absolute top-0 left-0"
-              onChange={(s) => handleSetPriceValue("max", s)}
+              onChange={(s: number) => handleSetPriceValue("max", s)}
               min={min}
               max={max}
               step={0.01}
@@ -90,7 +87,7 @@ export default function PriceCustomization() {
             max={max}
             step={0.01}
             value={maxPrice}
-            onChange={(s) => handleSetPriceValue("max", s)}
+            onChange={(s: number) => handleSetPriceValue("max", s)}
           />
         </article>
 
@@ -101,8 +98,8 @@ export default function PriceCustomization() {
             onlyFreeToPlay ? "-active" : ""
           }`}
           onClick={() => {
-            handleMinChange("0");
-            handleMaxChange("0");
+            handleMinChange(0);
+            handleMaxChange(0);
           }}
         >
           {!canSetToFreeToPlay
