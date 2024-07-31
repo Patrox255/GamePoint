@@ -4,6 +4,7 @@ import { API_URL } from "./config";
 import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
 import { IOrderCustomizationProperty } from "../store/products/SearchCustomizationContext";
 import { IReview } from "../models/review.model";
+import { IActionMutateArgsRegister } from "../pages/RegisterPage";
 
 export const queryClient = new QueryClient();
 
@@ -219,12 +220,7 @@ export const logout = async () => {
   return data;
 };
 
-export const register = async (formData: {
-  login: string;
-  password: string;
-  confirmedPassword: string;
-  email: string;
-}) => {
+export const register = async (formData: IActionMutateArgsRegister) => {
   const data = await getJSON<string>({
     url: `${API_URL}/register`,
     method: "POST",

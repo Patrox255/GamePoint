@@ -49,6 +49,63 @@ export const InputFieldSingleRow = ({ children }: { children: ReactNode }) => {
   );
 };
 
+type IFieldNotification = {
+  [key in keyof IFormInputField]?: IFormInputField[key];
+} & { formatPrefix: string; formatBoldText: string };
+
+const inputFieldNotifications: IFieldNotification[] = [
+  { type: "date", formatBoldText: "YYYY-MM-DD", formatPrefix: "format: " },
+  {
+    name: "phoneNr",
+    formatBoldText: "+48 111 222 333",
+    formatPrefix: "Include international prefix, e.g. ",
+  },
+];
+
+const requiredInputFieldIndicator = (
+  <span className="text-highlightRed">*</span>
+);
+
+const generateInputFieldLabel = (
+  inputFieldObj: IFormInputField,
+  markAsRequired: boolean | undefined
+) => {
+  const correspondingInputFieldNotificationObj = inputFieldNotifications.find(
+    (inputFieldNotification) =>
+      [...Object.entries(inputFieldNotification)].find(
+        (inputFieldNotificationEntries) =>
+          inputFieldNotificationEntries[0] !== "formatBoldText" &&
+          inputFieldNotificationEntries[0] !== "formatPrefix" &&
+          inputFieldObj[
+            inputFieldNotificationEntries[0] as keyof IFormInputField
+          ] === inputFieldNotificationEntries[1]
+      )
+  );
+
+  return inputFieldObj.renderLabel ||
+    inputFieldObj.renderLabel === undefined ? (
+    <label htmlFor={`input-${inputFieldObj.name}`}>
+      {(inputFieldObj.renderPlaceholderInTheLabel ||
+        inputFieldObj.renderPlaceholderInTheLabel === undefined) &&
+        inputFieldObj.placeholder}
+      {!correspondingInputFieldNotificationObj &&
+        markAsRequired &&
+        requiredInputFieldIndicator}
+      {correspondingInputFieldNotificationObj && (
+        <span>
+          &nbsp;({correspondingInputFieldNotificationObj.formatPrefix}
+          <span className="font-bold">
+            {correspondingInputFieldNotificationObj.formatBoldText}
+          </span>
+          ){markAsRequired && requiredInputFieldIndicator}
+        </span>
+      )}
+    </label>
+  ) : (
+    ""
+  );
+};
+
 export const InputFieldElementChildrenCtx = createContext<{
   forceInputFieldBlur: () => void;
   forceInputFieldFocus: () => void;
@@ -111,24 +168,18 @@ const InputFieldElement = forwardRef<
         </p>
       );
 
+    const markAsRequired = inputFieldObj?.otherValidationAttributes?.required;
+
     const inputLabelElement = (
       <>
-        {inputFieldObj.renderLabel && (
-          <label htmlFor={`input-${inputFieldObj.name}`}>
-            {inputFieldObj.placeholder}
-            {inputFieldObj.type === "date" ? (
-              <span>
-                (format <span className="font-bold">YYYY-MM-DD</span>)
-              </span>
-            ) : (
-              ""
-            )}
-          </label>
-        )}
+        {generateInputFieldLabel(inputFieldObj, markAsRequired)}
         <div className={`flex gap-3`}>
           <Input
             placeholder={
-              !inputFieldObj.renderLabel ? inputFieldObj.placeholder : undefined
+              inputFieldObj.renderLabel === false ||
+              inputFieldObj.renderPlaceholderInTheLabel === false
+                ? inputFieldObj.placeholder
+                : undefined
             }
             ref={inputRef}
             belongToFormElement
@@ -143,7 +194,7 @@ const InputFieldElement = forwardRef<
             onChangeCheckbox={onChangeCheckbox}
             checkedCheckbox={checkedCheckbox}
             options={inputFieldObj.selectOptions}
-            value={value}
+            value={inputFieldObj.type === "checkbox" ? "on" : value}
             manuallyManageValueInsideForm={value !== undefined}
             onChange={onChange}
           />

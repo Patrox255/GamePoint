@@ -129,7 +129,8 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
         type={type === "date" ? "text" : type}
         placeholder={placeholder}
         {...((!belongToFormElement ||
-          (belongToFormElement && manuallyManageValueInsideForm)) && {
+          (belongToFormElement && manuallyManageValueInsideForm) ||
+          type === "checkbox") && {
           value:
             typeof value === "string"
               ? value

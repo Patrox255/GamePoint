@@ -23,6 +23,7 @@ export interface IFormInputField {
   placeholder?: string;
   otherValidationAttributes?: IOtherValidationInputAttributes;
   renderLabel?: boolean;
+  renderPlaceholderInTheLabel?: boolean;
   instructionStr?: string;
   active?: boolean;
   selectOptions?: string[];

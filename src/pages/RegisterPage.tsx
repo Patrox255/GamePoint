@@ -17,11 +17,21 @@ import LoadingFallback from "../components/UI/LoadingFallback";
 import Error from "../components/UI/Error";
 import DatePickerInputFieldElement from "../components/UI/DatePickerInputFieldElement";
 
-interface IActionMutateArgs {
+export interface IActionMutateArgsRegister {
   login: string;
   password: string;
   confirmedPassword: string;
   email: string;
+  firstName: string;
+  surName: string;
+  dateOfBirth: string;
+  phoneNr: string;
+  country: string;
+  zipCode: string;
+  city: string;
+  street: string;
+  house: string;
+  flat?: string;
 }
 
 const registerInputFields = [
@@ -35,7 +45,7 @@ export default function RegisterPage() {
   const { mutate, error, data, isPending } = useMutation<
     FormActionBackendResponse,
     FormActionBackendErrorResponse,
-    IActionMutateArgs
+    IActionMutateArgsRegister
   >({
     mutationFn: register,
   });
@@ -59,7 +69,7 @@ export default function RegisterPage() {
   );
 
   const handleFormSubmit = useCallback(
-    (formDataObj: IActionMutateArgs) => {
+    (formDataObj: IActionMutateArgsRegister) => {
       mutate(formDataObj);
     },
     [mutate]

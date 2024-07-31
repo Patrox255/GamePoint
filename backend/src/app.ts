@@ -13,17 +13,22 @@ import Publisher, { IPublisher } from "./models/publisher.model";
 import Developer, { IDeveloper } from "./models/developer.model";
 import User, { IUser } from "./models/user.model";
 import jwt, { JsonWebTokenError } from "jsonwebtoken";
-import {
+import createDateNoTakingTimezoneIntoAccount, {
   corsOptions,
   createDocumentsOfObjsAndInsert,
   dropCollectionsIfTheyExist,
   generateAndSaveAccessToken,
   generateUniqueRandomStrs,
   getJSON,
+  ILoginBodyFromRequest,
+  IRegisterBodyFromRequest,
+  loginBodyEntries,
   parseQueries,
   random,
   randomizeArrOrder,
+  registerBodyEntries,
   sleep,
+  validateBodyEntries,
   validateQueriesTypes,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
@@ -1070,80 +1075,17 @@ const startServer = async () => {
       "/login",
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          const { login, password } = req.body;
+          const { login, password } = req.body as ILoginBodyFromRequest;
           const JWTREFRESHSECRET =
             accessEnvironmentVariable("JWTREFRESHSECRET");
 
-          interface IValidateBodyEntry<T> {
-            type: string;
-            name: string;
-            validateFn?: (val: T) => { message: string } | boolean;
-            optional?: boolean;
-            requestBodyName: string;
-          }
-          const validateBodyEntries = function <T>(
-            entries: IValidateBodyEntry<T>[],
-            request: Request
-          ) {
-            const errors: { message: string }[] = [];
-            entries.forEach((entry) => {
-              const {
-                type,
-                name,
-                validateFn,
-                optional = false,
-                requestBodyName,
-              } = entry;
-
-              const value = request.body[requestBodyName];
-              const createBodyEntryErr = (message: string) => ({
-                message,
-                errInputName: requestBodyName,
-              });
-              if (typeof value !== type)
-                errors.push(
-                  createBodyEntryErr(`Please write a correct ${name}`)
-                );
-              if (typeof value !== "object" && !optional && value === "")
-                errors.push(createBodyEntryErr(`${name} can't be empty!`));
-              if (
-                typeof value === "object" &&
-                Array.isArray(value) &&
-                value.length === 0 &&
-                !optional
-              )
-                errors.push(createBodyEntryErr(`${name} can't be empty!`));
-              if (validateFn && validateFn(value) !== true)
-                errors.push(
-                  createBodyEntryErr(
-                    (validateFn(value) as { message: string }).message
-                  )
-                );
-            });
-            return errors;
-          };
-          const stringBodyEntries: IValidateBodyEntry<string>[] = [
-            {
-              name: "Login",
-              type: "string",
-              requestBodyName: "login",
-            },
-            {
-              name: "Password",
-              type: "string",
-              requestBodyName: "password",
-              validateFn: (val) =>
-                val.length >= 8 || {
-                  message: "Password must consist of at least 8 characters!",
-                },
-            },
-          ];
           const stringBodyEntriesErrors = validateBodyEntries(
-            stringBodyEntries,
+            loginBodyEntries,
             req
           );
           const errors = [...stringBodyEntriesErrors];
           if (errors.length > 0) return res.status(422).json({ errors });
+
           const foundUser = await User.findOne({
             login: { $eq: login },
           });
@@ -1188,12 +1130,81 @@ const startServer = async () => {
       return res.status(200).json(token);
     });
 
-    app.get("/logout", verifyJwt, async (req: Request, res: Response) => {
-      await RefreshToken.deleteOne({ content: req.cookies.refreshToken });
-      res.clearCookie("refreshToken");
-      res.clearCookie("accessToken");
-      res.status(200).json("Successfully logged out!");
-    });
+    app.get(
+      "/logout",
+      verifyJwt,
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          await RefreshToken.deleteOne({ content: req.cookies.refreshToken });
+          res.clearCookie("refreshToken");
+          res.clearCookie("accessToken");
+          res.status(200).json("Successfully logged out!");
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
+
+    app.post(
+      "/register",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const {
+            login,
+            password,
+            confirmedPassword,
+            email,
+            expandedContactInformation,
+            firstName,
+            surName,
+            dateOfBirth,
+            phoneNr,
+            country,
+            zipCode,
+            city,
+            street,
+            house,
+            flat,
+          } = req.body as IRegisterBodyFromRequest;
+
+          const errors = expandedContactInformation
+            ? validateBodyEntries(registerBodyEntries.slice(0, 4), req)
+            : validateBodyEntries(registerBodyEntries, req);
+
+          if (errors.length > 0) return res.status(422).json({ errors });
+
+          const [year, month, day] = dateOfBirth
+            .split("-")
+            .map((datePart, i) => (i === 1 ? +datePart - 1 : +datePart));
+          const dateOfBirthToSave = createDateNoTakingTimezoneIntoAccount({
+            year,
+            month,
+            day,
+          });
+          const latestPossibleDate = createDateNoTakingTimezoneIntoAccount({});
+          const oldestPossibleDate = createDateNoTakingTimezoneIntoAccount({
+            year: latestPossibleDate.getUTCFullYear() - 150,
+            month: latestPossibleDate.getMonth(),
+            day: latestPossibleDate.getDate(),
+          });
+          if (
+            dateOfBirthToSave < oldestPossibleDate ||
+            dateOfBirthToSave > latestPossibleDate
+          )
+            return res
+              .status(422)
+              .json({
+                message: "Your date of birth does not seem to be correct!",
+              });
+
+          res
+            .status(200)
+            .json("You have successfully registered a new account!");
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
 
     const server = app.listen(port);
 
