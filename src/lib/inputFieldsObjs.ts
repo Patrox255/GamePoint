@@ -4,7 +4,7 @@ type inputFieldsNames =
   | "login"
   | "password"
   | "email"
-  | "confirmPassword"
+  | "confirmedPassword"
   | "expandedContactInformation"
   | "firstName"
   | "surName"
@@ -39,8 +39,8 @@ const inputFieldsObjs: Record<inputFieldsNames, IFormInputField> = {
       "Your password should consist of at least 8 characters including at least one lowercase and uppercase character, one digit and a special symbol",
     renderLabel: false,
   },
-  confirmPassword: {
-    name: "confirmPassword",
+  confirmedPassword: {
+    name: "confirmedPassword",
     type: "password",
     placeholder: "Confirm your password by entering it once again",
     otherValidationAttributes: {
@@ -53,7 +53,7 @@ const inputFieldsObjs: Record<inputFieldsNames, IFormInputField> = {
     placeholder: "Enter your account e-mail address",
     otherValidationAttributes: {
       required: true,
-      pattern: `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z0-9]+$`,
+      pattern: "^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z0-9]+$",
     },
   },
   expandedContactInformation: {

@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { accessEnvironmentVariable } from "./app";
 import { CorsOptions } from "cors";
+import bcrypt from "bcrypt";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -116,18 +117,30 @@ export const generateUniqueRandomStrs = (
   return strs;
 };
 
-export const generateAndSaveAccessToken = (res: Response, userId: string) => {
-  const JWTSECRET = accessEnvironmentVariable("JWTSECRET");
-  const accessToken = jwt.sign({ userId }, JWTSECRET, {
-    expiresIn: "5s",
+export const generateAndSaveJWT = (
+  res: Response,
+  userId: string,
+  type: "access" | "refresh"
+) => {
+  const JWTSECRET = accessEnvironmentVariable(
+    type === "access" ? "JWTSECRET" : "JWTREFRESHSECRET"
+  );
+  const newToken = jwt.sign({ userId }, JWTSECRET, {
+    expiresIn: type === "access" ? "30min" : "1d",
   });
-  res.cookie("accessToken", accessToken, {
+  const accessTokenMaxAge = 60 * 30 * 1000;
+  res.cookie(type === "access" ? "accessToken" : "refreshToken", newToken, {
     httpOnly: true,
     secure: true,
-    maxAge: 5000,
+    maxAge: type === "access" ? accessTokenMaxAge : accessTokenMaxAge * 2 * 24,
   });
-  return accessToken;
+  return newToken;
 };
+
+const createBodyEntryErr = (errInputName: string, message: string) => ({
+  message,
+  errInputName,
+});
 
 interface IBodyFromRequestToValidate {
   [k: string]: string | undefined;
@@ -141,21 +154,16 @@ type bodyEntryValidateFn<T extends IBodyFromRequestToValidate> = (
 
 export interface IValidateBodyEntry<T extends IBodyFromRequestToValidate> {
   type: string;
-  name: keyof T;
+  name: string;
   validateFn?: bodyEntryValidateFn<T>;
   optional?: boolean;
-  requestBodyName: string;
+  requestBodyName: keyof T;
 }
-
-const createBodyEntryErr = (errInputName: string, message: string) => ({
-  message,
-  errInputName,
-});
 
 export const validateBodyEntries = function <
   T extends IBodyFromRequestToValidate
 >(entries: IValidateBodyEntry<T>[], request: Request) {
-  const errors: { message: string }[] = [];
+  const errors: { message: string; errInputName: string }[] = [];
   const entriesWithValues = entries.map((entry) => ({
     ...entry,
     value: request.body[entry.requestBodyName],
@@ -169,7 +177,7 @@ export const validateBodyEntries = function <
       optional = false,
       requestBodyName,
       value,
-    } = entry as typeof entry & { name: string };
+    } = entry as typeof entry & { name: string; requestBodyName: string };
 
     const createBodyEntryErrSuppliedWithInputName = createBodyEntryErr.bind(
       null,
@@ -237,6 +245,7 @@ const stringFollowsRegex: validateHelperFn<
   errorMessageGeneratorFn,
   needsToHaveOrDontHave = true,
 }) => {
+  regex.lastIndex = 0; // due to the global flag updating lastIndex
   return (
     regex.test(val) === needsToHaveOrDontHave || {
       message: errorMessageGeneratorFn
@@ -269,27 +278,30 @@ const validatePasswordFn = (password: unknown, name: string) => {
   });
   if (passwordLengthValidation !== true) return passwordLengthValidation;
   for (const passwordRegex of passwordRegexArr) {
+    const isWhiteSpaceRegex = sameRegex(
+      passwordRegex,
+      whiteSpaceCharacterRegex
+    );
     const regexValidationResult = stringFollowsRegex({
       regex: passwordRegex,
       val: password as string,
       strNameForErrorGeneration: name,
-      needsToHaveOrDontHave:
-        passwordRegex === whiteSpaceCharacterRegex ? false : true,
+      needsToHaveOrDontHave: !isWhiteSpaceRegex,
       errorMessageGeneratorFn: (name) =>
-        `${name} has${
-          passwordRegex === whiteSpaceCharacterRegex ? " not" : ""
-        } to contain at least one ${
-          passwordRegex === lowerCaseRegex ||
-          passwordRegex === upperCaseRegex ||
-          passwordRegex === specialCharacterRegex
+        `${name} has${isWhiteSpaceRegex ? " not" : ""} to contain ${
+          !isWhiteSpaceRegex ? "at least one" : "any"
+        } ${
+          sameRegex(passwordRegex, lowerCaseRegex) ||
+          sameRegex(passwordRegex, upperCaseRegex) ||
+          sameRegex(passwordRegex, specialCharacterRegex)
             ? `${
-                passwordRegex === lowerCaseRegex
+                sameRegex(passwordRegex, lowerCaseRegex)
                   ? "lowercase"
-                  : passwordRegex === upperCaseRegex
+                  : sameRegex(passwordRegex, upperCaseRegex)
                   ? "uppercase"
                   : "special"
               } character`
-            : passwordRegex === digitRegex
+            : sameRegex(passwordRegex, digitRegex)
             ? "digit"
             : "whitespace character"
         }`,
@@ -357,13 +369,18 @@ export const registerBodyEntries: IRegisterBodyEntriesForValidation = (() => {
       ...loginBodyEntries[1],
       name: "Confirmed password",
       requestBodyName: "confirmedPassword",
-      validateFn: (val, name, otherEntries) =>
-        validatePasswordFn(val as string, name) &&
-        val ===
+      validateFn: (val, name, otherEntries) => {
+        const validatePasswordRes = validatePasswordFn(val as string, name);
+        if (validatePasswordRes !== true) return validatePasswordRes;
+        const compareConfirmedPasswordToNormalRes = val ===
           otherEntries!.find(
             (registerBodyEntry) =>
               registerBodyEntry.requestBodyName === "password"
-          )!.value,
+          )!.value || { message: "Provided passwords are not equal!" };
+        if (compareConfirmedPasswordToNormalRes !== true)
+          return compareConfirmedPasswordToNormalRes;
+        return true;
+      },
     },
     {
       name: "E-mail address",
@@ -472,3 +489,35 @@ export default function createDateNoTakingTimezoneIntoAccount({
 
   return new Date(Date.UTC(year, month, day));
 }
+
+export async function genSalt() {
+  return await bcrypt.genSalt(10);
+}
+
+const sameRegex = (regex1: RegExp, regex2: RegExp) =>
+  regex1.source === regex2.source && regex1.flags === regex2.flags;
+
+interface IVerifyEmailEntriesFromRequest extends IBodyFromRequestToValidate {
+  uId: string;
+  providedRegistrationCode: string;
+  registrationCode: string;
+}
+
+export const verifyEmailEntries: IValidateBodyEntry<IVerifyEmailEntriesFromRequest>[] =
+  [
+    {
+      name: "User identificator",
+      requestBodyName: "uId",
+      type: "string",
+    },
+    {
+      name: "Provided registration code",
+      requestBodyName: "providedRegistrationCode",
+      type: "string",
+    },
+    {
+      name: "Simulated registration code which realistically would be received by an e-mail",
+      requestBodyName: "registrationCode",
+      type: "string",
+    },
+  ];

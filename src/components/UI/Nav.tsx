@@ -66,6 +66,8 @@ const Nav = memo(() => {
     ].filter((entry) => entry.enabled === undefined || entry.enabled);
   }, [isAdmin, stableMutateFn]);
 
+  const showSearchBar = !pathname.includes("verify-email");
+
   return (
     <nav
       className={`w-full h-[15vh] flex items-center justify-between pt-6 pb-3 fixed top-0 left-0 z-10 bg-bodyBg opacity-80 hover:opacity-100 transition-all duration-1000`}
@@ -76,9 +78,11 @@ const Nav = memo(() => {
       <div className="px-6 flex justify-end gap-3 w-4/5 items-center h-full">
         {pathname !== "/products" && (
           <>
-            <DropDownMenuWrapper>
-              <NavSearchBar placeholder="Look for a game" />
-            </DropDownMenuWrapper>
+            {showSearchBar && (
+              <DropDownMenuWrapper>
+                <NavSearchBar placeholder="Look for a game" />
+              </DropDownMenuWrapper>
+            )}
             <Link to="/products">
               <Button>Advanced Search</Button>
             </Link>

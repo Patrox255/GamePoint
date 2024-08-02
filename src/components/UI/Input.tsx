@@ -123,6 +123,8 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       onBlur,
     };
 
+    console.log(otherValidationInputAttributes, name);
+
     let content = (
       <motion.input
         {...sharedPropsAcrossInputAndSelect}
@@ -158,7 +160,10 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
               }
             : undefined,
         })}
-        {...otherValidationInputAttributes}
+        {...{
+          ...otherValidationInputAttributes,
+          pattern: otherValidationInputAttributes?.pattern?.replace(/\\/, "\\"),
+        }}
         ref={ref}
         checked={checkedCheckbox}
       />

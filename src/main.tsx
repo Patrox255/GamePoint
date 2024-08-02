@@ -16,6 +16,10 @@ import ProductPage, {
   loader as productPageLoader,
 } from "./pages/ProductPage.tsx";
 import RegisterPage from "./pages/RegisterPage.tsx";
+import VerifyEmailPage, {
+  loader as VerifyEmailPageLoader,
+  action as VerifyEmailPageAction,
+} from "./pages/VerifyEmailPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -43,6 +47,12 @@ const router = createBrowserRouter([
         loader: productPageLoader,
       },
       { path: "register", element: <RegisterPage /> },
+      {
+        path: "verify-email",
+        element: <VerifyEmailPage />,
+        loader: VerifyEmailPageLoader,
+        action: VerifyEmailPageAction,
+      },
     ],
   },
 ]);

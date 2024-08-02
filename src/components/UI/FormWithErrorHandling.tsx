@@ -11,8 +11,8 @@ export interface IFormDataObj {
 
 export type ValidationErrorsArr = { message: string; errInputName: string }[];
 
-export type FormActionBackendResponse =
-  | { data: string }
+export type FormActionBackendResponse<T = string> =
+  | { data: T }
   | { data: { message: string } };
 
 export type FormActionBackendErrorResponse = Error | ValidationErrorsArr;
@@ -31,13 +31,13 @@ export interface IFormInputField {
 
 export type FormInputFields = IFormInputField[];
 
-interface IFormProps<T> {
+interface IFormProps<T, Y> {
   onSubmit: (formDataObj: T) => void;
   children?: ReactNode;
   queryRelatedToActionState: {
     isPending: boolean;
     error: FormActionBackendErrorResponse | null;
-    data: FormActionBackendResponse | undefined;
+    data: FormActionBackendResponse<Y> | undefined;
   };
   actionIfSuccess?: () => void;
   focusFirstField?: boolean;
@@ -50,7 +50,7 @@ export const FormWithErrorHandlingContext = createContext<{
   inputFields: FormInputFields;
 }>({ errorsRelatedToValidation: null, inputFields: [] });
 
-export default function FormWithErrorHandling<T>({
+export default function FormWithErrorHandling<T, Y>({
   onSubmit,
   children,
   queryRelatedToActionState: { isPending, error, data },
@@ -58,7 +58,7 @@ export default function FormWithErrorHandling<T>({
   focusFirstField,
   inputFields,
   inputFieldsToRender,
-}: IFormProps<T>) {
+}: IFormProps<T, Y>) {
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {

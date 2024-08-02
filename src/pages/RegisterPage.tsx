@@ -16,6 +16,8 @@ import InputFieldElement, {
 import LoadingFallback from "../components/UI/LoadingFallback";
 import Error from "../components/UI/Error";
 import DatePickerInputFieldElement from "../components/UI/DatePickerInputFieldElement";
+import { useNavigate } from "react-router-dom";
+import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
 
 export interface IActionMutateArgsRegister {
   login: string;
@@ -37,13 +39,18 @@ export interface IActionMutateArgsRegister {
 const registerInputFields = [
   inputFieldsObjs.login,
   inputFieldsObjs.password,
-  inputFieldsObjs.confirmPassword,
+  inputFieldsObjs.confirmedPassword,
   inputFieldsObjs.email,
 ].map((inputFieldObj) => ({ ...inputFieldObj, renderLabel: true }));
 
+type registerFormActionBackendResponseData = {
+  registrationCode: string;
+  uId: string;
+};
+
 export default function RegisterPage() {
   const { mutate, error, data, isPending } = useMutation<
-    FormActionBackendResponse,
+    FormActionBackendResponse<registerFormActionBackendResponseData>,
     FormActionBackendErrorResponse,
     IActionMutateArgsRegister
   >({
@@ -78,12 +85,27 @@ export default function RegisterPage() {
   const [expandedContactInformation, setExpandedContactInformation] =
     useState<boolean>(false);
 
+  const navigate = useNavigate();
+  function handleRegisterSuccess() {
+    const {
+      data: { registrationCode, uId },
+    } = data as { data: registerFormActionBackendResponseData };
+    navigate(
+      generateUrlEndpointWithSearchParams("/verify-email", {
+        registrationCode,
+        uId,
+      }),
+      { replace: true }
+    );
+  }
+
   return (
     <MainWrapper>
       <FormWithErrorHandling
         onSubmit={handleFormSubmit}
         queryRelatedToActionState={queryRelatedToActionStateStable}
         inputFields={registerInputFields}
+        actionIfSuccess={handleRegisterSuccess}
       >
         <InputFieldElement
           inputFieldObjFromProps={inputFieldsObjs.expandedContactInformation}

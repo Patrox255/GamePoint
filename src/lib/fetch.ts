@@ -28,7 +28,11 @@ export const getJSON = async function <dataInterface>({
     }),
     credentials: "include",
   });
-  const data = await res.json();
+  const contentType = res.headers.get("Content-Type");
+  let data;
+  if (contentType && contentType.includes("application/json"))
+    data = await res.json();
+  else data = await res.text();
   if (!res.ok) {
     if (res.status === 422 && data.errors) throw data.errors;
     throw {
@@ -221,7 +225,7 @@ export const logout = async () => {
 };
 
 export const register = async (formData: IActionMutateArgsRegister) => {
-  const data = await getJSON<string>({
+  const data = await getJSON<{ registrationCode: string; uId: string }>({
     url: `${API_URL}/register`,
     method: "POST",
     body: formData,
@@ -236,6 +240,35 @@ export const getCountries = async function (signal: AbortSignal) {
     signal,
   });
 
-  console.log(data);
+  return data;
+};
+
+export const verifyEmailGuard = async function (
+  signal: AbortSignal,
+  uId: string,
+  registrationCode: string
+) {
+  const data = await getJSON<string>({
+    signal,
+    url: generateUrlEndpointWithSearchParams(`${API_URL}/verify-email-guard`, {
+      registrationCode,
+      uId,
+    }),
+  });
+
+  return data;
+};
+
+export const verifyEmail = async (verifyEmailData: {
+  uId: string;
+  providedRegistrationCode: string;
+  registrationCode: string;
+}) => {
+  const data = await getJSON<string | { message: string }>({
+    url: `${API_URL}/verify-email`,
+    method: "POST",
+    body: verifyEmailData,
+  });
+
   return data;
 };

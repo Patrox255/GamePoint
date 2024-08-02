@@ -5,7 +5,7 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 import express, { NextFunction, Request, Response } from "express";
 import { connectDB } from "./db";
 import bcrypt from "bcrypt";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import Platform, { IPlatform } from "./models/platform.model";
 import Genre, { IGenre } from "./models/genre.model";
 import Game, { IGame } from "./models/game.model";
@@ -17,8 +17,10 @@ import createDateNoTakingTimezoneIntoAccount, {
   corsOptions,
   createDocumentsOfObjsAndInsert,
   dropCollectionsIfTheyExist,
-  generateAndSaveAccessToken,
+  generateAndSaveJWT,
+  generateRandomStr,
   generateUniqueRandomStrs,
+  genSalt,
   getJSON,
   ILoginBodyFromRequest,
   IRegisterBodyFromRequest,
@@ -30,12 +32,14 @@ import createDateNoTakingTimezoneIntoAccount, {
   sleep,
   validateBodyEntries,
   validateQueriesTypes,
+  verifyEmailEntries,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
 import cookieParser from "cookie-parser";
 import RefreshToken from "./models/refreshToken.model";
 import { IProcessEnvVariables } from "../env";
+import AdditionalContactInformation from "./models/additionalContactInformation.model";
 
 const app = express();
 const port = 3000;
@@ -730,7 +734,7 @@ const startServer = async () => {
             [4, 10]
           );
           console.log(sampleUsersLogins);
-          const salt = await bcrypt.genSalt(10);
+          const salt = await genSalt();
           const sampleUsersToSave: IUser[] = await Promise.all(
             Array.from({ length: 10 }, async (_, i) => {
               const passwordHash = await bcrypt.hash(
@@ -1034,7 +1038,7 @@ const startServer = async () => {
         const userId = decodedJwt.userId;
         let accessToken = req.cookies.accessToken;
         if (!accessToken) {
-          accessToken = generateAndSaveAccessToken(res, userId);
+          accessToken = generateAndSaveJWT(res, userId, "access");
         }
         let decodedJwtAccessToken: jwt.JwtPayload = {};
         try {
@@ -1044,7 +1048,7 @@ const startServer = async () => {
           )) as IJwtPayload;
         } catch (e) {
           if ((e as JsonWebTokenError).name === "TokenExpiredError") {
-            generateAndSaveAccessToken(res, userId);
+            generateAndSaveJWT(res, userId, "access");
             decodedJwtAccessToken.userId = userId;
           } else {
             throw e;
@@ -1076,8 +1080,6 @@ const startServer = async () => {
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const { login, password } = req.body as ILoginBodyFromRequest;
-          const JWTREFRESHSECRET =
-            accessEnvironmentVariable("JWTREFRESHSECRET");
 
           const stringBodyEntriesErrors = validateBodyEntries(
             loginBodyEntries,
@@ -1102,18 +1104,19 @@ const startServer = async () => {
               .status(200)
               .json({ message: "Provided password is invalid!" });
 
+          if (!foundUser.emailVerified)
+            return res.status(200).json({
+              message:
+                "You haven't verified your account yet! Check your e-mail for more details.",
+            });
+
           const foundUserIdStr = foundUser._id.toString();
-          const refreshToken = jwt.sign(
-            { userId: foundUserIdStr },
-            JWTREFRESHSECRET,
-            { expiresIn: "1d" }
+          const refreshToken = generateAndSaveJWT(
+            res,
+            foundUserIdStr,
+            "refresh"
           );
-          res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: true,
-            maxAge: 1000 * 3600 * 24,
-          });
-          const accessToken = generateAndSaveAccessToken(res, foundUserIdStr);
+          const accessToken = generateAndSaveJWT(res, foundUserIdStr, "access");
 
           await new RefreshToken({ content: refreshToken }).save();
 
@@ -1149,57 +1152,172 @@ const startServer = async () => {
       "/register",
       async (req: Request, res: Response, next: NextFunction) => {
         try {
+          const registerBody = req.body as IRegisterBodyFromRequest;
+
           const {
             login,
             password,
-            confirmedPassword,
             email,
             expandedContactInformation,
             firstName,
             surName,
             dateOfBirth,
             phoneNr,
-            country,
-            zipCode,
-            city,
-            street,
-            house,
-            flat,
-          } = req.body as IRegisterBodyFromRequest;
+          } = registerBody;
 
-          const errors = expandedContactInformation
+          const includedContactInformation =
+            expandedContactInformation !== undefined;
+
+          const errors = !includedContactInformation
             ? validateBodyEntries(registerBodyEntries.slice(0, 4), req)
             : validateBodyEntries(registerBodyEntries, req);
 
           if (errors.length > 0) return res.status(422).json({ errors });
 
-          const [year, month, day] = dateOfBirth
-            .split("-")
-            .map((datePart, i) => (i === 1 ? +datePart - 1 : +datePart));
-          const dateOfBirthToSave = createDateNoTakingTimezoneIntoAccount({
-            year,
-            month,
-            day,
-          });
-          const latestPossibleDate = createDateNoTakingTimezoneIntoAccount({});
-          const oldestPossibleDate = createDateNoTakingTimezoneIntoAccount({
-            year: latestPossibleDate.getUTCFullYear() - 150,
-            month: latestPossibleDate.getMonth(),
-            day: latestPossibleDate.getDate(),
-          });
-          if (
-            dateOfBirthToSave < oldestPossibleDate ||
-            dateOfBirthToSave > latestPossibleDate
-          )
-            return res
-              .status(422)
-              .json({
+          let dateOfBirthToSave: Date;
+          if (includedContactInformation) {
+            const [year, month, day] = dateOfBirth
+              .split("-")
+              .map((datePart, i) => (i === 1 ? +datePart - 1 : +datePart));
+            dateOfBirthToSave = createDateNoTakingTimezoneIntoAccount({
+              year,
+              month,
+              day,
+            });
+            const latestPossibleDate = createDateNoTakingTimezoneIntoAccount(
+              {}
+            );
+            const oldestPossibleDate = createDateNoTakingTimezoneIntoAccount({
+              year: latestPossibleDate.getUTCFullYear() - 150,
+              month: latestPossibleDate.getMonth(),
+              day: latestPossibleDate.getDate(),
+            });
+            if (
+              dateOfBirthToSave < oldestPossibleDate ||
+              dateOfBirthToSave > latestPossibleDate
+            )
+              return res.status(422).json({
                 message: "Your date of birth does not seem to be correct!",
               });
+          }
 
-          res
-            .status(200)
-            .json("You have successfully registered a new account!");
+          const sameLoginUser = await User.findOne({ login });
+          const sameEmailUser = await User.findOne({ email });
+          if (sameLoginUser || sameEmailUser)
+            return res.status(200).json({
+              message: `There is already an account which uses the same ${
+                sameLoginUser ? "login" : "e-mail address"
+              } as provided!`,
+            });
+
+          let savedContactInformation: Types.ObjectId;
+          if (includedContactInformation) {
+            const additionalContactInformationWithSameFirstLastNameAndPhoneNr =
+              await AdditionalContactInformation.findOne({
+                firstName,
+                surName,
+                phoneNr,
+              });
+            if (additionalContactInformationWithSameFirstLastNameAndPhoneNr)
+              return res.status(200).json({
+                message:
+                  "There is already a contact address with the same first name, surname and phone number added!",
+              });
+            const { newObjs } = await createDocumentsOfObjsAndInsert(
+              [
+                new AdditionalContactInformation({
+                  ...registerBody,
+                  dateOfBirth: dateOfBirthToSave!,
+                }),
+              ],
+              AdditionalContactInformation
+            );
+            savedContactInformation = newObjs[0]._id!;
+          }
+
+          const passwordSalt = await genSalt();
+          const passwordHash = await bcrypt.hash(password, passwordSalt);
+
+          const {
+            newObjs: [addedUser],
+          } = await createDocumentsOfObjsAndInsert(
+            [
+              new User({
+                login,
+                password: passwordHash,
+                email,
+                ...(includedContactInformation && {
+                  additionalContactInformation: [savedContactInformation!],
+                  activeAdditionalContactInformation: 0,
+                }),
+              }),
+            ],
+            User
+          );
+
+          res.status(200).json({
+            registrationCode: generateRandomStr(6),
+            uId: addedUser._id?.toString(),
+          });
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
+
+    app.get(
+      "/verify-email-guard",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { uId, registrationCode } = await parseQueries(req);
+          await validateQueriesTypes([
+            ["string", uId],
+            ["string", registrationCode],
+          ]);
+
+          const foundUser = await User.findById(uId);
+          if (!foundUser || foundUser.emailVerified) res.sendStatus(403);
+
+          res.sendStatus(200);
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
+
+    app.post(
+      "/verify-email",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { uId, providedRegistrationCode, registrationCode } = req.body;
+          const verifyEmailEntriesErrors = validateBodyEntries(
+            verifyEmailEntries,
+            req
+          );
+          if (verifyEmailEntriesErrors.length > 0)
+            return res.status(422).json({ errors: verifyEmailEntriesErrors });
+
+          const foundUser = await User.findById(uId);
+          if (!foundUser)
+            return res.status(200).json({
+              message: "Account that you are trying to verify does not exist!",
+            });
+          if (foundUser.emailVerified)
+            return res
+              .status(200)
+              .json({ message: "Account has been already verified!" });
+
+          // this would make sense if the desired registration code was received by an e-mail instead of simulating it
+          // with sending it over search param
+          if (registrationCode !== providedRegistrationCode)
+            return res
+              .status(200)
+              .json({ message: "Provided registration code is invalid" });
+
+          await foundUser.updateOne({ emailVerified: true });
+          generateAndSaveJWT(res, uId, "refresh");
+
+          res.sendStatus(200);
         } catch (e) {
           next(e);
         }

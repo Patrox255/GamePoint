@@ -16,6 +16,11 @@ import {
 import Input, { inputOnChange, inputValue } from "./Input";
 import Error from "./Error";
 
+export interface IInputFieldValidationError {
+  message: string;
+  errInputName: string;
+}
+
 const generateValidationErrorsRelatedToAnInput = (
   errorsRelatedToValidationArr: ValidationErrorsArr | undefined,
   inputName: string

@@ -6,6 +6,7 @@ import MainWrapper from "../components/structure/MainWrapper";
 import ProductsContextProvider from "../store/products/ProductsContext";
 import SearchCustomizationContextProvider from "../store/products/SearchCustomizationContext";
 import applySearchParamsSessionStorageEntryUpdateInLoader from "../helpers/applySearchParamsSessionStorageEntryUpdateInLoader";
+import createSearchParamsFromRequestURL from "../helpers/createSearchParamsFromRequestURL";
 
 export default function ProductsPage() {
   return (
@@ -33,9 +34,7 @@ const updateSessionStorageBasedOnSearchParams: LoaderFunction = ({
   request,
 }) => {
   if (request.url.indexOf("?") === -1) return null;
-  const searchParams = new URLSearchParams(
-    request.url.slice(request.url.indexOf("?") + 1)
-  );
+  const searchParams = createSearchParamsFromRequestURL(request.url);
   const updateURL = applySearchParamsSessionStorageEntryUpdateInLoader(
     searchParams,
     [

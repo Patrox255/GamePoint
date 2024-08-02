@@ -3,6 +3,7 @@ export default function Error({
   message = "",
   status = 404,
   smallVersion = false,
+  showDetails = true,
 }) {
   return (
     <div
@@ -15,7 +16,9 @@ export default function Error({
       {!smallVersion && <h1 className="text-2xl text-highlightRed">{title}</h1>}
       <p className={smallVersion ? "text-xl" : ""}>
         {message}
-        {!smallVersion ? `Error code: ${status}. Please try again later!` : ""}
+        {!smallVersion && showDetails
+          ? `Error code: ${status}. Please try again later!`
+          : ""}
       </p>
     </div>
   );
