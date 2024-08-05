@@ -14,6 +14,8 @@ import Developer, { IDeveloper } from "./models/developer.model";
 import User, { IUser } from "./models/user.model";
 import jwt, { JsonWebTokenError } from "jsonwebtoken";
 import createDateNoTakingTimezoneIntoAccount, {
+  cartDataEntries,
+  filterPropertiesFromObj,
   corsOptions,
   createDocumentsOfObjsAndInsert,
   dropCollectionsIfTheyExist,
@@ -22,9 +24,9 @@ import createDateNoTakingTimezoneIntoAccount, {
   generateUniqueRandomStrs,
   genSalt,
   getJSON,
+  ICartDataEntriesFromRequest,
   ILoginBodyFromRequest,
   IRegisterBodyFromRequest,
-  loginBodyEntries,
   parseQueries,
   random,
   randomizeArrOrder,
@@ -33,6 +35,9 @@ import createDateNoTakingTimezoneIntoAccount, {
   validateBodyEntries,
   validateQueriesTypes,
   verifyEmailEntries,
+  createCartWithGamesBasedOnReceivedCart,
+  updateUserCartBasedOnReceivedOne,
+  loginBodyEntriesWithCart,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -1014,7 +1019,11 @@ const startServer = async () => {
       });
 
     interface IRequestAdditionAfterVerifyJwtfMiddleware {
-      token: { isAdmin?: boolean; expDate?: Date; login?: string };
+      token: {
+        isAdmin?: boolean;
+        expDate?: Date;
+        login?: string;
+      };
     }
 
     const verifyJwt = async (
@@ -1079,10 +1088,10 @@ const startServer = async () => {
       "/login",
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          const { login, password } = req.body as ILoginBodyFromRequest;
+          const { login, password, cart } = req.body as ILoginBodyFromRequest;
 
           const stringBodyEntriesErrors = validateBodyEntries(
-            loginBodyEntries,
+            loginBodyEntriesWithCart,
             req
           );
           const errors = [...stringBodyEntriesErrors];
@@ -1110,6 +1119,9 @@ const startServer = async () => {
                 "You haven't verified your account yet! Check your e-mail for more details.",
             });
 
+          if (cart!.length > 0)
+            await updateUserCartBasedOnReceivedOne(cart!, login);
+
           const foundUserIdStr = foundUser._id.toString();
           const refreshToken = generateAndSaveJWT(
             res,
@@ -1132,6 +1144,69 @@ const startServer = async () => {
         IRequestAdditionAfterVerifyJwtfMiddleware;
       return res.status(200).json(token);
     });
+
+    app.get("/cart", verifyJwt, async (req: Request, res: Response) => {
+      const {
+        token: { login },
+      } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+      const foundUser = await User.findOne({ login }).lean();
+      if (!foundUser) return res.sendStatus(404);
+      const cart = foundUser.cart;
+      return res.status(200).json({
+        cart,
+      });
+    });
+
+    app.post(
+      "/cart",
+      verifyJwt,
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const {
+            token: { login },
+          } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+          const errors = validateBodyEntries(cartDataEntries, req);
+          if (errors.length > 0) return res.sendStatus(422);
+          const { cart } = req.body as ICartDataEntriesFromRequest;
+          await updateUserCartBasedOnReceivedOne(cart, login!);
+          return res.sendStatus(200);
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
+
+    app.post(
+      "/cart-details",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { cart } = req.body as ICartDataEntriesFromRequest;
+          const errors = validateBodyEntries(
+            cartDataEntries.map((cartDataEntry) => ({
+              ...cartDataEntry,
+              optional: false,
+            })),
+            req
+          );
+          if (errors.length > 0) return res.sendStatus(422);
+          const cartWithGames = await createCartWithGamesBasedOnReceivedCart(
+            cart
+          );
+          const cartToSend = cartWithGames
+            .filter((cartEntry) => cartEntry.relatedGame !== null)
+            .map((cartEntry) => ({
+              ...filterPropertiesFromObj(cartEntry, [
+                "relatedGame",
+                "quantity",
+              ]),
+              id: cartEntry.relatedGame,
+            }));
+          return res.status(200).json(cartToSend);
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
 
     app.get(
       "/logout",

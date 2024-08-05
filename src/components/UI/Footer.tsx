@@ -1,7 +1,16 @@
-import facebook from "../../assets/facebook-svgrepo-com.svg";
-import instagram from "../../assets/instagram-svgrepo-com.svg";
-import x from "../../assets/twitter-svgrepo-com.svg";
-import ButtonSVG from "./ButtonSVG";
+import { ReactNode } from "react";
+
+import properties from "../../styles/properties";
+import AnimatedSVG from "./svg/AnimatedSVG";
+import svgPathBase from "./svg/svgPathBase";
+
+const FooterAnimatedSVG = ({ path }: { path: ReactNode }) => (
+  <AnimatedSVG
+    svgPath={path}
+    additionalTailwindClasses="w-12 h-12"
+    defaultFill={properties.defaultFont}
+  />
+);
 
 export default function Footer() {
   return (
@@ -10,15 +19,15 @@ export default function Footer() {
       <p>You can also find us on:</p>
       <nav className="flex py-3 gap-3">
         <a href="http://facebook.com" target="_blank">
-          <ButtonSVG src={facebook} alt="Facebook icon" />
+          <FooterAnimatedSVG path={svgPathBase.facebookSVG} />
         </a>
 
         <a href="http://instagram.com" target="_blank">
-          <ButtonSVG src={instagram} alt="Instagram icon" />
+          <FooterAnimatedSVG path={svgPathBase.instagramSVG} />
         </a>
 
         <a href="http://x.com" target="_blank">
-          <ButtonSVG src={x} alt="X icon" />
+          <FooterAnimatedSVG path={svgPathBase.twitterSVG} />
         </a>
       </nav>
     </footer>

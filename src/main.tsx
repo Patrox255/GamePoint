@@ -20,6 +20,7 @@ import VerifyEmailPage, {
   loader as VerifyEmailPageLoader,
   action as VerifyEmailPageAction,
 } from "./pages/VerifyEmailPage.tsx";
+import CartPage from "./pages/CartPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
         loader: VerifyEmailPageLoader,
         action: VerifyEmailPageAction,
       },
+      { path: "cart", element: <CartPage /> },
     ],
   },
 ]);

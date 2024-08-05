@@ -2,7 +2,7 @@ import { Reducer, useCallback, useReducer } from "react";
 import { Location, NavigateFunction } from "react-router-dom";
 
 import generateInitialStateFromSearchParamsOrSessionStorage from "../../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
-import useChangeSearchParamsWhenUseReducerChanges from "../useChangeSearchParamsWhenUseReducerChanges";
+import useChangeSearchParamsAndSessionStorageWhenUseReducerChanges from "../useChangeSearchParamsWhenUseReducerChanges";
 
 type ISelectedTagsProperty = string[];
 
@@ -104,7 +104,7 @@ export default function useCreateUseReducerStateForCustomizationComponentWithInp
     []
   );
 
-  useChangeSearchParamsWhenUseReducerChanges({
+  useChangeSearchParamsAndSessionStorageWhenUseReducerChanges({
     stateNormalProperty: selectedTagsState.stateArr,
     stateDebouncedProperty: selectedTagsState.debouncedStateArr,
     location,

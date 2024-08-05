@@ -5,6 +5,8 @@ import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointW
 import { IOrderCustomizationProperty } from "../store/products/SearchCustomizationContext";
 import { IReview } from "../models/review.model";
 import { IActionMutateArgsRegister } from "../pages/RegisterPage";
+import { cartDetails, cartStateArr } from "../store/cartSlice";
+import { ILoginActionMutateArgs } from "../components/UI/modals/LoginModal";
 
 export const queryClient = new QueryClient();
 
@@ -197,7 +199,7 @@ export const getGameData = async <T = IGame>({
   return data as { data: T };
 };
 
-export const login = async (userData: { login: string; password: string }) => {
+export const login = async (userData: ILoginActionMutateArgs) => {
   const data = await getJSON<string>({
     url: `${API_URL}/login`,
     method: "POST",
@@ -268,6 +270,43 @@ export const verifyEmail = async (verifyEmailData: {
     url: `${API_URL}/verify-email`,
     method: "POST",
     body: verifyEmailData,
+  });
+
+  return data;
+};
+
+export const getCart = async function (signal: AbortSignal) {
+  const data = await getJSON<{ cart: cartStateArr }>({
+    url: `${API_URL}/cart`,
+    signal,
+  });
+
+  return data;
+};
+
+export const sendCart = async function (
+  cart: cartStateArr,
+  signal: AbortSignal
+) {
+  const data = await getJSON({
+    url: `${API_URL}/cart`,
+    method: "POST",
+    body: { cart },
+    signal,
+  });
+
+  return data;
+};
+
+export const getCartDetails = async function (
+  signal: AbortSignal,
+  cart: cartStateArr
+) {
+  const data = await getJSON<cartDetails>({
+    url: `${API_URL}/cart-details`,
+    body: { cart },
+    signal,
+    method: "POST",
   });
 
   return data;

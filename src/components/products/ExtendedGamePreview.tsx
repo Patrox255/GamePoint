@@ -13,11 +13,11 @@ import ReviewsWrapper from "../product/ReviewsWrapper";
 import ProductAdditionalInformation from "../product/ProductAdditionalInformation";
 import { MAX_REVIEWS_PER_PAGE } from "../../helpers/config";
 import PagesManagerContextProvider from "../../store/products/PagesManagerContext";
+import { useAppDispatch, useAppSelector } from "../../hooks/reduxStore";
+import { modifyCartQuantityAction } from "../../store/customActions";
 
 const ExtendedGamePreview = memo(
   ({ game }: { game: IGame & { reviews: number } }) => {
-    console.log(game);
-
     const stableSliderImageOverviewFn = useCallback(
       (SliderImageOverviewPrepared: () => JSX.Element) => (
         <AnimatedAppearance>
@@ -31,6 +31,8 @@ const ExtendedGamePreview = memo(
       [game.artworks.length]
     );
 
+    const dispatch = useAppDispatch();
+    const login = useAppSelector((state) => state.userAuthSlice.login);
     return (
       <>
         <article className="product-overview">
@@ -43,7 +45,13 @@ const ExtendedGamePreview = memo(
             {(element) => (
               <Button
                 onClick={() => {
-                  console.log(`${element.title} added to cart!`);
+                  dispatch(
+                    modifyCartQuantityAction({
+                      productId: element._id,
+                      operation: "increase",
+                      login,
+                    })
+                  );
                 }}
               >
                 Add to cart

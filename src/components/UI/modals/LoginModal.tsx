@@ -15,10 +15,13 @@ import FormWithErrorHandling, {
   FormInputFields,
 } from "../FormWithErrorHandling";
 import inputFieldsObjs from "../../../lib/inputFieldsObjs";
+import { cartStateArr } from "../../../store/cartSlice";
+import { useAppSelector } from "../../../hooks/reduxStore";
 
-interface ILoginActionMutateArgs {
+export interface ILoginActionMutateArgs {
   login: string;
   password: string;
+  cart: cartStateArr;
 }
 
 const inputFields: FormInputFields = [
@@ -48,11 +51,13 @@ export default function LoginModal() {
       queryClient.invalidateQueries({ queryKey: ["userAuth"] }),
   });
 
+  const cart = useAppSelector((state) => state.cartSlice.cart);
+
   const onSubmitStable = useCallback(
     (formDataObj: ILoginActionMutateArgs) => {
-      mutate(formDataObj);
+      mutate({ ...formDataObj, cart });
     },
-    [mutate]
+    [mutate, cart]
   );
 
   function handleCloseLoginModal() {

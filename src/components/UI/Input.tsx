@@ -45,6 +45,7 @@ interface IInputProps {
   imperativeActive?: boolean;
   checkedCheckbox?: boolean;
   options?: string[];
+  customInputNumber?: boolean;
 }
 
 const Input = forwardRef<HTMLInputElement, IInputProps>(
@@ -72,6 +73,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       imperativeActive,
       checkedCheckbox,
       options,
+      customInputNumber = false,
     },
     ref
   ) => {
@@ -83,15 +85,15 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
 
     const handleInputChange: ChangeEventHandler<HTMLInputElement> = (e) => {
       const value = e.currentTarget.value.replace(",", ".");
-      const numberRegex = /\d*(,\d{1,2})?/;
+      const numberRegex = /\d*(\.\d{1,2})?/;
       const isValidNumberIfTypeNumber =
         type !== "number"
           ? true
           : value === "" ||
             (value &&
               numberRegex.test(value) &&
-              parseFloat(value) >= min! &&
-              parseFloat(value) <= max!);
+              (!min || parseFloat(value) >= min) &&
+              (!max || parseFloat(value) <= max));
       isValidNumberIfTypeNumber && onChange
         ? type === "number"
           ? (onChange as inputOnChangeTypeNumber)(parseFloat(value))
@@ -123,11 +125,14 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       onBlur,
     };
 
-    console.log(otherValidationInputAttributes, name);
-
     let content = (
       <motion.input
-        {...sharedPropsAcrossInputAndSelect}
+        {...{
+          ...sharedPropsAcrossInputAndSelect,
+          className: customInputNumber
+            ? className + " custom-input-number"
+            : className,
+        }}
         type={type === "date" ? "text" : type}
         placeholder={placeholder}
         {...((!belongToFormElement ||

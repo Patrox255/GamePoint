@@ -36,7 +36,12 @@ export default function HeaderLinkOrHeaderAnimation({
       }}
     >
       {onlyAnimation ? (
-        <div onClick={onClick ? onClick : undefined}>{children}</div>
+        <div
+          onClick={onClick ? onClick : undefined}
+          className={additionalTailwindClasses}
+        >
+          {children}
+        </div>
       ) : sendCurrentPageInformation ? (
         <LinkToDifferentPageWithCurrentPageInformation to={href!}>
           {children}

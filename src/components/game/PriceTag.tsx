@@ -2,6 +2,13 @@ import { useAnimate, motion } from "framer-motion";
 import { useEffect } from "react";
 import customColors from "../../styles/properties";
 
+export const priceFormat = new Intl.NumberFormat(navigator.language, {
+  style: "currency",
+  currency: "USD",
+  useGrouping: false,
+  maximumFractionDigits: 2,
+});
+
 export default function PriceTag({
   price,
   discount,
@@ -16,13 +23,6 @@ export default function PriceTag({
   removeOriginalPriceAfterAnimation?: boolean;
 }) {
   const [scope, animate] = useAnimate();
-
-  const priceFormat = new Intl.NumberFormat(navigator.language, {
-    style: "currency",
-    currency: "USD",
-    useGrouping: false,
-    maximumFractionDigits: 2,
-  });
 
   const isFree = price === 0 || discount === 100;
   const hasDiscount = discount !== 0;

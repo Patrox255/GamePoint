@@ -31,7 +31,7 @@ export default function NavSearchBar({ placeholder }: { placeholder: string }) {
   const { setShowResults } = useContext(DropDownMenuContext);
 
   async function handleInputBlur() {
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 200));
     setShowResults(false);
   }
   function handleInputFocus() {

@@ -93,14 +93,8 @@ export default function SliderProductElementContent({
       usesProductChangeContext &&
         hasArtworks &&
         setCanCountProductChangeStable(false);
-      console.log(artworkIndex, pageNr);
       Math.trunc(artworkIndex / 5) !== pageNr &&
         setPageNr(Math.trunc(artworkIndex / 5));
-      console.log(
-        artworkIndex,
-        pageNr,
-        Math.trunc(artworkIndex / 5) !== pageNr
-      );
     },
     [
       hasArtworks,
@@ -110,8 +104,6 @@ export default function SliderProductElementContent({
       usesProductChangeContext,
     ]
   );
-
-  console.log(pageNr);
 
   const {
     activeElementIndex: artworkIndex,
@@ -155,7 +147,6 @@ export default function SliderProductElementContent({
                   motionAnimation={sliderProductElementsAnimation}
                   key={`artwork-${artworkIndex}-${element.artworks[artworkIndex]}`}
                   additionalActionOnLoadFn={() => {
-                    console.log(setCanCount, "A");
                     setCanCount(true);
                     usesProductChangeContext &&
                       setCanCountProductChangeStable(true);

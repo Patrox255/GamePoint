@@ -13,12 +13,12 @@ import { useInput } from "../../hooks/useInput";
 import { useAppSelector } from "../../hooks/reduxStore";
 import { actions } from "../mainSearchBarSlice";
 import generateInitialStateFromSearchParamsOrSessionStorage from "../../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
-import useChangeSearchParamsWhenUseReducerChanges from "../../hooks/useChangeSearchParamsWhenUseReducerChanges";
 import { useStateWithSearchParams } from "../../hooks/useStateWithSearchParams";
 import useCreateUseReducerStateForCustomizationComponentWithInputAndTags, {
   ISelectedTags,
   ISelectedTagsReducer,
 } from "../../hooks/searchCustomizationRelated/useCreateUseReducerStateForCustomizationComponentWithInputAndTags";
+import useChangeSearchParamsAndSessionStorageWhenUseReducerChanges from "../../hooks/useChangeSearchParamsWhenUseReducerChanges";
 
 type IOrderCustomizationPropertyValues = "" | "1" | "-1";
 
@@ -298,21 +298,21 @@ export default function SearchCustomizationContextProvider({
     []
   );
 
-  useChangeSearchParamsWhenUseReducerChanges({
+  useChangeSearchParamsAndSessionStorageWhenUseReducerChanges({
     dispatchCallbackFn: orderCustomizationHookCallback,
     searchParamName: "popularity",
     stateNormalProperty: popularity,
     stateDebouncedProperty: debouncedPopularity,
     ...orderCustomizationHookData,
   });
-  useChangeSearchParamsWhenUseReducerChanges({
+  useChangeSearchParamsAndSessionStorageWhenUseReducerChanges({
     dispatchCallbackFn: orderCustomizationHookCallback,
     searchParamName: "price",
     stateNormalProperty: price,
     stateDebouncedProperty: debouncedPrice,
     ...orderCustomizationHookData,
   });
-  useChangeSearchParamsWhenUseReducerChanges({
+  useChangeSearchParamsAndSessionStorageWhenUseReducerChanges({
     dispatchCallbackFn: orderCustomizationHookCallback,
     searchParamName: "title",
     stateNormalProperty: title,

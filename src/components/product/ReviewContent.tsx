@@ -4,7 +4,7 @@ import Button from "../UI/Button";
 import Header from "../UI/headers/Header";
 import Input from "../UI/Input";
 import TextArea from "../UI/TextArea";
-import StarSVG from "../UI/svg/StarSVG";
+import AnimatedSVG from "../UI/svg/AnimatedSVG";
 import { useContext } from "react";
 import { AddReviewContext } from "../../store/product/AddReviewContext";
 import properties from "../../styles/properties";
@@ -12,6 +12,7 @@ import AnimatedAppearance from "../UI/AnimatedAppearance";
 import { isEqual } from "lodash";
 import { IReview } from "../../models/review.model";
 import { dateTimeFormat } from "../../helpers/dateTimeFormat";
+import svgPathBase from "../UI/svg/svgPathBase";
 
 export default function ReviewContent({
   reviewToRender,
@@ -126,7 +127,7 @@ export default function ReviewContent({
                   )}
                   <motion.section className="criterion-stars flex" layout>
                     {Array.from({ length: 5 }, (_, i) => i).map((rating) => (
-                      <StarSVG
+                      <AnimatedSVG
                         size="48px"
                         key={`criterion-example-star-${rating}`}
                         onClick={
@@ -167,6 +168,7 @@ export default function ReviewContent({
                             : undefined
                         }
                         hoverAnimation={serveAsAnAddReviewComponent}
+                        svgPath={svgPathBase.startSVG}
                       />
                     ))}
                   </motion.section>

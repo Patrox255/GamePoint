@@ -231,3 +231,10 @@ progress {
 input[type="date"]::-webkit-calendar-picker-indicator {
   display: none;
 }
+
+.custom-input-number::-webkit-outer-spin-button,
+.custom-input-number::-webkit-inner-spin-button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+}

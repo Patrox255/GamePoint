@@ -175,12 +175,6 @@ export const useSlider = function <T, Y>({
         )
       : activeElementIndexState;
 
-  console.log(
-    activeElementIndex,
-    wentAheadToTheFirstElement,
-    wentBackToTheLastElement
-  );
-
   // const changeActiveElementIndex = useCallback(
   //   (operation: "increment" | "decrement" = "increment") => {
   //     let newArtworkIndex: number;
@@ -276,12 +270,6 @@ export const useSlider = function <T, Y>({
           payload: { operation },
         });
       const newElementIndex = getNewElementIndex(
-        activeElementIndex,
-        elements.length,
-        operation
-      );
-      console.log(
-        newElementIndex,
         activeElementIndex,
         elements.length,
         operation

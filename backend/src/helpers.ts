@@ -1,9 +1,11 @@
-import mongoose, { Types } from "mongoose";
+import mongoose, { isValidObjectId, Types } from "mongoose";
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { accessEnvironmentVariable } from "./app";
 import { CorsOptions } from "cors";
 import bcrypt from "bcrypt";
+import Game from "./models/game.model";
+import User from "./models/user.model";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -143,7 +145,7 @@ const createBodyEntryErr = (errInputName: string, message: string) => ({
 });
 
 interface IBodyFromRequestToValidate {
-  [k: string]: string | undefined;
+  [k: string]: string | undefined | string[] | object;
 }
 
 type bodyEntryValidateFn<T extends IBodyFromRequestToValidate> = (
@@ -183,8 +185,9 @@ export const validateBodyEntries = function <
       null,
       requestBodyName
     );
+    const typeToCheckFor = type === "array" ? "object" : type;
 
-    if (typeof value !== type)
+    if (typeof value !== typeToCheckFor)
       errors.push(
         createBodyEntryErrSuppliedWithInputName(
           `Please write a correct ${name}`
@@ -195,7 +198,7 @@ export const validateBodyEntries = function <
         createBodyEntryErrSuppliedWithInputName(`${name} can't be empty!`)
       );
     if (
-      typeof value === "object" &&
+      type === "array" &&
       Array.isArray(value) &&
       value.length === 0 &&
       !optional
@@ -328,7 +331,15 @@ const firstAndLastNameValidateFn: bodyEntryValidateFn<
 export interface ILoginBodyFromRequest extends IBodyFromRequestToValidate {
   login: string;
   password: string;
+  cart?: receivedCart;
 }
+
+export const cartDataEntry: IValidateBodyEntry<ILoginBodyFromRequest> = {
+  name: "cart",
+  requestBodyName: "cart",
+  type: "array",
+  optional: true, // to allow an empty array
+};
 
 export const loginBodyEntries: IValidateBodyEntry<ILoginBodyFromRequest>[] = [
   {
@@ -343,6 +354,9 @@ export const loginBodyEntries: IValidateBodyEntry<ILoginBodyFromRequest>[] = [
     validateFn: validatePasswordFn,
   },
 ];
+
+export const loginBodyEntriesWithCart: IValidateBodyEntry<ILoginBodyFromRequest>[] =
+  [...loginBodyEntries, cartDataEntry];
 
 export interface IRegisterBodyFromRequest extends ILoginBodyFromRequest {
   confirmedPassword: string;
@@ -441,7 +455,7 @@ export const registerBodyEntries: IRegisterBodyEntriesForValidation = (() => {
       requestBodyName: "firstName",
       type: "string",
     },
-    { name: "Last name", requestBodyName: "lastName", type: "string" },
+    { name: "Surname", requestBodyName: "surName", type: "string" },
   ].map((registerBodyEntry) => ({
     ...registerBodyEntry,
     validateFn: (val, name) => firstAndLastNameValidateFn(val, name),
@@ -521,3 +535,47 @@ export const verifyEmailEntries: IValidateBodyEntry<IVerifyEmailEntriesFromReque
       type: "string",
     },
   ];
+
+export type receivedCart = { id: string; quantity: number }[];
+
+export interface ICartDataEntriesFromRequest
+  extends IBodyFromRequestToValidate {
+  cart: receivedCart;
+}
+
+export const cartDataEntries: IValidateBodyEntry<ICartDataEntriesFromRequest>[] =
+  [cartDataEntry as unknown as IValidateBodyEntry<ICartDataEntriesFromRequest>];
+
+export const filterPropertiesFromObj = (obj: object, properties: string[]) => ({
+  ...Object.fromEntries(
+    Object.entries(obj).filter(
+      (objEntry) =>
+        !properties.find((propertiesEntry) => propertiesEntry === objEntry[0])
+    )
+  ),
+});
+
+export const createCartWithGamesBasedOnReceivedCart = async function (
+  cart: receivedCart
+) {
+  return await Promise.all(
+    cart.map(async (cartEntry) => {
+      const { id } = cartEntry;
+      if (!isValidObjectId(id)) return { relatedGame: null };
+      const gameId = new mongoose.Types.ObjectId(id);
+      const foundGame = await Game.findById(gameId);
+      return { ...cartEntry, relatedGame: foundGame, id: gameId };
+    })
+  );
+};
+
+export const updateUserCartBasedOnReceivedOne = async function (
+  cart: receivedCart,
+  login: string
+) {
+  const cartWithGames = await createCartWithGamesBasedOnReceivedCart(cart);
+  const cartToSave = cartWithGames
+    .filter((cartEntry) => cartEntry.relatedGame !== null)
+    .map((cartEntry) => filterPropertiesFromObj(cartEntry, ["relatedGame"]));
+  await User.updateOne({ login }, { cart: cartToSave });
+};

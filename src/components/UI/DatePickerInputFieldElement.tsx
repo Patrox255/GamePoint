@@ -208,12 +208,6 @@ function DatePicker() {
   useEffect(() => {
     const clickOutsideFn: EventListenerOrEventListenerObject = (e) => {
       const target = e.target as Element;
-      console.log(
-        target,
-        !target.closest(".date-picker-control"),
-        !target.closest(".date-picker"),
-        datePickerState
-      );
       target &&
         !target.closest(".date-picker-control") &&
         !target.closest(".date-picker") &&
@@ -658,8 +652,6 @@ export default function DatePickerInputFieldElement({
     stateValue: selectedDate,
     setStateValue: setSelectedDate,
   });
-
-  console.log(datePickerState);
 
   const selectedDateDebouncedStable = useCompareComplexForUseMemo(
     selectedDateDebounced

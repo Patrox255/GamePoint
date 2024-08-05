@@ -29,7 +29,9 @@ export default function generateInitialStateFromSearchParamsOrSessionStorage<T>(
   searchParams: URLSearchParams,
   stateName: string,
   stateIsAnObjectWithPossibleNaNPropertyValues: boolean = false,
-  valueToReturnInCaseOfLackOfSuchSearchParamOrSessionStorageValue?: unknown
+  valueToReturnInCaseOfLackOfSuchSearchParamOrSessionStorageValue?: unknown,
+  useSearchParams: boolean = true,
+  storageType: "session" | "local" = "session"
 ) {
   const [searchParamsValue, sessionStorageValue] = Array.from(
     { length: 2 },
@@ -38,12 +40,14 @@ export default function generateInitialStateFromSearchParamsOrSessionStorage<T>(
     validateJSONValue(
       i === 0
         ? searchParams.get(stateName)!
-        : sessionStorage.getItem(stateName)!,
+        : storageType === "session"
+        ? sessionStorage.getItem(stateName)!
+        : localStorage.getItem(stateName)!,
       initialState,
       stateIsAnObjectWithPossibleNaNPropertyValues
     )
   );
-  if (searchParamsValue !== false) return searchParamsValue;
+  if (searchParamsValue !== false && useSearchParams) return searchParamsValue;
   if (sessionStorageValue !== false) return sessionStorageValue;
   return valueToReturnInCaseOfLackOfSuchSearchParamOrSessionStorageValue !==
     undefined

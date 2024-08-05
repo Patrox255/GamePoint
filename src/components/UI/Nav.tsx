@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { memo, useCallback, useContext, useEffect, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 
 import Button from "./Button";
 import NavSearchBar from "../main/nav/NavSearchBar";
@@ -14,6 +15,9 @@ import DropDownMenuWrapper from "./DropDownMenu/DropDownMenuWrapper";
 import UserSVG from "./svg/UserSVG";
 import DropDownMenuDroppedElementsContainer from "./DropDownMenu/DropDownMenuDroppedElementsContainer";
 import NavUserPanelLink from "../main/nav/NavUserPanelLink";
+import AnimatedSVG from "./svg/AnimatedSVG";
+import svgPathBase from "./svg/svgPathBase";
+import properties from "../../styles/properties";
 
 let initialRender = true;
 
@@ -31,8 +35,8 @@ const Nav = memo(() => {
 
   useEffect(() => {
     if (!initialRender) return;
-    if (query === null) return;
     initialRender = false;
+    if (query === null) return;
     dispatch(actions.setSearchTerm(query));
   }, [dispatch, query]);
 
@@ -67,6 +71,11 @@ const Nav = memo(() => {
   }, [isAdmin, stableMutateFn]);
 
   const showSearchBar = !pathname.includes("verify-email");
+  const cartState = useAppSelector((state) => state.cartSlice);
+  const cartTotalQuantity = cartState.cart.reduce(
+    (quantity, product) => quantity + product.quantity,
+    0
+  );
 
   return (
     <nav
@@ -120,6 +129,20 @@ const Nav = memo(() => {
             </DropDownMenuDroppedElementsContainer>
           </DropDownMenuWrapper>
         )}
+        <Link to="/cart">
+          <AnimatedSVG
+            svgPath={svgPathBase.cartSVG}
+            additionalTailwindClasses="w-12"
+            defaultFill={properties.bodyBg}
+            useVariants={true}
+          >
+            {cartTotalQuantity ? (
+              <motion.span className="cart-total-quantity self-end cursor-default">
+                {cartTotalQuantity}
+              </motion.span>
+            ) : undefined}
+          </AnimatedSVG>
+        </Link>
       </div>
     </nav>
   );

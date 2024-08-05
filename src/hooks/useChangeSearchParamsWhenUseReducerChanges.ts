@@ -8,7 +8,9 @@ import { isEqual } from "lodash";
 
 const idsOfDeeperStates: { [key: string]: { [key: string]: number } } = {};
 
-export default function useChangeSearchParamsWhenUseReducerChanges<T>({
+export default function useChangeSearchParamsAndSessionStorageWhenUseReducerChanges<
+  T
+>({
   stateNormalProperty,
   stateDebouncedProperty,
   searchParamName,
@@ -17,10 +19,12 @@ export default function useChangeSearchParamsWhenUseReducerChanges<T>({
   dispatchCallbackFn,
   timeToWait = 500,
   idOfDeeperStateThatIsSentAndDispatchCanChangeIt,
+  omitChangingSearchParams = false,
+  useDebouncedState = true,
   provideSearchParamNameToDispatch = false,
 }: {
   stateNormalProperty: T;
-  stateDebouncedProperty: T;
+  stateDebouncedProperty?: T;
   searchParamName: string;
   location: Location;
   navigate: NavigateFunction;
@@ -30,6 +34,8 @@ export default function useChangeSearchParamsWhenUseReducerChanges<T>({
   ) => void | ((newState: T) => void);
   timeToWait?: number;
   idOfDeeperStateThatIsSentAndDispatchCanChangeIt?: string;
+  omitChangingSearchParams?: boolean;
+  useDebouncedState?: boolean;
   provideSearchParamNameToDispatch?: boolean;
 }) {
   // This is used when the provided dispatchCallback is able to perform an action which in result can also modify multiple state
@@ -85,16 +91,18 @@ export default function useChangeSearchParamsWhenUseReducerChanges<T>({
   const debouncedUpdate = useMemo(
     () =>
       debounce((stateNormalPropertyMemoized: T) => {
-        provideSearchParamNameToDispatch
-          ? dispatchCallbackFn(stateNormalPropertyMemoized, searchParamName)
-          : (dispatchCallbackFn as (newState: T) => void)(
-              stateNormalPropertyMemoized
-            );
-        searchParams.set(
+        sessionStorage.setItem(
           searchParamName,
           JSON.stringify(stateNormalPropertyMemoized)
         );
-        sessionStorage.setItem(
+        if (useDebouncedState)
+          provideSearchParamNameToDispatch
+            ? dispatchCallbackFn(stateNormalPropertyMemoized, searchParamName)
+            : (dispatchCallbackFn as (newState: T) => void)(
+                stateNormalPropertyMemoized
+              );
+        if (omitChangingSearchParams) return;
+        searchParams.set(
           searchParamName,
           JSON.stringify(stateNormalPropertyMemoized)
         );
@@ -106,8 +114,10 @@ export default function useChangeSearchParamsWhenUseReducerChanges<T>({
       timeToWait,
       idOfDeeperStateThatIsSentAndDispatchCanChangeIt,
       searchParamName,
+      useDebouncedState,
       provideSearchParamNameToDispatch,
       dispatchCallbackFn,
+      omitChangingSearchParams,
       searchParams,
       navigate,
       pathname,
@@ -116,13 +126,14 @@ export default function useChangeSearchParamsWhenUseReducerChanges<T>({
 
   useEffect(() => {
     if (
-      (typeof stateNormalPropertyMemoized === "object" &&
+      ((typeof stateNormalPropertyMemoized === "object" &&
         isEqual(
           stateNormalPropertyMemoized as object,
           stateDebouncedPropertyMemoized as object
         )) ||
-      (typeof stateNormalPropertyMemoized !== "object" &&
-        stateNormalPropertyMemoized === stateDebouncedPropertyMemoized)
+        (typeof stateNormalPropertyMemoized !== "object" &&
+          stateNormalPropertyMemoized === stateDebouncedPropertyMemoized)) &&
+      useDebouncedState
     ) {
       return;
     }
@@ -134,5 +145,6 @@ export default function useChangeSearchParamsWhenUseReducerChanges<T>({
     debouncedUpdate,
     stateDebouncedPropertyMemoized,
     stateNormalPropertyMemoized,
+    useDebouncedState,
   ]);
 }
