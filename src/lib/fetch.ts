@@ -7,6 +7,8 @@ import { IReview } from "../models/review.model";
 import { IActionMutateArgsRegister } from "../pages/RegisterPage";
 import { cartDetails, cartStateArr } from "../store/cartSlice";
 import { ILoginActionMutateArgs } from "../components/UI/modals/LoginModal";
+import { IReviewDataToSend } from "../store/product/AddReviewContext";
+import { FormActionBackendResponse } from "../components/UI/FormWithErrorHandling";
 
 export const queryClient = new QueryClient();
 
@@ -310,4 +312,24 @@ export const getCartDetails = async function (
   });
 
   return data;
+};
+
+export const sendReview = async function (reviewData: IReviewDataToSend) {
+  const data = await getJSON<string>({
+    url: `${API_URL}/add-review`,
+    method: "POST",
+    body: reviewData,
+  });
+
+  return data;
+};
+
+export const removeReview = async function (reviewId: string) {
+  const data = await getJSON<string>({
+    url: `${API_URL}/remove-review`,
+    method: "POST",
+    body: { reviewId },
+  });
+
+  return data as FormActionBackendResponse;
 };

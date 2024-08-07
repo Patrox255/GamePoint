@@ -1,11 +1,12 @@
 import mongoose, { isValidObjectId, Types } from "mongoose";
-import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
+import { NextFunction, Request, Response } from "express";
+import jwt, { JsonWebTokenError } from "jsonwebtoken";
 import { accessEnvironmentVariable } from "./app";
 import { CorsOptions } from "cors";
 import bcrypt from "bcrypt";
 import Game from "./models/game.model";
 import User from "./models/user.model";
+import { receivedCart } from "./validateBodyEntries";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -139,338 +140,6 @@ export const generateAndSaveJWT = (
   return newToken;
 };
 
-const createBodyEntryErr = (errInputName: string, message: string) => ({
-  message,
-  errInputName,
-});
-
-interface IBodyFromRequestToValidate {
-  [k: string]: string | undefined | string[] | object;
-}
-
-type bodyEntryValidateFn<T extends IBodyFromRequestToValidate> = (
-  val: unknown,
-  name: string,
-  otherEntries?: (IValidateBodyEntry<T> & { value: unknown })[]
-) => { message: string } | boolean;
-
-export interface IValidateBodyEntry<T extends IBodyFromRequestToValidate> {
-  type: string;
-  name: string;
-  validateFn?: bodyEntryValidateFn<T>;
-  optional?: boolean;
-  requestBodyName: keyof T;
-}
-
-export const validateBodyEntries = function <
-  T extends IBodyFromRequestToValidate
->(entries: IValidateBodyEntry<T>[], request: Request) {
-  const errors: { message: string; errInputName: string }[] = [];
-  const entriesWithValues = entries.map((entry) => ({
-    ...entry,
-    value: request.body[entry.requestBodyName],
-  }));
-
-  entriesWithValues.forEach((entry) => {
-    const {
-      type,
-      name,
-      validateFn,
-      optional = false,
-      requestBodyName,
-      value,
-    } = entry as typeof entry & { name: string; requestBodyName: string };
-
-    const createBodyEntryErrSuppliedWithInputName = createBodyEntryErr.bind(
-      null,
-      requestBodyName
-    );
-    const typeToCheckFor = type === "array" ? "object" : type;
-
-    if (typeof value !== typeToCheckFor)
-      errors.push(
-        createBodyEntryErrSuppliedWithInputName(
-          `Please write a correct ${name}`
-        )
-      );
-    if (typeof value !== "object" && !optional && value === "")
-      errors.push(
-        createBodyEntryErrSuppliedWithInputName(`${name} can't be empty!`)
-      );
-    if (
-      type === "array" &&
-      Array.isArray(value) &&
-      value.length === 0 &&
-      !optional
-    )
-      errors.push(
-        createBodyEntryErrSuppliedWithInputName(`${name} can't be empty!`)
-      );
-    if (validateFn && validateFn(value, name, entriesWithValues) !== true)
-      errors.push(
-        createBodyEntryErrSuppliedWithInputName(
-          (validateFn(value, name, entriesWithValues) as { message: string })
-            .message
-        )
-      );
-  });
-  return errors;
-};
-
-type validateHelperFn<T, payload extends object> = (
-  validateHelperFnArg: {
-    val: T;
-    strNameForErrorGeneration: string;
-  } & payload
-) => boolean | { message: string };
-
-const validateStrLength: validateHelperFn<
-  string,
-  { length: number; checkType: "min" | "max" }
-> = ({ checkType, val, strNameForErrorGeneration, length }) =>
-  (checkType === "min" ? val.length >= length : val.length <= length) || {
-    message: `${strNameForErrorGeneration} must consist of at ${
-      checkType === "min" ? "least" : "most"
-    } ${length} character${length >= 2 ? "s" : ""}`,
-  };
-
-const stringFollowsRegex: validateHelperFn<
-  string,
-  {
-    regex: RegExp;
-    errorMessageGeneratorFn?: (name: string) => string;
-    needsToHaveOrDontHave?: boolean;
-  }
-> = ({
-  regex,
-  val,
-  strNameForErrorGeneration,
-  errorMessageGeneratorFn,
-  needsToHaveOrDontHave = true,
-}) => {
-  regex.lastIndex = 0; // due to the global flag updating lastIndex
-  return (
-    regex.test(val) === needsToHaveOrDontHave || {
-      message: errorMessageGeneratorFn
-        ? errorMessageGeneratorFn(strNameForErrorGeneration)
-        : `${strNameForErrorGeneration} has to meet its format requirements!`,
-    }
-  );
-};
-
-const upperCaseRegex = /[A-Z]/g;
-const lowerCaseRegex = /[a-z]/g;
-const digitRegex = /\d/g;
-const specialCharacterRegex = /\W/g;
-const whiteSpaceCharacterRegex = /\s/g;
-
-const passwordRegexArr = [
-  upperCaseRegex,
-  lowerCaseRegex,
-  digitRegex,
-  specialCharacterRegex,
-  whiteSpaceCharacterRegex,
-];
-
-const validatePasswordFn = (password: unknown, name: string) => {
-  const passwordLengthValidation = validateStrLength({
-    val: password as string,
-    strNameForErrorGeneration: name,
-    checkType: "min",
-    length: 8,
-  });
-  if (passwordLengthValidation !== true) return passwordLengthValidation;
-  for (const passwordRegex of passwordRegexArr) {
-    const isWhiteSpaceRegex = sameRegex(
-      passwordRegex,
-      whiteSpaceCharacterRegex
-    );
-    const regexValidationResult = stringFollowsRegex({
-      regex: passwordRegex,
-      val: password as string,
-      strNameForErrorGeneration: name,
-      needsToHaveOrDontHave: !isWhiteSpaceRegex,
-      errorMessageGeneratorFn: (name) =>
-        `${name} has${isWhiteSpaceRegex ? " not" : ""} to contain ${
-          !isWhiteSpaceRegex ? "at least one" : "any"
-        } ${
-          sameRegex(passwordRegex, lowerCaseRegex) ||
-          sameRegex(passwordRegex, upperCaseRegex) ||
-          sameRegex(passwordRegex, specialCharacterRegex)
-            ? `${
-                sameRegex(passwordRegex, lowerCaseRegex)
-                  ? "lowercase"
-                  : sameRegex(passwordRegex, upperCaseRegex)
-                  ? "uppercase"
-                  : "special"
-              } character`
-            : sameRegex(passwordRegex, digitRegex)
-            ? "digit"
-            : "whitespace character"
-        }`,
-    });
-    if (regexValidationResult !== true) return regexValidationResult;
-  }
-  return true;
-};
-
-const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]+$/;
-const firstAndLastNameRegex = /^[a-zA-ZÀ-ÿ' -]+$/;
-const properDateFromInputTypeDateRegex = /\d{4}-\d{2}-\d{2}/;
-const zipCodeRegex = /^[A-Za-z0-9\- ]{2,15}$/;
-
-const firstAndLastNameValidateFn: bodyEntryValidateFn<
-  IRegisterBodyFromRequest
-> = (val, name) =>
-  stringFollowsRegex({
-    val: val as string,
-    regex: firstAndLastNameRegex,
-    strNameForErrorGeneration: name,
-  });
-
-export interface ILoginBodyFromRequest extends IBodyFromRequestToValidate {
-  login: string;
-  password: string;
-  cart?: receivedCart;
-}
-
-export const cartDataEntry: IValidateBodyEntry<ILoginBodyFromRequest> = {
-  name: "cart",
-  requestBodyName: "cart",
-  type: "array",
-  optional: true, // to allow an empty array
-};
-
-export const loginBodyEntries: IValidateBodyEntry<ILoginBodyFromRequest>[] = [
-  {
-    name: "Login",
-    type: "string",
-    requestBodyName: "login",
-  },
-  {
-    name: "Password",
-    type: "string",
-    requestBodyName: "password",
-    validateFn: validatePasswordFn,
-  },
-];
-
-export const loginBodyEntriesWithCart: IValidateBodyEntry<ILoginBodyFromRequest>[] =
-  [...loginBodyEntries, cartDataEntry];
-
-export interface IRegisterBodyFromRequest extends ILoginBodyFromRequest {
-  confirmedPassword: string;
-  email: string;
-  expandedContactInformation?: string;
-  firstName: string;
-  surName: string;
-  dateOfBirth: string;
-  phoneNr: string;
-  country: string;
-  zipCode: string;
-  city: string;
-  street: string;
-  house: string;
-  flat?: string;
-}
-
-type IRegisterBodyEntriesForValidation =
-  IValidateBodyEntry<IRegisterBodyFromRequest>[];
-
-export const registerBodyEntries: IRegisterBodyEntriesForValidation = (() => {
-  const newBodyEntries: IRegisterBodyEntriesForValidation = [
-    {
-      ...loginBodyEntries[1],
-      name: "Confirmed password",
-      requestBodyName: "confirmedPassword",
-      validateFn: (val, name, otherEntries) => {
-        const validatePasswordRes = validatePasswordFn(val as string, name);
-        if (validatePasswordRes !== true) return validatePasswordRes;
-        const compareConfirmedPasswordToNormalRes = val ===
-          otherEntries!.find(
-            (registerBodyEntry) =>
-              registerBodyEntry.requestBodyName === "password"
-          )!.value || { message: "Provided passwords are not equal!" };
-        if (compareConfirmedPasswordToNormalRes !== true)
-          return compareConfirmedPasswordToNormalRes;
-        return true;
-      },
-    },
-    {
-      name: "E-mail address",
-      requestBodyName: "email",
-      type: "string",
-      validateFn: (val, name) =>
-        stringFollowsRegex({
-          val: val as string,
-          strNameForErrorGeneration: name,
-          regex: emailRegex,
-        }),
-    },
-    {
-      name: "Date of birth",
-      requestBodyName: "dateOfBirth",
-      type: "string",
-      validateFn: (val, name) =>
-        stringFollowsRegex({
-          val: val as string,
-          strNameForErrorGeneration: name,
-          regex: properDateFromInputTypeDateRegex,
-        }),
-    },
-    {
-      name: "Phone number",
-      requestBodyName: "phoneNr",
-      type: "string",
-    },
-    { name: "Country name", requestBodyName: "country", type: "string" },
-    {
-      name: "Zip code",
-      requestBodyName: "zipCode",
-      type: "string",
-      validateFn: (val, name) =>
-        stringFollowsRegex({
-          val: val as string,
-          strNameForErrorGeneration: name,
-          regex: zipCodeRegex,
-        }),
-    },
-    { name: "City name", requestBodyName: "city", type: "string" },
-    {
-      name: "Street name",
-      requestBodyName: "street",
-      type: "string",
-    },
-    { name: "House number", requestBodyName: "house", type: "string" },
-    {
-      name: "Flat number",
-      requestBodyName: "flat",
-      type: "string",
-      optional: true,
-    },
-  ];
-  const firstAndLastNameBodyEntries: IRegisterBodyEntriesForValidation = [
-    {
-      name: "First name",
-      requestBodyName: "firstName",
-      type: "string",
-    },
-    { name: "Surname", requestBodyName: "surName", type: "string" },
-  ].map((registerBodyEntry) => ({
-    ...registerBodyEntry,
-    validateFn: (val, name) => firstAndLastNameValidateFn(val, name),
-  }));
-
-  return [
-    ...loginBodyEntries,
-    ...newBodyEntries,
-    ...firstAndLastNameBodyEntries,
-  ] as unknown as IRegisterBodyEntriesForValidation;
-})();
-
-// Had to do such things in order to correctly merge loginBodyEntries into registerBodyEntries without losing proper
-// type inference
-
 export default function createDateNoTakingTimezoneIntoAccount({
   year,
   month,
@@ -508,43 +177,8 @@ export async function genSalt() {
   return await bcrypt.genSalt(10);
 }
 
-const sameRegex = (regex1: RegExp, regex2: RegExp) =>
+export const sameRegex = (regex1: RegExp, regex2: RegExp) =>
   regex1.source === regex2.source && regex1.flags === regex2.flags;
-
-interface IVerifyEmailEntriesFromRequest extends IBodyFromRequestToValidate {
-  uId: string;
-  providedRegistrationCode: string;
-  registrationCode: string;
-}
-
-export const verifyEmailEntries: IValidateBodyEntry<IVerifyEmailEntriesFromRequest>[] =
-  [
-    {
-      name: "User identificator",
-      requestBodyName: "uId",
-      type: "string",
-    },
-    {
-      name: "Provided registration code",
-      requestBodyName: "providedRegistrationCode",
-      type: "string",
-    },
-    {
-      name: "Simulated registration code which realistically would be received by an e-mail",
-      requestBodyName: "registrationCode",
-      type: "string",
-    },
-  ];
-
-export type receivedCart = { id: string; quantity: number }[];
-
-export interface ICartDataEntriesFromRequest
-  extends IBodyFromRequestToValidate {
-  cart: receivedCart;
-}
-
-export const cartDataEntries: IValidateBodyEntry<ICartDataEntriesFromRequest>[] =
-  [cartDataEntry as unknown as IValidateBodyEntry<ICartDataEntriesFromRequest>];
 
 export const filterPropertiesFromObj = (obj: object, properties: string[]) => ({
   ...Object.fromEntries(
@@ -578,4 +212,105 @@ export const updateUserCartBasedOnReceivedOne = async function (
     .filter((cartEntry) => cartEntry.relatedGame !== null)
     .map((cartEntry) => filterPropertiesFromObj(cartEntry, ["relatedGame"]));
   await User.updateOne({ login }, { cart: cartToSave });
+};
+
+interface IJwtPayload {
+  userId: string;
+  iat?: number;
+  exp?: number;
+}
+
+const jwtVerifyPromisified = (token: string, secretKey: string) =>
+  new Promise<string | jwt.JwtPayload | undefined>((resolve, reject) => {
+    jwt.verify(token, secretKey, (err, decoded) => {
+      if (err) reject(err);
+      resolve(decoded);
+    });
+  });
+
+interface IRequestTokenPropertyAfterJwtMiddleware {
+  isAdmin?: boolean;
+  expDate?: Date;
+  login?: string;
+  userId?: string;
+}
+
+export interface IRequestAdditionAfterVerifyJwtfMiddleware {
+  token: IRequestTokenPropertyAfterJwtMiddleware;
+}
+
+export interface IRequestAdditionAfterAccessJwtfMiddleware {
+  token?: IRequestTokenPropertyAfterJwtMiddleware;
+}
+
+const accessJwt = async (req: Request, res: Response) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) return { message: "Could not authorize", status: 401 };
+
+  try {
+    const [JWTREFRESHSECRET, JWTSECRET] = accessEnvironmentVariable([
+      "JWTREFRESHSECRET",
+      "JWTSECRET",
+    ]);
+    const decodedJwt = (await jwtVerifyPromisified(
+      refreshToken,
+      JWTREFRESHSECRET
+    )) as IJwtPayload;
+    const userId = decodedJwt.userId;
+    let accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+      accessToken = generateAndSaveJWT(res, userId, "access");
+    }
+    let decodedJwtAccessToken: jwt.JwtPayload = {};
+    try {
+      decodedJwtAccessToken = (await jwtVerifyPromisified(
+        accessToken,
+        JWTSECRET!
+      )) as IJwtPayload;
+    } catch (e) {
+      if ((e as JsonWebTokenError).name === "TokenExpiredError") {
+        generateAndSaveJWT(res, userId, "access");
+        decodedJwtAccessToken.userId = userId;
+      } else {
+        throw e;
+      }
+    }
+    if (decodedJwtAccessToken.userId !== userId)
+      return { message: "Misleading tokens data!", status: 401 };
+
+    const correspondingUserDocument = await User.findOne({ _id: userId });
+    if (!correspondingUserDocument)
+      return { message: "Could not authorize as such user!", status: 401 };
+    (req as Request & IRequestAdditionAfterVerifyJwtfMiddleware).token = {
+      isAdmin: correspondingUserDocument?.isAdmin,
+      login: correspondingUserDocument.login,
+      userId,
+    };
+  } catch (_) {
+    return {
+      message: "You are not allowed to access the requested content",
+      status: 403,
+    };
+  }
+};
+
+export const verifyJwt = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const accessJwtResult = await accessJwt(req, res);
+  if (typeof accessJwtResult !== "object") return next();
+  return res
+    .status(accessJwtResult.status)
+    .json({ message: accessJwtResult.message });
+};
+
+export const onlyAccessJwt = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  await accessJwt(req, res);
+  next();
 };

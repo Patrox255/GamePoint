@@ -34,7 +34,7 @@ export default function Header({
   additionalTailwindClasses?: string;
   colorTailwindClass?: string;
 }) {
-  const { headerAnimationProps } = useContext(HeaderLinkContext);
+  const { headerAnimationProps, disabled } = useContext(HeaderLinkContext);
   const usesHeaderLinkContext = Object.keys(headerAnimationProps).length !== 0;
 
   const HeaderElement = headerSizesProperties[size].element;
@@ -47,7 +47,11 @@ export default function Header({
           ? defaultHeaderTailwindCSS
           : defaultHeaderTailwindCSS.replace("pb-2", "")
       } ${
-        usesHeaderLinkContext ? "cursor-pointer" : colorTailwindClass
+        usesHeaderLinkContext
+          ? !disabled
+            ? "cursor-pointer"
+            : ""
+          : colorTailwindClass
       } ${additionalTailwindClasses}`}
       {...motionAnimationProperties}
       {...(usesHeaderLinkContext ? headerAnimationProps : {})}

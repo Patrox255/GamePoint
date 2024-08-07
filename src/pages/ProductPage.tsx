@@ -9,7 +9,9 @@ import {
 import { getGameData, queryClient } from "../lib/fetch";
 import MainWrapper from "../components/structure/MainWrapper";
 import Error from "../components/UI/Error";
-import ExtendedGamePreview from "../components/products/ExtendedGamePreview";
+import ExtendedGamePreview, {
+  IExtendedGamePreviewGameArg,
+} from "../components/products/ExtendedGamePreview";
 import useCompareComplexForUseMemo from "../hooks/useCompareComplexForUseMemo";
 import { IGame } from "../models/game.model";
 
@@ -17,7 +19,11 @@ export default function ProductPage() {
   const { productSlug } = useParams();
 
   const { data, error } = useQuery({
-    queryFn: ({ signal }) => getGameData({ signal, productSlug: productSlug! }),
+    queryFn: ({ signal }) =>
+      getGameData<IExtendedGamePreviewGameArg>({
+        signal,
+        productSlug: productSlug!,
+      }),
     queryKey: ["games", productSlug],
   });
 
@@ -30,7 +36,7 @@ export default function ProductPage() {
   if (data && data.data) {
     content = (
       <ExtendedGamePreview
-        game={gameStable as IGame & { reviews: number }}
+        game={gameStable as IExtendedGamePreviewGameArg}
         key={`product-${(gameStable as IGame).slug}`}
       />
     );

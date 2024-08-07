@@ -5,16 +5,14 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 import express, { NextFunction, Request, Response } from "express";
 import { connectDB } from "./db";
 import bcrypt from "bcrypt";
-import mongoose, { Types } from "mongoose";
+import mongoose, { startSession, Types } from "mongoose";
 import Platform, { IPlatform } from "./models/platform.model";
 import Genre, { IGenre } from "./models/genre.model";
 import Game, { IGame } from "./models/game.model";
 import Publisher, { IPublisher } from "./models/publisher.model";
 import Developer, { IDeveloper } from "./models/developer.model";
 import User, { IUser } from "./models/user.model";
-import jwt, { JsonWebTokenError } from "jsonwebtoken";
 import createDateNoTakingTimezoneIntoAccount, {
-  cartDataEntries,
   filterPropertiesFromObj,
   corsOptions,
   createDocumentsOfObjsAndInsert,
@@ -24,20 +22,17 @@ import createDateNoTakingTimezoneIntoAccount, {
   generateUniqueRandomStrs,
   genSalt,
   getJSON,
-  ICartDataEntriesFromRequest,
-  ILoginBodyFromRequest,
-  IRegisterBodyFromRequest,
   parseQueries,
   random,
   randomizeArrOrder,
-  registerBodyEntries,
   sleep,
-  validateBodyEntries,
   validateQueriesTypes,
-  verifyEmailEntries,
   createCartWithGamesBasedOnReceivedCart,
   updateUserCartBasedOnReceivedOne,
-  loginBodyEntriesWithCart,
+  onlyAccessJwt,
+  IRequestAdditionAfterVerifyJwtfMiddleware,
+  verifyJwt,
+  IRequestAdditionAfterAccessJwtfMiddleware,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -45,6 +40,21 @@ import cookieParser from "cookie-parser";
 import RefreshToken from "./models/refreshToken.model";
 import { IProcessEnvVariables } from "../env";
 import AdditionalContactInformation from "./models/additionalContactInformation.model";
+import sanitizeHtml from "sanitize-html";
+import {
+  addReviewEntries,
+  cartDataEntries,
+  IAddReviewEntriesFromRequest,
+  ICartDataEntriesFromRequest,
+  ILoginBodyFromRequest,
+  IRegisterBodyFromRequest,
+  IRemoveReviewEntriesFromRequest,
+  loginBodyEntriesWithCart,
+  registerBodyEntries,
+  removeReviewEntries,
+  verifyEmailEntries,
+} from "./validateBodyEntries";
+import { validateBodyEntries } from "./validateBodyFn";
 
 const app = express();
 const port = 3000;
@@ -80,12 +90,6 @@ export function accessEnvironmentVariable(
 interface Error {
   message?: string;
   status?: number;
-}
-
-interface IJwtPayload {
-  userId: string;
-  iat?: number;
-  exp?: number;
 }
 
 const startServer = async () => {
@@ -325,6 +329,7 @@ const startServer = async () => {
 
     app.get(
       "/products/:productSlug",
+      onlyAccessJwt,
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const { productSlug } = req.params;
@@ -354,16 +359,32 @@ const startServer = async () => {
             return res
               .status(404)
               .json({ message: "No such a game has been found!" });
-          res
-            .status(200)
-            .json(
-              !onlyReviews
-                ? { ...game.toObject(), reviews: game.reviews!.length }
-                : game.reviews?.slice(
-                    reviewsPageNr * maxReviewsPerPage,
-                    (reviewsPageNr + 1) * maxReviewsPerPage
-                  )
+          const { token } = req as Request &
+            IRequestAdditionAfterAccessJwtfMiddleware;
+          const login = token?.login;
+          type receivedGameReview = IReview & { userId: IUser };
+          let userReview: receivedGameReview | undefined = undefined;
+          if (login)
+            userReview = (game.reviews as unknown as receivedGameReviews)?.find(
+              (gameReview) => gameReview.userId.login === login
             );
+          if (!onlyReviews)
+            return res.status(200).json({
+              ...game.toObject(),
+              reviews: game.reviews!.length + (userReview ? -1 : 0),
+              userReview: userReview ? true : false,
+            });
+          type receivedGameReviews = receivedGameReview[];
+          let gameReviewsToSend: receivedGameReviews = game.reviews!.slice(
+            reviewsPageNr * maxReviewsPerPage,
+            (reviewsPageNr + 1) * maxReviewsPerPage
+          ) as unknown as receivedGameReviews;
+          if (token) {
+            gameReviewsToSend = gameReviewsToSend.filter(
+              (gameReview) => gameReview.userId.login !== login
+            );
+          }
+          res.status(200).json({ reviews: gameReviewsToSend, userReview });
         } catch (err) {
           next(err);
         }
@@ -1010,80 +1031,6 @@ const startServer = async () => {
       }
     );
 
-    const jwtVerifyPromisified = (token: string, secretKey: string) =>
-      new Promise<string | jwt.JwtPayload | undefined>((resolve, reject) => {
-        jwt.verify(token, secretKey, (err, decoded) => {
-          if (err) reject(err);
-          resolve(decoded);
-        });
-      });
-
-    interface IRequestAdditionAfterVerifyJwtfMiddleware {
-      token: {
-        isAdmin?: boolean;
-        expDate?: Date;
-        login?: string;
-      };
-    }
-
-    const verifyJwt = async (
-      req: Request,
-      res: Response,
-      next: NextFunction
-    ) => {
-      const refreshToken = req.cookies.refreshToken;
-      if (!refreshToken)
-        return res.status(401).json({ message: "Could not authorize" });
-
-      try {
-        const [JWTREFRESHSECRET, JWTSECRET] = accessEnvironmentVariable([
-          "JWTREFRESHSECRET",
-          "JWTSECRET",
-        ]);
-        const decodedJwt = (await jwtVerifyPromisified(
-          refreshToken,
-          JWTREFRESHSECRET
-        )) as IJwtPayload;
-        const userId = decodedJwt.userId;
-        let accessToken = req.cookies.accessToken;
-        if (!accessToken) {
-          accessToken = generateAndSaveJWT(res, userId, "access");
-        }
-        let decodedJwtAccessToken: jwt.JwtPayload = {};
-        try {
-          decodedJwtAccessToken = (await jwtVerifyPromisified(
-            accessToken,
-            JWTSECRET!
-          )) as IJwtPayload;
-        } catch (e) {
-          if ((e as JsonWebTokenError).name === "TokenExpiredError") {
-            generateAndSaveJWT(res, userId, "access");
-            decodedJwtAccessToken.userId = userId;
-          } else {
-            throw e;
-          }
-        }
-        if (decodedJwtAccessToken.userId !== userId)
-          return res.status(401).json({ message: "Misleading tokens data!" });
-
-        const correspondingUserDocument = await User.findOne({ _id: userId });
-        if (!correspondingUserDocument)
-          return res
-            .status(401)
-            .json({ messsage: "Could not authorize as such user!" });
-        (req as Request & IRequestAdditionAfterVerifyJwtfMiddleware).token = {
-          isAdmin: correspondingUserDocument?.isAdmin,
-          login: correspondingUserDocument.login,
-        };
-        next();
-      } catch (e) {
-        console.log(e);
-        return res.status(403).json({
-          message: "You are not allowed to access the requested content",
-        });
-      }
-    };
-
     app.post(
       "/login",
       async (req: Request, res: Response, next: NextFunction) => {
@@ -1271,7 +1218,7 @@ const startServer = async () => {
               dateOfBirthToSave < oldestPossibleDate ||
               dateOfBirthToSave > latestPossibleDate
             )
-              return res.status(422).json({
+              return res.status(200).json({
                 message: "Your date of birth does not seem to be correct!",
               });
           }
@@ -1393,6 +1340,116 @@ const startServer = async () => {
           generateAndSaveJWT(res, uId, "refresh");
 
           res.sendStatus(200);
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
+
+    app.post(
+      "/add-review",
+      verifyJwt,
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const errors = validateBodyEntries(addReviewEntries, req);
+          if (errors.length > 0) return res.status(422).json({ errors });
+
+          const { criteria, reviewContent, gameId } =
+            req.body as IAddReviewEntriesFromRequest;
+          const {
+            token: { userId },
+          } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+
+          const relatedGame = await Game.findById(gameId).populate("reviews");
+          if (!relatedGame)
+            return res.status(200).json({
+              message:
+                "There isn't such a game You would like to upload a review to!",
+            });
+          const gameReviews = relatedGame.reviews as unknown as IReview[];
+          if (
+            gameReviews.length > 0 &&
+            gameReviews.find(
+              (gameReview) => gameReview.userId.toString() === userId
+            )
+          )
+            return res.status(200).json({
+              message:
+                "You have already added a review connected to this game!",
+            });
+
+          const reviewContentToSave = sanitizeHtml(reviewContent, {
+            allowedTags: ["b", "i", "u", "strong", "em", "p", "br", "a"],
+            allowedAttributes: {
+              a: ["href"],
+            },
+            allowedSchemes: ["https", "http"],
+          });
+          const { newObjs } = await createDocumentsOfObjsAndInsert(
+            [
+              new Review({
+                content: reviewContentToSave,
+                criteria,
+                userId,
+              }),
+            ],
+            Review
+          );
+
+          await relatedGame.updateOne({
+            $push: { reviews: newObjs[0]._id },
+          });
+          return res.sendStatus(200);
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
+
+    app.post(
+      "/remove-review",
+      verifyJwt,
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { reviewId } = req.body as IRemoveReviewEntriesFromRequest;
+          const errors = validateBodyEntries(removeReviewEntries, req);
+          if (errors.length > 0) return res.status(422).json({ errors });
+
+          const {
+            token: { userId },
+          } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+          const requestedReviewToRemove = await Review.findById(reviewId);
+          if (!requestedReviewToRemove)
+            return res.status(200).json({
+              message: "We couldn't find your review! Please try again later.",
+            });
+          if (requestedReviewToRemove.userId.toString() !== userId)
+            return res
+              .status(200)
+              .json({ message: "You are not the owner of this review!" });
+          const relatedGame = await Game.findOne({
+            reviews: { $elemMatch: { $eq: requestedReviewToRemove._id } },
+          });
+          if (!relatedGame)
+            return res.status(200).json({
+              message: "Failed to find a game related to your review!",
+            });
+
+          const session = await startSession();
+          session.startTransaction();
+
+          try {
+            await relatedGame.updateOne({
+              $pull: { reviews: requestedReviewToRemove._id },
+            });
+            await requestedReviewToRemove.deleteOne();
+          } catch (e) {
+            await session.abortTransaction();
+            throw e;
+          }
+          await session.commitTransaction();
+
+          return res.sendStatus(200);
         } catch (e) {
           next(e);
         }

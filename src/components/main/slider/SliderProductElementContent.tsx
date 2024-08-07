@@ -19,11 +19,9 @@ import { PagesManagerContext } from "../../../store/products/PagesManagerContext
 export default function SliderProductElementContent({
   element,
   children = (element: IGame) => (
-    <Button>
-      <Link to={`/products/${slugify(element.title, { lower: true })}`}>
-        Learn More
-      </Link>
-    </Button>
+    <Link to={`/products/${slugify(element.title, { lower: true })}`}>
+      <Button>Learn More</Button>
+    </Link>
   ),
   showTags = true,
   showSummary = true,

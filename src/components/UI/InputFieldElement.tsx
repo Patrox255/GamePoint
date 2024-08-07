@@ -21,7 +21,7 @@ export interface IInputFieldValidationError {
   errInputName: string;
 }
 
-const generateValidationErrorsRelatedToAnInput = (
+export const generateValidationErrorsRelatedToAnInput = (
   errorsRelatedToValidationArr: ValidationErrorsArr | undefined,
   inputName: string
 ) => {

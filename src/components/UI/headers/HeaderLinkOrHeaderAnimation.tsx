@@ -7,7 +7,8 @@ import LinkToDifferentPageWithCurrentPageInformation from "../LinkToDifferentPag
 
 export const HeaderLinkContext = createContext<{
   headerAnimationProps: AnimationProps & HoverHandlers;
-}>({ headerAnimationProps: {} });
+  disabled: boolean;
+}>({ headerAnimationProps: {}, disabled: false });
 
 export default function HeaderLinkOrHeaderAnimation({
   href,
@@ -17,6 +18,7 @@ export default function HeaderLinkOrHeaderAnimation({
   sendCurrentPageInformation = false,
   onlyAnimation = false,
   onClick,
+  disabled = false,
 }: {
   href?: string;
   children: ReactNode;
@@ -25,14 +27,18 @@ export default function HeaderLinkOrHeaderAnimation({
   sendCurrentPageInformation?: boolean;
   onlyAnimation?: boolean;
   onClick?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <HeaderLinkContext.Provider
       value={{
         headerAnimationProps: {
           initial: { color: properties.defaultFont },
-          whileHover: { color: properties.highlightRed },
+          whileHover: !disabled
+            ? { color: properties.highlightRed }
+            : undefined,
         },
+        disabled,
       }}
     >
       {onlyAnimation ? (

@@ -7,15 +7,11 @@ export default function TagsComponent<T>({
   tags,
   paramName,
   children = (tag: T) => (
-    <Button>
-      <Link
-        to={`/products?${
-          paramName ? `${paramName}=${JSON.stringify(tag)}` : ""
-        }`}
-      >
-        {tag as string}
-      </Link>
-    </Button>
+    <Link
+      to={`/products?${paramName ? `${paramName}=${JSON.stringify(tag)}` : ""}`}
+    >
+      <Button>{tag as string}</Button>
+    </Link>
   ),
   idGathererFn = (tag: T) => tag as string,
 }: {

@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { memo, useCallback } from "react";
 
 import SliderProductElementContent from "../main/slider/SliderProductElementContent";
@@ -16,8 +16,13 @@ import PagesManagerContextProvider from "../../store/products/PagesManagerContex
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxStore";
 import { modifyCartQuantityAction } from "../../store/customActions";
 
+export type IExtendedGamePreviewGameArg = IGame & {
+  reviews: number;
+  userReview: boolean;
+};
+
 const ExtendedGamePreview = memo(
-  ({ game }: { game: IGame & { reviews: number } }) => {
+  ({ game }: { game: IExtendedGamePreviewGameArg }) => {
     const stableSliderImageOverviewFn = useCallback(
       (SliderImageOverviewPrepared: () => JSX.Element) => (
         <AnimatedAppearance>
@@ -35,7 +40,17 @@ const ExtendedGamePreview = memo(
     const login = useAppSelector((state) => state.userAuthSlice.login);
     return (
       <>
-        <article className="product-overview">
+        <motion.article
+          className="product-overview"
+          variants={{
+            initial: { opacity: 0 },
+            animate: { opacity: 0.7 },
+            hover: { opacity: 1 },
+          }}
+          initial="initial"
+          animate="animate"
+          whileHover="hover"
+        >
           <SliderProductElementContent
             element={game}
             showTags={false}
@@ -58,50 +73,53 @@ const ExtendedGamePreview = memo(
               </Button>
             )}
           </SliderProductElementContent>
-        </article>
-        <motion.article
-          className="product-details flex flex-col text-center bg-darkerBg p-8 rounded-xl gap-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.7 }}
-          whileHover={{ opacity: 1 }}
-        >
-          <AnimatedAppearance>
-            <motion.section className="product-details-summary">
-              <Header>Summary</Header>
-              <p>{game.summary}</p>
-            </motion.section>
-          </AnimatedAppearance>
-          {game.storyLine && (
+        </motion.article>
+        <PagesManagerContextProvider>
+          <motion.article
+            className="product-details flex flex-col text-center bg-darkerBg p-8 rounded-xl gap-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.7 }}
+            whileHover={{ opacity: 1 }}
+          >
             <AnimatedAppearance>
-              <motion.section className="product-details-storyline">
-                <Header>Storyline</Header>
-                <p>{game.storyLine}</p>
+              <motion.section className="product-details-summary">
+                <Header>Summary</Header>
+                <p>{game.summary}</p>
               </motion.section>
             </AnimatedAppearance>
-          )}
-          <ProductAdditionalInformation game={game} />
-
-          <section className="product-details-add-review w-full">
-            <Header>Add your own review</Header>
-            <AddReviewContextProvider>
-              <ReviewContent />
-            </AddReviewContextProvider>
-          </section>
-        </motion.article>
-        <article className="product-reviews text-center">
-          <header className="py-6">
-            <Header size="large">Reviews</Header>
-          </header>
-          <PagesManagerContextProvider>
-            <ReviewsWrapper />
-            {game.reviews > 0 && (
-              <PagesElement
-                amountOfElementsPerPage={MAX_REVIEWS_PER_PAGE}
-                totalAmountOfElementsToDisplayOnPages={game.reviews}
-              />
+            {game.storyLine && (
+              <AnimatedAppearance>
+                <motion.section className="product-details-storyline">
+                  <Header>Storyline</Header>
+                  <p>{game.storyLine}</p>
+                </motion.section>
+              </AnimatedAppearance>
             )}
-          </PagesManagerContextProvider>
-        </article>
+            <ProductAdditionalInformation game={game} />
+            <AddReviewContextProvider gameId={game._id}>
+              {!game.userReview && (
+                <motion.section className="product-details-add-review w-full">
+                  <Header>Add your own review</Header>
+                  <ReviewContent />
+                </motion.section>
+              )}
+            </AddReviewContextProvider>
+          </motion.article>
+          <article className="product-reviews text-center">
+            <header className="py-6">
+              <Header size="large">Reviews</Header>
+            </header>
+            <AnimatePresence>
+              <motion.article>
+                <ReviewsWrapper />
+                <PagesElement
+                  amountOfElementsPerPage={MAX_REVIEWS_PER_PAGE}
+                  totalAmountOfElementsToDisplayOnPages={game.reviews}
+                />
+              </motion.article>
+            </AnimatePresence>
+          </article>
+        </PagesManagerContextProvider>
       </>
     );
   }
