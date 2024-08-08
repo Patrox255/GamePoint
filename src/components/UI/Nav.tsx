@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { Link, useLocation } from "react-router-dom";
 import { memo, useCallback, useContext, useEffect, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
@@ -18,8 +19,24 @@ import NavUserPanelLink from "../main/nav/NavUserPanelLink";
 import AnimatedSVG from "./svg/AnimatedSVG";
 import svgPathBase from "./svg/svgPathBase";
 import properties from "../../styles/properties";
+import { HeaderLinkSearchParamsContextProvider } from "./headers/HeaderLinkOrHeaderAnimation";
 
 let initialRender = true;
+
+export interface IUserPanelEntry {
+  header: string;
+  userPanelParam: string;
+  enabled?: boolean;
+  actionOnClick?: () => void;
+  adminRestricted?: boolean;
+}
+
+export const userPanelEntries: IUserPanelEntry[] = [
+  { header: "Your Orders", userPanelParam: "orders" },
+  { header: "Contact Information", userPanelParam: "contact" },
+  { header: "Admin Panel", userPanelParam: "admin", adminRestricted: true },
+  { header: "Log out", userPanelParam: "logout" },
+];
 
 const Nav = memo(() => {
   const { pathname, search } = useLocation();
@@ -52,23 +69,25 @@ const Nav = memo(() => {
 
   const { login, isAdmin } = useAppSelector((state) => state.userAuthSlice);
 
-  interface IUserPanelLinkEntry {
-    header: string;
-    userPanelParam?: string;
-    enabled?: boolean;
-    actionOnClick?: () => void;
-  }
-
   const stableMutateFn = useCallback(() => mutate(), [mutate]);
+  const isOnUserPanelPage = pathname.startsWith("/user");
 
-  const userPanelLinks = useMemo<IUserPanelLinkEntry[]>(() => {
-    return [
-      { header: "Orders", userPanelParam: "orders" },
-      { header: "Contact Information", userPanelParam: "contact" },
-      { header: "Admin Panel", userPanelParam: "admin", enabled: isAdmin },
-      { header: "Log out", actionOnClick: stableMutateFn },
-    ].filter((entry) => entry.enabled === undefined || entry.enabled);
-  }, [isAdmin, stableMutateFn]);
+  const userPanelLinks = useMemo<IUserPanelEntry[]>(() => {
+    return userPanelEntries
+      .map((userPanelEntry) => ({
+        ...userPanelEntry,
+        enabled: userPanelEntry.adminRestricted
+          ? isAdmin
+          : userPanelEntry.userPanelParam !== "logout" && isOnUserPanelPage
+          ? false
+          : undefined,
+        actionOnClick:
+          userPanelEntry.userPanelParam === "logout"
+            ? stableMutateFn
+            : undefined,
+      }))
+      .filter((entry) => entry.enabled === undefined || entry.enabled);
+  }, [isAdmin, isOnUserPanelPage, stableMutateFn]);
 
   const showSearchBar = !pathname.includes("verify-email");
   const cartState = useAppSelector((state) => state.cartSlice);
@@ -118,12 +137,17 @@ const Nav = memo(() => {
             >
               <ul className="user-panel-nav w-full flex flex-col gap-6 text-center">
                 {userPanelLinks.map((userPanelLink) => (
-                  <NavUserPanelLink
-                    header={userPanelLink.header}
-                    userPanelParam={userPanelLink.userPanelParam}
+                  <HeaderLinkSearchParamsContextProvider
+                    otherSearchParams={{
+                      panelSection: userPanelLink.userPanelParam,
+                    }}
                     key={userPanelLink.header}
-                    actionOnClick={userPanelLink.actionOnClick}
-                  />
+                  >
+                    <NavUserPanelLink
+                      header={userPanelLink.header}
+                      actionOnClick={userPanelLink.actionOnClick}
+                    />
+                  </HeaderLinkSearchParamsContextProvider>
                 ))}
               </ul>
             </DropDownMenuDroppedElementsContainer>

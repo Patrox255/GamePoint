@@ -35,6 +35,7 @@ const updateSessionStorageBasedOnSearchParams: LoaderFunction = ({
 }) => {
   if (request.url.indexOf("?") === -1) return null;
   const searchParams = createSearchParamsFromRequestURL(request.url);
+  if (!searchParams) return null;
   const updateURL = applySearchParamsSessionStorageEntryUpdateInLoader(
     searchParams,
     [

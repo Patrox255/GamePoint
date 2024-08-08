@@ -759,7 +759,6 @@ const startServer = async () => {
             "test",
             [4, 10]
           );
-          console.log(sampleUsersLogins);
           const salt = await genSalt();
           const sampleUsersToSave: IUser[] = await Promise.all(
             Array.from({ length: 10 }, async (_, i) => {

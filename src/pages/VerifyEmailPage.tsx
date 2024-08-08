@@ -93,6 +93,7 @@ export default function VerifyEmailPage() {
 export const loader: LoaderFunction = async ({ request }) => {
   try {
     const searchParams = createSearchParamsFromRequestURL(request.url);
+    if (!searchParams) throw "";
     const [registrationCode, uId] = [
       validateJSONValue(searchParams.get("registrationCode"), ""),
       validateJSONValue(searchParams.get("uId"), ""),
@@ -114,9 +115,8 @@ export const action: ActionFunction = async ({ request }) => {
   let uId: string;
   let registrationCode: string;
   try {
-    const searchParams = createSearchParamsFromRequestURL(request.url);
+    const searchParams = createSearchParamsFromRequestURL(request.url)!;
     const formData = await request.formData();
-    console.log(formData);
     providedRegistrationCode = formData.get("registrationCode") as string;
     [uId, registrationCode] = [
       validateJSONValue(searchParams.get("uId"), ""),

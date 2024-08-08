@@ -186,7 +186,7 @@ export default function CartPage() {
               AdditionalGameInformation={AdditionalGameInformation}
             />
           </section>
-          <section className="w-1/4 bg-darkerBg rounded-xl flex flex-col items-center justify-start pt-6 gap-6">
+          <section className="w-1/4 bg-darkerBg rounded-xl flex flex-col items-center justify-start py-6 px-4 gap-6 self-center">
             <p className="text-lg flex items-center gap-2">
               Total price:
               <span className="font-bold text-highlightRed text-xl">

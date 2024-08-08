@@ -1,14 +1,33 @@
 import { AnimationProps, HoverHandlers } from "framer-motion";
-import { createContext, ReactNode } from "react";
+import { createContext, ReactNode, useContext } from "react";
 import { Link } from "react-router-dom";
 import properties from "../../../styles/properties";
-import generateUrlEndpointWithSearchParams from "../../../helpers/generateUrlEndpointWithSearchParams";
-import LinkToDifferentPageWithCurrentPageInformation from "../LinkToDifferentPageWithCurrentPageInformation";
+import generateUrlEndpointWithSearchParams, {
+  ISearchParamsToAddToURL,
+} from "../../../helpers/generateUrlEndpointWithSearchParams";
 
 export const HeaderLinkContext = createContext<{
   headerAnimationProps: AnimationProps & HoverHandlers;
   disabled: boolean;
 }>({ headerAnimationProps: {}, disabled: false });
+
+export const HeaderLinkSearchParamsContext = createContext<{
+  otherSearchParams: ISearchParamsToAddToURL;
+}>({ otherSearchParams: {} });
+
+export function HeaderLinkSearchParamsContextProvider({
+  otherSearchParams,
+  children,
+}: {
+  children: ReactNode;
+  otherSearchParams: ISearchParamsToAddToURL;
+}) {
+  return (
+    <HeaderLinkSearchParamsContext.Provider value={{ otherSearchParams }}>
+      {children}
+    </HeaderLinkSearchParamsContext.Provider>
+  );
+}
 
 export default function HeaderLinkOrHeaderAnimation({
   href,
@@ -29,6 +48,8 @@ export default function HeaderLinkOrHeaderAnimation({
   onClick?: () => void;
   disabled?: boolean;
 }) {
+  const { otherSearchParams } = useContext(HeaderLinkSearchParamsContext);
+
   return (
     <HeaderLinkContext.Provider
       value={{
@@ -49,9 +70,16 @@ export default function HeaderLinkOrHeaderAnimation({
           {children}
         </div>
       ) : sendCurrentPageInformation ? (
-        <LinkToDifferentPageWithCurrentPageInformation to={href!}>
+        <Link
+          to={generateUrlEndpointWithSearchParams(
+            href!,
+            [...Object.entries(otherSearchParams)].length !== 0
+              ? otherSearchParams
+              : undefined
+          )}
+        >
           {children}
-        </LinkToDifferentPageWithCurrentPageInformation>
+        </Link>
       ) : (
         <Link
           to={generateUrlEndpointWithSearchParams(href!, searchParams)}

@@ -210,11 +210,18 @@ export const login = async (userData: ILoginActionMutateArgs) => {
   return data;
 };
 
+export interface IGetAuthDataResponse {
+  isAdmin: boolean;
+  login: string;
+  userId: string;
+}
+
+export interface IGetAuthResponse {
+  data: IGetAuthDataResponse;
+}
+
 export const getAuthData = async (signal: AbortSignal) => {
-  const data = await getJSON<{
-    isAdmin: boolean;
-    login: string;
-  }>({
+  const data = await getJSON<IGetAuthDataResponse>({
     signal,
     url: `${API_URL}/auth`,
   });

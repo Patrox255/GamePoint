@@ -230,7 +230,6 @@ const jwtVerifyPromisified = (token: string, secretKey: string) =>
 
 interface IRequestTokenPropertyAfterJwtMiddleware {
   isAdmin?: boolean;
-  expDate?: Date;
   login?: string;
   userId?: string;
 }

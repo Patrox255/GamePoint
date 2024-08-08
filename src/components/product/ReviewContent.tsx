@@ -97,10 +97,6 @@ export default function ReviewContent() {
           "reviewContent"
         )
     );
-  console.log(
-    errorsRelatedToReviewContentValidation,
-    hasErrorNotRelatedToValidation
-  );
   const errorsRelatedToCriteriaValidation = checkValidationErrorsGeneration(
     !hasErrorNotRelatedToValidation &&
       generateValidationErrorsRelatedToAnInput(

@@ -221,7 +221,6 @@ export const handleMutationError = async function (
   ctx: IAddReviewMutationCtx
 ) {
   const { oldReviews, oldGameData } = ctx!;
-  console.log(oldReviews, oldGameData);
   await queryClient.setQueryData(reviewsKey, oldReviews);
   await queryClient.setQueryData(gameDataKey, oldGameData);
 };
@@ -261,8 +260,6 @@ export const AddReviewContextProvider = memo(
         debouncedCriteria: initialCriteriaProperty,
       }
     );
-
-    console.log(criteriaState.criteria, criteriaState.debouncedCriteria);
 
     const criteriaDispatchHookCallback = useCallback(
       (newState: ICriterion[]) =>

@@ -63,8 +63,6 @@ export default function DataSlider<ElementInterface, Y>({
     additionalActionUponReachingTheEndByGoingBackwardsInTheBeginning,
   });
 
-  console.log(activeElementIndex);
-
   return (
     <AnimatedAppearance>
       <div className="data-slider-container flex justify-center items-center text-center w-4/5 gap-2">

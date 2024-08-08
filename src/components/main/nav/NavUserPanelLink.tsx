@@ -1,13 +1,11 @@
 import { motion } from "framer-motion";
-import HeaderLinkOrHeaderAnimation from "../../UI/headers/HeaderLinkOrHeaderAnimation";
 import Header from "../../UI/headers/Header";
+import HeaderLinkOrHeaderAnimation from "../../UI/headers/HeaderLinkOrHeaderAnimation";
 
 export default function NavUserPanelLink({
-  userPanelParam,
   actionOnClick,
   header,
 }: {
-  userPanelParam?: string;
   actionOnClick?: () => void;
   header: string;
 }) {
@@ -22,9 +20,9 @@ export default function NavUserPanelLink({
       whileHover="hover"
     >
       <HeaderLinkOrHeaderAnimation
-        {...(userPanelParam
+        {...(!actionOnClick
           ? {
-              href: `/user/${userPanelParam}`,
+              href: `/user`,
               sendCurrentPageInformation: true,
             }
           : { onlyAnimation: true, onClick: actionOnClick })}

@@ -1,8 +1,10 @@
+export interface ISearchParamsToAddToURL {
+  [key: string]: unknown;
+}
+
 export default function generateUrlEndpointWithSearchParams(
   url: string,
-  searchParams?: {
-    [key: string]: unknown;
-  }
+  searchParams?: ISearchParamsToAddToURL
 ) {
   return `${url}${
     searchParams

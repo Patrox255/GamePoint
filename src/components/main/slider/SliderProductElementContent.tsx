@@ -15,6 +15,7 @@ import ImageWithLoading from "../../UI/ImageWithLoading";
 import { SliderContext } from "./DataSlider";
 import usePages from "../../../hooks/usePages";
 import { PagesManagerContext } from "../../../store/products/PagesManagerContext";
+import { DelayGenresAppearanceToTheFirstGameImageContext } from "../../../store/mainPage/DelayGenresRenderToTheFirstGameImageContext";
 
 export default function SliderProductElementContent({
   element,
@@ -68,16 +69,26 @@ export default function SliderProductElementContent({
     [setCanCountProductChange]
   );
 
+  const { setFinishedLoading } = useContext(
+    DelayGenresAppearanceToTheFirstGameImageContext
+  );
+  const usesDelayGenresAppearanceToTheFirstGameImageContext =
+    setFinishedLoading !== undefined;
+
   useEffect(() => {
-    !hasArtworks &&
-      usesProductChangeContext &&
+    if (hasArtworks) return;
+    usesProductChangeContext &&
       !CanCountProductChange &&
       setCanCountProductChangeStable(true);
+    usesDelayGenresAppearanceToTheFirstGameImageContext &&
+      setFinishedLoading(true);
   }, [
     hasArtworks,
     setCanCountProductChangeStable,
     usesProductChangeContext,
     CanCountProductChange,
+    usesDelayGenresAppearanceToTheFirstGameImageContext,
+    setFinishedLoading,
   ]);
 
   const stableElementArtworks = useCompareComplexForUseMemo(
@@ -148,6 +159,8 @@ export default function SliderProductElementContent({
                     setCanCount(true);
                     usesProductChangeContext &&
                       setCanCountProductChangeStable(true);
+                    usesDelayGenresAppearanceToTheFirstGameImageContext &&
+                      setFinishedLoading(true);
                   }}
                 />
               </>

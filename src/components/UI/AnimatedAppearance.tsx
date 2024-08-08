@@ -1,5 +1,5 @@
-import { motion, useInView } from "framer-motion";
-import { ReactNode, useRef } from "react";
+import { motion } from "framer-motion";
+import { ReactNode } from "react";
 
 export default function AnimatedAppearance({
   children,
@@ -10,12 +10,8 @@ export default function AnimatedAppearance({
   staggerChildren?: boolean;
   flexTailwindClass?: "flex-col" | "flex-row";
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, amount: 0.2 });
-
   return (
     <motion.div
-      ref={ref}
       className={`flex ${flexTailwindClass} w-full justify-center items-center`}
       variants={{
         hidden: {
@@ -31,7 +27,8 @@ export default function AnimatedAppearance({
         },
       }}
       initial="hidden"
-      animate={isInView && "visible"}
+      whileInView="visible"
+      viewport={{ once: true }}
     >
       {children}
     </motion.div>
