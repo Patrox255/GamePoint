@@ -151,7 +151,9 @@ const InputFieldElement = forwardRef<
     const usesFormWithErrorHandlingCtx = errorsRelatedToValidation !== null;
     const inputFieldObj = inputFieldObjFromProps
       ? inputFieldObjFromProps
-      : usesFormWithErrorHandlingCtx && formWithErrorHandlingCtxInputFieldsName
+      : usesFormWithErrorHandlingCtx &&
+        formWithErrorHandlingCtxInputFieldsName &&
+        inputFields
       ? inputFields.find(
           (inputFieldObj) =>
             inputFieldObj.name === formWithErrorHandlingCtxInputFieldsName

@@ -5,7 +5,7 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 import express, { NextFunction, Request, Response } from "express";
 import { connectDB } from "./db";
 import bcrypt from "bcrypt";
-import mongoose, { startSession, Types } from "mongoose";
+import mongoose, { isValidObjectId, startSession, Types } from "mongoose";
 import Platform, { IPlatform } from "./models/platform.model";
 import Genre, { IGenre } from "./models/genre.model";
 import Game, { IGame } from "./models/game.model";
@@ -33,6 +33,7 @@ import createDateNoTakingTimezoneIntoAccount, {
   IRequestAdditionAfterVerifyJwtfMiddleware,
   verifyJwt,
   IRequestAdditionAfterAccessJwtfMiddleware,
+  getUserContactInformationByLogin,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -44,8 +45,10 @@ import sanitizeHtml from "sanitize-html";
 import {
   addReviewEntries,
   cartDataEntries,
+  changeActiveContactInformationEntries,
   IAddReviewEntriesFromRequest,
   ICartDataEntriesFromRequest,
+  IChangeActiveContactInformationEntriesFromRequest,
   ILoginBodyFromRequest,
   IRegisterBodyFromRequest,
   IRemoveReviewEntriesFromRequest,
@@ -1269,7 +1272,7 @@ const startServer = async () => {
                 email,
                 ...(includedContactInformation && {
                   additionalContactInformation: [savedContactInformation!],
-                  activeAdditionalContactInformation: 0,
+                  activeAdditionalContactInformation: savedContactInformation!,
                 }),
               }),
             ],
@@ -1448,6 +1451,90 @@ const startServer = async () => {
           }
           await session.commitTransaction();
 
+          return res.sendStatus(200);
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
+
+    app.get("/contact-information", verifyJwt, async (req, res, next) => {
+      try {
+        const {
+          token: { login },
+        } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+
+        const userContactInformation = await getUserContactInformationByLogin(
+          login!
+        );
+        const {
+          activeAdditionalContactInformation,
+          additionalContactInformation,
+        } = userContactInformation!;
+        // Surely this account contains this information as its existence has been already verified in verifyJwt middleware
+
+        res.status(200).json({
+          additionalContactInformation,
+          activeAdditionalContactInformation,
+        });
+      } catch (e) {
+        next(e);
+      }
+    });
+
+    app.post(
+      "/contact-information-active",
+      verifyJwt,
+      async (req, res, next) => {
+        try {
+          const {
+            token: { login },
+          } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+
+          const errors = validateBodyEntries(
+            changeActiveContactInformationEntries,
+            req
+          );
+          if (errors.length > 0) return res.status(422).json({ errors });
+          const { newActiveAdditionalInformationEntryId } =
+            req.body as IChangeActiveContactInformationEntriesFromRequest;
+
+          const userContactInformation = await getUserContactInformationByLogin(
+            login!
+          );
+          const { additionalContactInformation, relatedUser } =
+            userContactInformation!;
+          if (newActiveAdditionalInformationEntryId === "") {
+            await relatedUser.updateOne({
+              activeAdditionalContactInformation: undefined,
+            });
+            return res.sendStatus(200);
+          }
+
+          if (
+            additionalContactInformation!.length === 0 ||
+            !additionalContactInformation!.find(
+              (additionalContactInformationEntry) =>
+                additionalContactInformationEntry._id.toString() ===
+                newActiveAdditionalInformationEntryId
+            )
+          )
+            return res.status(200).json({
+              message:
+                "Couldn't find a desired contact information to change to!",
+            });
+
+          if (!isValidObjectId(newActiveAdditionalInformationEntryId))
+            return res.status(200).json({
+              message:
+                "Failed to read your desired contact information identificator",
+            });
+
+          await relatedUser.updateOne({
+            activeAdditionalContactInformation: new Types.ObjectId(
+              newActiveAdditionalInformationEntryId
+            ),
+          });
           return res.sendStatus(200);
         } catch (e) {
           next(e);

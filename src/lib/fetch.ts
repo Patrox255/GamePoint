@@ -9,6 +9,8 @@ import { cartDetails, cartStateArr } from "../store/cartSlice";
 import { ILoginActionMutateArgs } from "../components/UI/modals/LoginModal";
 import { IReviewDataToSend } from "../store/product/AddReviewContext";
 import { FormActionBackendResponse } from "../components/UI/FormWithErrorHandling";
+import { IActionMutateArgsContactUserPanel } from "../components/userPanel/UserContactInformation";
+import { IAdditionalContactInformation } from "../models/additionalContactInformation.model";
 
 export const queryClient = new QueryClient();
 
@@ -339,4 +341,49 @@ export const removeReview = async function (reviewId: string) {
   });
 
   return data as FormActionBackendResponse;
+};
+
+export const manageContactInformation = async function (
+  formData: IActionMutateArgsContactUserPanel
+) {
+  const data = await getJSON<string>({
+    url: `${API_URL}/contact-information`,
+    body: formData,
+    method: "POST",
+  });
+
+  return data;
+};
+
+export interface IRetrievedContactInformation {
+  additionalContactInformation: IAdditionalContactInformation[];
+  activeAdditionalContactInformation: string;
+}
+
+export const retrieveContactInformation = async function (signal: AbortSignal) {
+  const data = await getJSON<IRetrievedContactInformation>({
+    url: `${API_URL}/contact-information`,
+    signal,
+  });
+
+  data.data.additionalContactInformation.forEach(
+    (additionalContactInformationEntry) =>
+      (additionalContactInformationEntry.dateOfBirth = new Date(
+        additionalContactInformationEntry.dateOfBirth
+      ))
+  );
+
+  return data;
+};
+
+export const changeUserActiveAdditionalInformation = async function (
+  newActiveAdditionalInformationEntryId: string
+) {
+  const data = await getJSON<string>({
+    url: `${API_URL}/contact-information-active`,
+    body: { newActiveAdditionalInformationEntryId },
+    method: "POST",
+  });
+
+  return data;
 };

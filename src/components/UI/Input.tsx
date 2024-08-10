@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import properties from "../../styles/properties";
-import { ChangeEvent, ChangeEventHandler, forwardRef } from "react";
+import { ChangeEvent, ChangeEventHandler, forwardRef, useContext } from "react";
 import isoStringToDateInputValue from "../../helpers/isoStringToDateInputValue";
+import { FormWithErrorHandlingContext } from "./FormWithErrorHandling";
 
 export type inputValue = string | number | Date;
 
@@ -46,6 +47,7 @@ interface IInputProps {
   checkedCheckbox?: boolean;
   options?: string[];
   customInputNumber?: boolean;
+  lightThemeFromProps?: boolean;
 }
 
 const Input = forwardRef<HTMLInputElement, IInputProps>(
@@ -74,6 +76,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       checkedCheckbox,
       options,
       customInputNumber = false,
+      lightThemeFromProps,
     },
     ref
   ) => {
@@ -101,7 +104,13 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
         : undefined;
     };
 
-    const className = `outline-none py-2 px-1 rounded-lg bg-darkerBg text-defaultFont border-2 ${width} ${
+    const lightTheme =
+      useContext(FormWithErrorHandlingContext).lightTheme ||
+      lightThemeFromProps;
+
+    const className = `outline-none py-2 px-1 rounded-lg ${
+      lightTheme ? "bg-bodyBg" : "bg-darkerBg"
+    } text-defaultFont border-2 ${width} ${
       additionalTailwindClasses ? additionalTailwindClasses : ""
     }`;
 

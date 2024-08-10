@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import Game from "./models/game.model";
 import User from "./models/user.model";
 import { receivedCart } from "./validateBodyEntries";
+import { IAdditionalContactInformation } from "./models/additionalContactInformation.model";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -312,4 +313,24 @@ export const onlyAccessJwt = async (
 ) => {
   await accessJwt(req, res);
   next();
+};
+
+export const getUserContactInformationByLogin = async (login: string) => {
+  const relatedUser = await User.findOne(
+    { login },
+    {
+      additionalContactInformation: true,
+      activeAdditionalContactInformation: true,
+    }
+  ).populate("additionalContactInformation");
+  if (!relatedUser) return undefined;
+  const { additionalContactInformation, activeAdditionalContactInformation } =
+    relatedUser!;
+  return {
+    additionalContactInformation: additionalContactInformation as
+      | undefined
+      | (IAdditionalContactInformation & { _id: mongoose.Types.ObjectId })[],
+    activeAdditionalContactInformation,
+    relatedUser,
+  };
 };

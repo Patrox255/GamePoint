@@ -234,3 +234,18 @@ export const removeReviewEntries: IValidateBodyEntry<IRemoveReviewEntriesFromReq
       name: "Identificator of your review",
     },
   ];
+
+export interface IChangeActiveContactInformationEntriesFromRequest
+  extends IBodyFromRequestToValidate {
+  newActiveAdditionalInformationEntryId: string;
+}
+
+export const changeActiveContactInformationEntries: IValidateBodyEntry<IChangeActiveContactInformationEntriesFromRequest>[] =
+  [
+    {
+      name: "Identificator of your contact details entry",
+      requestBodyName: "newActiveAdditionalInformationEntryId",
+      type: "string",
+      optional: true,
+    },
+  ];

@@ -41,14 +41,22 @@ interface IFormProps<T, Y> {
   };
   actionIfSuccess?: () => void;
   focusFirstField?: boolean;
-  inputFields: FormInputFields;
+  inputFields?: FormInputFields;
   inputFieldsToRender?: FormInputFields;
+  lightTheme?: boolean;
 }
 
 export const FormWithErrorHandlingContext = createContext<{
   errorsRelatedToValidation: ValidationErrorsArr | undefined | null;
-  inputFields: FormInputFields;
-}>({ errorsRelatedToValidation: null, inputFields: [] });
+  inputFields?: FormInputFields;
+  lightTheme: boolean;
+  isPending: boolean;
+}>({
+  errorsRelatedToValidation: null,
+  inputFields: [],
+  lightTheme: false,
+  isPending: false,
+});
 
 export default function FormWithErrorHandling<T, Y>({
   onSubmit,
@@ -58,6 +66,7 @@ export default function FormWithErrorHandling<T, Y>({
   focusFirstField,
   inputFields,
   inputFieldsToRender,
+  lightTheme = false,
 }: IFormProps<T, Y>) {
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
@@ -88,9 +97,15 @@ export default function FormWithErrorHandling<T, Y>({
     onSubmit(formDataObj);
   }
 
+  const inputFieldsToRenderInsideOrRelyOnChildren = inputFieldsToRender
+    ? inputFieldsToRender
+    : inputFields
+    ? inputFields
+    : undefined;
+
   return (
     <FormWithErrorHandlingContext.Provider
-      value={{ errorsRelatedToValidation, inputFields }}
+      value={{ errorsRelatedToValidation, inputFields, lightTheme, isPending }}
     >
       <form
         className="login-form w-3/4 h-full flex flex-col justify-center items-center gap-3"
@@ -98,8 +113,8 @@ export default function FormWithErrorHandling<T, Y>({
         action=""
         onSubmit={handleFormSubmit}
       >
-        {(inputFieldsToRender ? inputFieldsToRender : inputFields).map(
-          (inputFieldObj, i) =>
+        {inputFieldsToRenderInsideOrRelyOnChildren &&
+          inputFieldsToRenderInsideOrRelyOnChildren.map((inputFieldObj, i) =>
             inputFieldObj.type !== "date" ? (
               <InputFieldElement
                 inputFieldObjFromProps={inputFieldObj}
@@ -112,7 +127,7 @@ export default function FormWithErrorHandling<T, Y>({
                 key={inputFieldObj.name}
               />
             )
-        )}
+          )}
         {children}
         <div className="form-additional-information">
           {isPending && <LoadingFallback />}

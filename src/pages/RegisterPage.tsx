@@ -1,29 +1,45 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useMemo, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import MainWrapper from "../components/structure/MainWrapper";
 import FormWithErrorHandling, {
   FormActionBackendErrorResponse,
   FormActionBackendResponse,
+  FormWithErrorHandlingContext,
 } from "../components/UI/FormWithErrorHandling";
-import { getCountries, register } from "../lib/fetch";
+import { register } from "../lib/fetch";
 import inputFieldsObjs from "../lib/inputFieldsObjs";
 import Button from "../components/UI/Button";
-import InputFieldElement, {
-  InputFieldSingleRow,
-} from "../components/UI/InputFieldElement";
-import LoadingFallback from "../components/UI/LoadingFallback";
-import Error from "../components/UI/Error";
-import DatePickerInputFieldElement from "../components/UI/DatePickerInputFieldElement";
-import { useNavigate } from "react-router-dom";
+import InputFieldElement from "../components/UI/InputFieldElement";
 import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
+import RegisterFormContent from "../components/formRelated/RegisterFormContent";
 
-export interface IActionMutateArgsRegister {
-  login: string;
-  password: string;
-  confirmedPassword: string;
-  email: string;
+export const RegisterPageFormControls = ({
+  additionalResetClickAction,
+  submitBtnText = "Register",
+  children,
+}: {
+  additionalResetClickAction?: () => void;
+  submitBtnText?: string;
+  children?: ReactNode;
+}) => {
+  const { isPending } = useContext(FormWithErrorHandlingContext);
+
+  return (
+    <div className="form-controls flex gap-3 justify-between w-full py-6">
+      {children}
+      <Button type="reset" onClick={additionalResetClickAction}>
+        Reset fields
+      </Button>
+      <Button disabled={isPending}>
+        {isPending ? "Submitting..." : submitBtnText}
+      </Button>
+    </div>
+  );
+};
+
+export interface IActionMutateArgsContact {
   firstName: string;
   surName: string;
   dateOfBirth: string;
@@ -34,6 +50,13 @@ export interface IActionMutateArgsRegister {
   street: string;
   house: string;
   flat?: string;
+}
+
+export interface IActionMutateArgsRegister extends IActionMutateArgsContact {
+  login: string;
+  password: string;
+  confirmedPassword: string;
+  email: string;
 }
 
 const registerInputFields = [
@@ -55,15 +78,6 @@ export default function RegisterPage() {
     IActionMutateArgsRegister
   >({
     mutationFn: register,
-  });
-
-  const {
-    error: countriesError,
-    data: countriesData,
-    isLoading: countriesIsLoading,
-  } = useQuery({
-    queryFn: ({ signal }) => getCountries(signal),
-    queryKey: ["countries"],
   });
 
   const queryRelatedToActionStateStable = useMemo(
@@ -99,6 +113,11 @@ export default function RegisterPage() {
     );
   }
 
+  const handleFormReset = useCallback(
+    () => setExpandedContactInformation(false),
+    []
+  );
+
   return (
     <MainWrapper>
       <FormWithErrorHandling
@@ -112,74 +131,10 @@ export default function RegisterPage() {
           onChangeCheckbox={setExpandedContactInformation}
           checkedCheckbox={expandedContactInformation}
         />
-        {expandedContactInformation && (
-          <AnimatePresence mode="wait">
-            <motion.div
-              className="contact-information-inputs-container w-full flex flex-col gap-3"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <InputFieldSingleRow>
-                <InputFieldElement
-                  inputFieldObjFromProps={inputFieldsObjs.firstName}
-                />
-                <InputFieldElement
-                  inputFieldObjFromProps={inputFieldsObjs.surName}
-                />
-              </InputFieldSingleRow>
-              <DatePickerInputFieldElement
-                inputFieldObjFromProps={inputFieldsObjs.dateOfBirth}
-              />
-              <InputFieldElement
-                inputFieldObjFromProps={inputFieldsObjs.phoneNr}
-              />
-              {countriesIsLoading && <LoadingFallback />}
-              {countriesError && <Error message={countriesError.message} />}
-              {!countriesIsLoading &&
-                !countriesError &&
-                countriesData &&
-                countriesData.data && (
-                  <InputFieldElement
-                    inputFieldObjFromProps={{
-                      ...inputFieldsObjs.country,
-                      selectOptions: countriesData.data.map(
-                        (country) => country.name.common
-                      ),
-                    }}
-                  />
-                )}
-              <InputFieldSingleRow>
-                <InputFieldElement
-                  inputFieldObjFromProps={inputFieldsObjs.zipCode}
-                />
-                <InputFieldElement
-                  inputFieldObjFromProps={inputFieldsObjs.city}
-                />
-              </InputFieldSingleRow>
-              <InputFieldSingleRow>
-                <InputFieldElement
-                  inputFieldObjFromProps={inputFieldsObjs.street}
-                />
-                <InputFieldElement
-                  inputFieldObjFromProps={inputFieldsObjs.house}
-                />
-                <InputFieldElement
-                  inputFieldObjFromProps={inputFieldsObjs.flat}
-                />
-              </InputFieldSingleRow>
-            </motion.div>
-          </AnimatePresence>
-        )}
-        <div className="form-controls flex gap-3 justify-between w-full py-6">
-          <Button
-            type="reset"
-            onClick={() => setExpandedContactInformation(false)}
-          >
-            Reset fields
-          </Button>
-          <Button>Register</Button>
-        </div>
+        {expandedContactInformation && <RegisterFormContent />}
+        <RegisterPageFormControls
+          additionalResetClickAction={handleFormReset}
+        />
       </FormWithErrorHandling>
     </MainWrapper>
   );

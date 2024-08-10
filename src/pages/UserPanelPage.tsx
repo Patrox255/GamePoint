@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { ReactNode, useCallback, useMemo, useState } from "react";
+import { ReactNode, useCallback, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 import { LoaderFunction, redirect, useLoaderData } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -15,7 +15,6 @@ import AnimatedAppearance from "../components/UI/AnimatedAppearance";
 import UserOrders from "../components/userPanel/UserOrders";
 import UserContactInformation from "../components/userPanel/UserContactInformation";
 import UserAdminPanel from "../components/userPanel/UserAdminPanel";
-import useChangeSearchParamsAndSessionStorageWhenUseReducerChanges from "../hooks/useChangeSearchParamsWhenUseReducerChanges";
 import { useStateWithSearchParams } from "../hooks/useStateWithSearchParams";
 
 const panelSectionsComponents: { [key: string]: ReactNode } = {
@@ -25,12 +24,21 @@ const panelSectionsComponents: { [key: string]: ReactNode } = {
 };
 const possiblePanelSections = userPanelEntries.slice(0, -1);
 
+export interface IUserPanelLoaderData {
+  panelSection: string;
+  isAdmin: boolean;
+  login: string;
+}
+
+export const userPanelPageSectionTransitionProperties = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  transition: { duration: 0.5 },
+};
+
 export default function UserPanelPage() {
-  const { panelSection, isAdmin } = useLoaderData() as {
-    panelSection: string;
-    isAdmin: boolean;
-    login: string;
-  };
+  const { panelSection, isAdmin } = useLoaderData() as IUserPanelLoaderData;
   const {
     state: panelState,
     setStateWithSearchParams: setPanelState,
@@ -91,12 +99,9 @@ export default function UserPanelPage() {
           </nav>
           <AnimatePresence mode="wait">
             <motion.article
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              {...userPanelPageSectionTransitionProperties}
               key={`user-panel-content-${curActivePanelSectionEntry.userPanelParam}`}
-              transition={{ duration: 0.5 }}
-              className="py-8"
+              className="py-8 w-full flex justify-center items-center text-center flex-col"
             >
               <CurPanelSectionComponent />
             </motion.article>
@@ -117,7 +122,6 @@ export const loader: LoaderFunction = async function ({ request }) {
     (panelSectionFromSearchParams
       ? validateJSONValue(panelSectionFromSearchParams, "")
       : false) || possiblePanelSections[0].userPanelParam;
-  console.log(panelSection, authGuardFnRes);
   if (
     !authGuardFnRes ||
     !possiblePanelSections

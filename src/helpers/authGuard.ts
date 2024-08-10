@@ -2,6 +2,7 @@ import { LoaderFunction, redirect } from "react-router-dom";
 import { getAuthData, IGetAuthResponse, queryClient } from "../lib/fetch";
 import createSearchParamsFromRequestURL from "./createSearchParamsFromRequestURL";
 
+// Returns auth data or nothing if a user hasn't been authorized
 export async function authGuardFn(requestURL: string) {
   try {
     const pathName = new URL(requestURL).pathname;
@@ -17,6 +18,7 @@ export async function authGuardFn(requestURL: string) {
   }
 }
 
+// Loader to redirect from pages only for authorized users
 const authGuard: LoaderFunction = async function ({ request }) {
   const requestURL = request.url;
   const previousPagePathName =
