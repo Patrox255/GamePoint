@@ -45,6 +45,7 @@ const UserSchema = new Schema<IUser>({
   activeAdditionalContactInformation: {
     type: Schema.Types.ObjectId,
     ref: "AdditionalContactInformation",
+    default: null,
   },
   cart: [
     {

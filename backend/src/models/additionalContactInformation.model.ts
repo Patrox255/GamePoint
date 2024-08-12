@@ -1,9 +1,8 @@
 import { model, Schema } from "mongoose";
 
-export interface IAdditionalContactInformation {
+export interface IAdditionalContactInformationWithoutDateOfBirth {
   firstName: string;
   surName: string;
-  dateOfBirth: Date;
   phoneNr: string;
   country: string;
   zipCode: string;
@@ -11,6 +10,11 @@ export interface IAdditionalContactInformation {
   street: string;
   house: string;
   flat?: string;
+}
+
+export interface IAdditionalContactInformation
+  extends IAdditionalContactInformationWithoutDateOfBirth {
+  dateOfBirth: Date;
 }
 
 const AdditionalContactInformationSchema =

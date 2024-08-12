@@ -238,3 +238,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   -webkit-appearance: none;
   margin: 0;
 }
+
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  transition: background-color 0s 600000s, color 0s 600000s !important;
+}

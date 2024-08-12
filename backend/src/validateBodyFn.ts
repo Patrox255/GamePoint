@@ -27,11 +27,21 @@ export interface IValidateBodyEntry<T extends IBodyFromRequestToValidate> {
 
 export const validateBodyEntries = function <
   T extends IBodyFromRequestToValidate
->(entries: IValidateBodyEntry<T>[], request: Request) {
+>({
+  entries,
+  req,
+  requestBodyEntriesObj,
+}: {
+  entries: IValidateBodyEntry<T>[];
+  req?: Request;
+  requestBodyEntriesObj?: T;
+}) {
   const errors: { message: string; errInputName: string }[] = [];
   const entriesWithValues = entries.map((entry) => ({
     ...entry,
-    value: request.body[entry.requestBodyName],
+    value: req
+      ? req.body[entry.requestBodyName]
+      : requestBodyEntriesObj![entry.requestBodyName],
   }));
 
   entriesWithValues.forEach((entry) => {

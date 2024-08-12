@@ -12,7 +12,7 @@ import Game, { IGame } from "./models/game.model";
 import Publisher, { IPublisher } from "./models/publisher.model";
 import Developer, { IDeveloper } from "./models/developer.model";
 import User, { IUser } from "./models/user.model";
-import createDateNoTakingTimezoneIntoAccount, {
+import {
   filterPropertiesFromObj,
   corsOptions,
   createDocumentsOfObjsAndInsert,
@@ -34,6 +34,8 @@ import createDateNoTakingTimezoneIntoAccount, {
   verifyJwt,
   IRequestAdditionAfterAccessJwtfMiddleware,
   getUserContactInformationByLogin,
+  createAndVerifyDateOfBirthFromInput,
+  verifyCreateAndInsertAdditionalContactInformationDocumentBasedOnRequestData,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -49,10 +51,13 @@ import {
   IAddReviewEntriesFromRequest,
   ICartDataEntriesFromRequest,
   IChangeActiveContactInformationEntriesFromRequest,
+  IContactInformationEntriesFromRequest,
   ILoginBodyFromRequest,
+  IModifyOrAddContactInformationEntriesFromRequest,
   IRegisterBodyFromRequest,
   IRemoveReviewEntriesFromRequest,
   loginBodyEntriesWithCart,
+  modifyOrAddContactInformationValidationEntries,
   registerBodyEntries,
   removeReviewEntries,
   verifyEmailEntries,
@@ -1039,10 +1044,10 @@ const startServer = async () => {
         try {
           const { login, password, cart } = req.body as ILoginBodyFromRequest;
 
-          const stringBodyEntriesErrors = validateBodyEntries(
-            loginBodyEntriesWithCart,
-            req
-          );
+          const stringBodyEntriesErrors = validateBodyEntries({
+            entries: loginBodyEntriesWithCart,
+            req,
+          });
           const errors = [...stringBodyEntriesErrors];
           if (errors.length > 0) return res.status(422).json({ errors });
 
@@ -1114,7 +1119,7 @@ const startServer = async () => {
           const {
             token: { login },
           } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
-          const errors = validateBodyEntries(cartDataEntries, req);
+          const errors = validateBodyEntries({ entries: cartDataEntries, req });
           if (errors.length > 0) return res.sendStatus(422);
           const { cart } = req.body as ICartDataEntriesFromRequest;
           await updateUserCartBasedOnReceivedOne(cart, login!);
@@ -1130,13 +1135,13 @@ const startServer = async () => {
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const { cart } = req.body as ICartDataEntriesFromRequest;
-          const errors = validateBodyEntries(
-            cartDataEntries.map((cartDataEntry) => ({
+          const errors = validateBodyEntries({
+            entries: cartDataEntries.map((cartDataEntry) => ({
               ...cartDataEntry,
               optional: false,
             })),
-            req
-          );
+            req,
+          });
           if (errors.length > 0) return res.sendStatus(422);
           const cartWithGames = await createCartWithGamesBasedOnReceivedCart(
             cart
@@ -1183,46 +1188,32 @@ const startServer = async () => {
             password,
             email,
             expandedContactInformation,
-            firstName,
-            surName,
             dateOfBirth,
-            phoneNr,
           } = registerBody;
 
           const includedContactInformation =
             expandedContactInformation !== undefined;
+          const validateBodyEntriesArgObj = { req };
 
           const errors = !includedContactInformation
-            ? validateBodyEntries(registerBodyEntries.slice(0, 4), req)
-            : validateBodyEntries(registerBodyEntries, req);
+            ? validateBodyEntries({
+                ...validateBodyEntriesArgObj,
+                entries: registerBodyEntries.slice(0, 4),
+              })
+            : validateBodyEntries({
+                ...validateBodyEntriesArgObj,
+                entries: registerBodyEntries,
+              });
 
           if (errors.length > 0) return res.status(422).json({ errors });
 
-          let dateOfBirthToSave: Date;
+          let dateOfBirthToSave: Date | false;
           if (includedContactInformation) {
-            const [year, month, day] = dateOfBirth
-              .split("-")
-              .map((datePart, i) => (i === 1 ? +datePart - 1 : +datePart));
-            dateOfBirthToSave = createDateNoTakingTimezoneIntoAccount({
-              year,
-              month,
-              day,
-            });
-            const latestPossibleDate = createDateNoTakingTimezoneIntoAccount(
-              {}
+            dateOfBirthToSave = createAndVerifyDateOfBirthFromInput(
+              dateOfBirth,
+              res
             );
-            const oldestPossibleDate = createDateNoTakingTimezoneIntoAccount({
-              year: latestPossibleDate.getUTCFullYear() - 150,
-              month: latestPossibleDate.getMonth(),
-              day: latestPossibleDate.getDate(),
-            });
-            if (
-              dateOfBirthToSave < oldestPossibleDate ||
-              dateOfBirthToSave > latestPossibleDate
-            )
-              return res.status(200).json({
-                message: "Your date of birth does not seem to be correct!",
-              });
+            if (!dateOfBirthToSave) return;
           }
 
           const sameLoginUser = await User.findOne({ login });
@@ -1234,29 +1225,19 @@ const startServer = async () => {
               } as provided!`,
             });
 
+          const session = await startSession();
+          session.startTransaction();
+
           let savedContactInformation: Types.ObjectId;
           if (includedContactInformation) {
-            const additionalContactInformationWithSameFirstLastNameAndPhoneNr =
-              await AdditionalContactInformation.findOne({
-                firstName,
-                surName,
-                phoneNr,
-              });
-            if (additionalContactInformationWithSameFirstLastNameAndPhoneNr)
-              return res.status(200).json({
-                message:
-                  "There is already a contact address with the same first name, surname and phone number added!",
-              });
-            const { newObjs } = await createDocumentsOfObjsAndInsert(
-              [
-                new AdditionalContactInformation({
-                  ...registerBody,
-                  dateOfBirth: dateOfBirthToSave!,
-                }),
-              ],
-              AdditionalContactInformation
-            );
-            savedContactInformation = newObjs[0]._id!;
+            const saveContactInformationRes =
+              await verifyCreateAndInsertAdditionalContactInformationDocumentBasedOnRequestData(
+                { ...registerBody, dateOfBirth: dateOfBirthToSave! as Date },
+                res,
+                session
+              );
+            if (!saveContactInformationRes) return;
+            savedContactInformation = saveContactInformationRes.newObjs[0]._id!;
           }
 
           const passwordSalt = await genSalt();
@@ -1276,9 +1257,11 @@ const startServer = async () => {
                 }),
               }),
             ],
-            User
+            User,
+            session
           );
 
+          await session.commitTransaction();
           res.status(200).json({
             registrationCode: generateRandomStr(6),
             uId: addedUser._id?.toString(),
@@ -1314,10 +1297,10 @@ const startServer = async () => {
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const { uId, providedRegistrationCode, registrationCode } = req.body;
-          const verifyEmailEntriesErrors = validateBodyEntries(
-            verifyEmailEntries,
-            req
-          );
+          const verifyEmailEntriesErrors = validateBodyEntries({
+            entries: verifyEmailEntries,
+            req,
+          });
           if (verifyEmailEntriesErrors.length > 0)
             return res.status(422).json({ errors: verifyEmailEntriesErrors });
 
@@ -1353,7 +1336,10 @@ const startServer = async () => {
       verifyJwt,
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          const errors = validateBodyEntries(addReviewEntries, req);
+          const errors = validateBodyEntries({
+            entries: addReviewEntries,
+            req,
+          });
           if (errors.length > 0) return res.status(422).json({ errors });
 
           const { criteria, reviewContent, gameId } =
@@ -1414,7 +1400,10 @@ const startServer = async () => {
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const { reviewId } = req.body as IRemoveReviewEntriesFromRequest;
-          const errors = validateBodyEntries(removeReviewEntries, req);
+          const errors = validateBodyEntries({
+            entries: removeReviewEntries,
+            req,
+          });
           if (errors.length > 0) return res.status(422).json({ errors });
 
           const {
@@ -1482,6 +1471,82 @@ const startServer = async () => {
       }
     });
 
+    app.post("/contact-information", verifyJwt, async (req, res, next) => {
+      try {
+        const { newContactInformation, updateContactInformationId } =
+          req.body as IModifyOrAddContactInformationEntriesFromRequest;
+
+        const errors =
+          validateBodyEntries<IContactInformationEntriesFromRequest>({
+            requestBodyEntriesObj: newContactInformation,
+            entries: modifyOrAddContactInformationValidationEntries,
+          });
+        if (errors.length > 0) return res.status(422).json({ errors });
+
+        const dateOfBirthToSave = createAndVerifyDateOfBirthFromInput(
+          newContactInformation.dateOfBirth,
+          res
+        );
+        if (!dateOfBirthToSave) return;
+        const contactInformationToSave = {
+          ...newContactInformation,
+          dateOfBirth: dateOfBirthToSave,
+        };
+        const session = await startSession();
+        session.startTransaction();
+
+        if (updateContactInformationId) {
+          const failedToFindErr = {
+            message: "Failed to find a selected contact details entry!",
+          };
+          if (!isValidObjectId(updateContactInformationId))
+            return res.status(200).json(failedToFindErr);
+          const relatedAdditionalContactInformation =
+            await AdditionalContactInformation.findById(
+              updateContactInformationId
+            ).session(session);
+          if (!relatedAdditionalContactInformation)
+            return res.status(200).json(failedToFindErr);
+
+          relatedAdditionalContactInformation.set(contactInformationToSave);
+          try {
+            await relatedAdditionalContactInformation.save({ session });
+          } catch (_) {
+            await session.abortTransaction();
+            return res.status(200).json({
+              message: "Failed to update the desired contact details entry!",
+            });
+          }
+          await session.commitTransaction();
+          return res.sendStatus(200);
+        }
+
+        const {
+          token: { login },
+        } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+        const { newObjs } = await createDocumentsOfObjsAndInsert(
+          [contactInformationToSave],
+          AdditionalContactInformation,
+          session
+        );
+
+        const createdContactInformationObjectId = newObjs[0]._id!;
+        const relatedUser = await User.findOne({ login }).session(session);
+        // relatedUser has to be true as its existence has been already checked within verifyJwt middleware
+        relatedUser!.additionalContactInformation!.push(
+          createdContactInformationObjectId
+        );
+        if (relatedUser!.additionalContactInformation?.length === 1)
+          relatedUser!.activeAdditionalContactInformation =
+            createdContactInformationObjectId;
+        await relatedUser?.save({ session });
+        await session.commitTransaction();
+        return res.sendStatus(200);
+      } catch (e) {
+        next(e);
+      }
+    });
+
     app.post(
       "/contact-information-active",
       verifyJwt,
@@ -1491,10 +1556,10 @@ const startServer = async () => {
             token: { login },
           } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
 
-          const errors = validateBodyEntries(
-            changeActiveContactInformationEntries,
-            req
-          );
+          const errors = validateBodyEntries({
+            entries: changeActiveContactInformationEntries,
+            req,
+          });
           if (errors.length > 0) return res.status(422).json({ errors });
           const { newActiveAdditionalInformationEntryId } =
             req.body as IChangeActiveContactInformationEntriesFromRequest;
@@ -1506,7 +1571,7 @@ const startServer = async () => {
             userContactInformation!;
           if (newActiveAdditionalInformationEntryId === "") {
             await relatedUser.updateOne({
-              activeAdditionalContactInformation: undefined,
+              activeAdditionalContactInformation: null,
             });
             return res.sendStatus(200);
           }

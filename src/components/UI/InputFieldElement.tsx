@@ -204,6 +204,7 @@ const InputFieldElement = forwardRef<
             value={inputFieldObj.type === "checkbox" ? "on" : value}
             manuallyManageValueInsideForm={value !== undefined}
             onChange={onChange}
+            defaultValue={inputFieldObj.defaultValue}
           />
           {children && (
             <InputFieldElementChildrenCtx.Provider

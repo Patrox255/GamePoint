@@ -7,7 +7,9 @@ import bcrypt from "bcrypt";
 import Game from "./models/game.model";
 import User from "./models/user.model";
 import { receivedCart } from "./validateBodyEntries";
-import { IAdditionalContactInformation } from "./models/additionalContactInformation.model";
+import AdditionalContactInformation, {
+  IAdditionalContactInformation,
+} from "./models/additionalContactInformation.model";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -33,20 +35,31 @@ export const dropCollectionsIfTheyExist = async (collections: string[]) => {
 
 export const createDocumentsOfObjsAndInsert = async <storedObjInterface>(
   objs: storedObjInterface[],
-  model: mongoose.Model<storedObjInterface>
+  model: mongoose.Model<storedObjInterface>,
+  session?: mongoose.ClientSession
 ) => {
   // Here _id is going to be id of an individual document according to our mongoDB database
   // and default id will be related to id from the API and we will be able to change ids in individual games obj properties
   // to their equivalents according to our mongoDB database
+  let documents: mongoose.Document<unknown, object, storedObjInterface>[] = [];
   const newObjs: (storedObjInterface & {
-    _id?: Types.ObjectId | undefined;
+    _id?: Types.ObjectId;
   })[] = objs.map((obj) => ({ ...obj, _id: undefined }));
-  const documents = objs.map((obj) => new model(obj));
-  newObjs.forEach((newObj, i: number) => {
-    const correspondingDocument = documents[i];
-    newObj._id = correspondingDocument._id as Types.ObjectId;
-  });
-  await Promise.all(documents.map(async (doc) => await doc.save()));
+  try {
+    documents = objs.map((obj) => new model(obj));
+    newObjs.forEach((newObj, i: number) => {
+      const correspondingDocument = documents[i];
+      newObj._id = correspondingDocument._id as Types.ObjectId;
+    });
+    await Promise.all(
+      documents.map(
+        async (doc) => await doc.save(session ? { session } : undefined)
+      )
+    );
+  } catch (e) {
+    if (session) await session.abortTransaction();
+    throw e;
+  }
   return { documents, newObjs };
 };
 
@@ -334,3 +347,65 @@ export const getUserContactInformationByLogin = async (login: string) => {
     relatedUser,
   };
 };
+
+export const createAndVerifyDateOfBirthFromInput = function (
+  dateOfBirth: string,
+  res: Response
+) {
+  const [year, month, day] = dateOfBirth
+    .split("-")
+    .map((datePart, i) => (i === 1 ? +datePart - 1 : +datePart));
+  const dateOfBirthToSave = createDateNoTakingTimezoneIntoAccount({
+    year,
+    month,
+    day,
+  });
+  const latestPossibleDate = createDateNoTakingTimezoneIntoAccount({});
+  const oldestPossibleDate = createDateNoTakingTimezoneIntoAccount({
+    year: latestPossibleDate.getUTCFullYear() - 150,
+    month: latestPossibleDate.getMonth(),
+    day: latestPossibleDate.getDate(),
+  });
+  if (
+    dateOfBirthToSave < oldestPossibleDate ||
+    dateOfBirthToSave > latestPossibleDate
+  ) {
+    res.status(200).json({
+      message: "Your date of birth does not seem to be correct!",
+    });
+    return false;
+  }
+  return dateOfBirthToSave;
+};
+
+export const verifyCreateAndInsertAdditionalContactInformationDocumentBasedOnRequestData =
+  async function (
+    additionalContactInformationBody: IAdditionalContactInformation,
+    res: Response,
+    session?: mongoose.ClientSession
+  ) {
+    const { firstName, surName, phoneNr } = additionalContactInformationBody;
+    const additionalContactInformationWithSameFirstLastNameAndPhoneNr =
+      await AdditionalContactInformation.findOne(
+        {
+          firstName,
+          surName,
+          phoneNr,
+        },
+        undefined,
+        session ? { session } : undefined
+      );
+    if (additionalContactInformationWithSameFirstLastNameAndPhoneNr) {
+      res.status(200).json({
+        message:
+          "There is already a contact address with the same first name, surname and phone number added!",
+      });
+      return false;
+    }
+    const { newObjs, documents } = await createDocumentsOfObjsAndInsert(
+      [new AdditionalContactInformation(additionalContactInformationBody)],
+      AdditionalContactInformation,
+      session
+    );
+    return { newObjs, documents };
+  };

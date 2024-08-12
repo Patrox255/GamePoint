@@ -19,7 +19,9 @@ type inputFieldsNames =
 
 const firstAndLastNamePattern = "^[a-zA-ZÀ-ÿ' -]+$";
 
-const inputFieldsObjs: Record<inputFieldsNames, IFormInputField> = {
+export type IInputFieldsObjs = Record<inputFieldsNames, IFormInputField>;
+
+const inputFieldsObjs: IInputFieldsObjs = {
   login: {
     name: "login",
     placeholder: "Enter your account login",

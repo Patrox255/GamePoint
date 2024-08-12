@@ -344,11 +344,11 @@ export const removeReview = async function (reviewId: string) {
 };
 
 export const manageContactInformation = async function (
-  formData: IActionMutateArgsContactUserPanel
+  formDataWithPotentialEntryToUpdateId: IActionMutateArgsContactUserPanel
 ) {
   const data = await getJSON<string>({
     url: `${API_URL}/contact-information`,
-    body: formData,
+    body: formDataWithPotentialEntryToUpdateId,
     method: "POST",
   });
 

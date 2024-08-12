@@ -1,3 +1,4 @@
+import { IAdditionalContactInformationWithoutDateOfBirth } from "./models/additionalContactInformation.model";
 import {
   emailRegex,
   firstAndLastNameValidateFn,
@@ -39,20 +40,95 @@ export const loginBodyEntries: IValidateBodyEntry<ILoginBodyFromRequest>[] = [
 export const loginBodyEntriesWithCart: IValidateBodyEntry<ILoginBodyFromRequest>[] =
   [...loginBodyEntries, cartDataEntry];
 
-export interface IRegisterBodyFromRequest extends ILoginBodyFromRequest {
+// export interface IContactInformationEntriesFromRequest {
+//   firstName: string;
+//   surName: string;
+//   dateOfBirth: string;
+//   phoneNr: string;
+//   country: string;
+//   zipCode: string;
+//   city: string;
+//   street: string;
+//   house: string;
+//   flat?: string;
+// }
+
+export interface IContactInformationEntriesFromRequest
+  extends IAdditionalContactInformationWithoutDateOfBirth,
+    IBodyFromRequestToValidate {
+  dateOfBirth: string;
+}
+
+type IContactInformationEntriesForValidation =
+  IValidateBodyEntry<IContactInformationEntriesFromRequest>[];
+
+export const contactInformationEntries: IValidateBodyEntry<IContactInformationEntriesFromRequest>[] =
+  (() => {
+    const addressEntries: IContactInformationEntriesForValidation = [
+      {
+        name: "Date of birth",
+        requestBodyName: "dateOfBirth",
+        type: "string",
+        validateFn: (val, name) =>
+          stringFollowsRegex({
+            val: val as string,
+            strNameForErrorGeneration: name,
+            regex: properDateFromInputTypeDateRegex,
+          }),
+      },
+      {
+        name: "Phone number",
+        requestBodyName: "phoneNr",
+        type: "string",
+      },
+      { name: "Country name", requestBodyName: "country", type: "string" },
+      {
+        name: "Zip code",
+        requestBodyName: "zipCode",
+        type: "string",
+        validateFn: (val, name) =>
+          stringFollowsRegex({
+            val: val as string,
+            strNameForErrorGeneration: name,
+            regex: zipCodeRegex,
+          }),
+      },
+      { name: "City name", requestBodyName: "city", type: "string" },
+      {
+        name: "Street name",
+        requestBodyName: "street",
+        type: "string",
+      },
+      { name: "House number", requestBodyName: "house", type: "string" },
+      {
+        name: "Flat number",
+        requestBodyName: "flat",
+        type: "string",
+        optional: true,
+      },
+    ];
+    const firstAndLastNameBodyEntries: IContactInformationEntriesForValidation =
+      [
+        {
+          name: "First name",
+          requestBodyName: "firstName",
+          type: "string",
+        },
+        { name: "Surname", requestBodyName: "surName", type: "string" },
+      ].map((registerBodyEntry) => ({
+        ...registerBodyEntry,
+        validateFn: (val, name) => firstAndLastNameValidateFn(val, name),
+      }));
+
+    return [...addressEntries, ...firstAndLastNameBodyEntries];
+  })();
+
+export interface IRegisterBodyFromRequest
+  extends ILoginBodyFromRequest,
+    IContactInformationEntriesFromRequest {
   confirmedPassword: string;
   email: string;
   expandedContactInformation?: string;
-  firstName: string;
-  surName: string;
-  dateOfBirth: string;
-  phoneNr: string;
-  country: string;
-  zipCode: string;
-  city: string;
-  street: string;
-  house: string;
-  flat?: string;
 }
 
 type IRegisterBodyEntriesForValidation =
@@ -88,64 +164,12 @@ export const registerBodyEntries: IRegisterBodyEntriesForValidation = (() => {
           regex: emailRegex,
         }),
     },
-    {
-      name: "Date of birth",
-      requestBodyName: "dateOfBirth",
-      type: "string",
-      validateFn: (val, name) =>
-        stringFollowsRegex({
-          val: val as string,
-          strNameForErrorGeneration: name,
-          regex: properDateFromInputTypeDateRegex,
-        }),
-    },
-    {
-      name: "Phone number",
-      requestBodyName: "phoneNr",
-      type: "string",
-    },
-    { name: "Country name", requestBodyName: "country", type: "string" },
-    {
-      name: "Zip code",
-      requestBodyName: "zipCode",
-      type: "string",
-      validateFn: (val, name) =>
-        stringFollowsRegex({
-          val: val as string,
-          strNameForErrorGeneration: name,
-          regex: zipCodeRegex,
-        }),
-    },
-    { name: "City name", requestBodyName: "city", type: "string" },
-    {
-      name: "Street name",
-      requestBodyName: "street",
-      type: "string",
-    },
-    { name: "House number", requestBodyName: "house", type: "string" },
-    {
-      name: "Flat number",
-      requestBodyName: "flat",
-      type: "string",
-      optional: true,
-    },
   ];
-  const firstAndLastNameBodyEntries: IRegisterBodyEntriesForValidation = [
-    {
-      name: "First name",
-      requestBodyName: "firstName",
-      type: "string",
-    },
-    { name: "Surname", requestBodyName: "surName", type: "string" },
-  ].map((registerBodyEntry) => ({
-    ...registerBodyEntry,
-    validateFn: (val, name) => firstAndLastNameValidateFn(val, name),
-  }));
 
   return [
     ...loginBodyEntries,
     ...newBodyEntries,
-    ...firstAndLastNameBodyEntries,
+    ...contactInformationEntries,
   ] as unknown as IRegisterBodyEntriesForValidation;
 })();
 
@@ -249,3 +273,11 @@ export const changeActiveContactInformationEntries: IValidateBodyEntry<IChangeAc
       optional: true,
     },
   ];
+
+export interface IModifyOrAddContactInformationEntriesFromRequest {
+  newContactInformation: IContactInformationEntriesFromRequest;
+  updateContactInformationId?: string;
+}
+
+export const modifyOrAddContactInformationValidationEntries: IValidateBodyEntry<IContactInformationEntriesFromRequest>[] =
+  [...contactInformationEntries];

@@ -1,12 +1,14 @@
 import { createContext, useCallback, useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useLoaderData } from "react-router-dom";
 
 import {
   IActionMutateArgsContact,
   RegisterPageFormControls,
 } from "../../pages/RegisterPage";
-import RegisterFormContent from "../formRelated/RegisterFormContent";
+import RegisterFormContent, {
+  IInputFieldsDefaultValues,
+} from "../formRelated/RegisterFormContent";
 import FormWithErrorHandling, {
   FormActionBackendErrorResponse,
   FormActionBackendResponse,
@@ -16,19 +18,20 @@ import {
   IRetrievedContactInformation,
   manageContactInformation,
   queryClient,
-  retrieveContactInformation,
 } from "../../lib/fetch";
 import { IUserPanelLoaderData } from "../../pages/UserPanelPage";
 import Header from "../UI/headers/Header";
 import LoadingFallback from "../UI/LoadingFallback";
 import Error from "../UI/Error";
-import UserContactInformationOverviews from "./UserContactInformationOverviews";
+import UserContactInformationOverviews, {
+  AddANewContactDetailsEntry,
+} from "./UserContactInformationOverviews";
 import Button from "../UI/Button";
 import { IAdditionalContactInformation } from "../../models/additionalContactInformation.model";
+import useRetrieveContactInformation from "../../hooks/accountRelated/useRetrieveContactInformation";
 
-interface IActionMutateArgsContactUserPanelFormData
-  extends IActionMutateArgsContact {
-  login: string;
+interface IActionMutateArgsContactUserPanelFormData {
+  newContactInformation: IActionMutateArgsContact;
 }
 
 export interface IActionMutateArgsContactUserPanel
@@ -36,18 +39,25 @@ export interface IActionMutateArgsContactUserPanel
   updateContactInformationId?: string;
 }
 
+const contactInformationSectionStateValuesNotRelatedToContactInformationEntryId =
+  ["", "add"];
+
 export const ChangeActiveUserContactInformationContext = createContext<{
   handleApplyClick: (newActiveAdditionalInformationId: string) => void;
   error: FormActionBackendErrorResponse | null;
   contactInformationArr: IAdditionalContactInformation[];
   activeContactInformationOverviewIdFromReq: string;
   data?: FormActionBackendResponse;
+  setContactInformationSectionState: React.Dispatch<
+    React.SetStateAction<string>
+  >;
 }>({
   handleApplyClick: () => {},
   error: null,
   contactInformationArr: [],
   activeContactInformationOverviewIdFromReq: "",
   data: undefined,
+  setContactInformationSectionState: () => {},
 });
 
 interface IRetrievedContactInformationQueryRes {
@@ -57,37 +67,60 @@ interface IRetrievedContactInformationQueryRes {
 export default function UserContactInformation() {
   const [contactInformationSectionState, setContactInformationSectionState] =
     useState<string>("");
-
-  const { mutate, data, error, isPending } = useMutation<
-    FormActionBackendResponse,
-    FormActionBackendErrorResponse,
-    IActionMutateArgsContactUserPanel
-  >({ mutationFn: manageContactInformation });
-
-  const handleFormSubmit = useCallback(
-    (formData: IActionMutateArgsContactUserPanelFormData) =>
-      mutate({
-        ...formData,
-        updateContactInformationId: undefined, // TODO
-      }),
-    [mutate]
-  );
-
   const { login } = useLoaderData() as IUserPanelLoaderData;
   const contactInformationQueryKey = useMemo(
     () => ["contact-information", login],
     [login]
   );
+
+  const { mutate, data, error, isPending } = useMutation<
+    FormActionBackendResponse,
+    FormActionBackendErrorResponse,
+    IActionMutateArgsContactUserPanel
+  >({
+    mutationFn: manageContactInformation,
+    onSuccess: async (resData) => {
+      if (typeof resData.data === "object") return;
+      setContactInformationSectionState("");
+      await queryClient.resetQueries({
+        queryKey: contactInformationQueryKey,
+      });
+    },
+  });
+
+  const selectedContactInformationEntryId =
+    !contactInformationSectionStateValuesNotRelatedToContactInformationEntryId.includes(
+      contactInformationSectionState
+    ) && contactInformationSectionState;
+
+  const handleFormSubmit = useCallback(
+    (formData: IActionMutateArgsContact) =>
+      mutate({
+        newContactInformation: formData,
+        ...(selectedContactInformationEntryId && {
+          updateContactInformationId: selectedContactInformationEntryId,
+        }),
+      }),
+    [selectedContactInformationEntryId, mutate]
+  );
+  const handleGoToContactInformationMainPage = useCallback(() => {
+    setContactInformationSectionState("");
+  }, []);
+
   const {
     data: contactInformationData,
     error: contactInformationError,
     isLoading: contactInformationLoading,
-  } = useQuery({
-    queryKey: contactInformationQueryKey,
-    queryFn: ({ signal }) => retrieveContactInformation(signal),
-  });
-  const contactInformationArr =
-    contactInformationData?.data?.additionalContactInformation;
+  } = useRetrieveContactInformation();
+  const contactInformationArr = useMemo(
+    () =>
+      !contactInformationLoading &&
+      contactInformationData?.data?.additionalContactInformation,
+    [
+      contactInformationData?.data?.additionalContactInformation,
+      contactInformationLoading,
+    ]
+  );
   const activeContactInformationOverviewIdFromReq =
     contactInformationData?.data?.activeAdditionalContactInformation || "";
   const hasContactInformationSaved =
@@ -138,22 +171,72 @@ export default function UserContactInformation() {
     [changeUserActiveAdditionalInformationMutate]
   );
 
+  const defaultContactInformationFormValues = useMemo(() => {
+    if (
+      contactInformationSectionState === "" ||
+      contactInformationSectionState === "add" ||
+      !contactInformationArr
+    )
+      return undefined;
+    const selectedContactInformationData = contactInformationArr.find(
+      (contactInformationArrEntry) =>
+        contactInformationArrEntry._id === contactInformationSectionState
+    );
+    // this should never be of different id than one of the contact information entries
+    // but just in case
+    if (!selectedContactInformationData) return undefined;
+    return selectedContactInformationData;
+  }, [contactInformationArr, contactInformationSectionState]);
+
+  // sectionState set to an individual contact details entry id or to "add" in case of adding a new contact
+  // details entry
   let content = (
-    <article className="available-contact-information flex flex-col w-full">
-      {contactInformationLoading && <LoadingFallback />}
-      {contactInformationError && (
-        <Error message={contactInformationError.message} />
-      )}
-      {contactInformationArr && (
-        <>
-          <Header usePaddingBottom={false} additionalTailwindClasses="pb-8">
-            {hasContactInformationSaved
-              ? "Here are your saved contact details"
-              : "You haven't saved any contact details yet! Feel free to add them down there"}
-          </Header>
-          {hasContactInformationSaved && (
+    <article className="contact-information-form w-full flex justify-center items-center">
+      <FormWithErrorHandling
+        queryRelatedToActionState={{ data, error, isPending }}
+        onSubmit={handleFormSubmit}
+        lightTheme
+      >
+        <RegisterFormContent
+          defaultValuesObj={
+            defaultContactInformationFormValues
+              ? (defaultContactInformationFormValues as unknown as IInputFieldsDefaultValues)
+              : undefined
+          }
+        />
+        <RegisterPageFormControls
+          submitBtnText={
+            contactInformationSectionState === "add"
+              ? "Add Entry"
+              : "Edit Entry"
+          }
+        >
+          <Button type="button" onClick={handleGoToContactInformationMainPage}>
+            Go back
+          </Button>
+        </RegisterPageFormControls>
+      </FormWithErrorHandling>
+    </article>
+  );
+
+  if (contactInformationSectionState === "")
+    content = (
+      <article className="available-contact-information flex flex-col w-full items-center">
+        {contactInformationLoading && <LoadingFallback />}
+        {contactInformationError && (
+          <Error message={contactInformationError.message} />
+        )}
+        {contactInformationArr && (
+          <>
+            <Header usePaddingBottom={false} additionalTailwindClasses="pb-8">
+              {hasContactInformationSaved
+                ? "Here are your saved contact details"
+                : "You haven't saved any contact details yet! Feel free to add them down there"}
+            </Header>
+
             <ChangeActiveUserContactInformationContext.Provider
               value={{
+                setContactInformationSectionState,
                 error: changeUserActiveAdditionalInformationError,
                 handleApplyClick,
                 contactInformationArr,
@@ -161,40 +244,18 @@ export default function UserContactInformation() {
                 data: changeUserActiveAdditionalInformationData,
               }}
             >
-              <UserContactInformationOverviews
-                key={activeContactInformationOverviewIdFromReq}
-              >
-                <Button
-                  onClick={() => setContactInformationSectionState("add")}
-                >
-                  Add a new contact details entry
-                </Button>
-              </UserContactInformationOverviews>
+              {hasContactInformationSaved ? (
+                <UserContactInformationOverviews
+                  key={activeContactInformationOverviewIdFromReq}
+                />
+              ) : (
+                <div className="w-1/2">
+                  <AddANewContactDetailsEntry />
+                </div>
+              )}
             </ChangeActiveUserContactInformationContext.Provider>
-          )}
-        </>
-      )}
-    </article>
-  );
-
-  if (contactInformationSectionState === "add")
-    content = (
-      <article className="contact-information-form w-full flex justify-center items-center">
-        <FormWithErrorHandling
-          queryRelatedToActionState={{ data, error, isPending }}
-          onSubmit={handleFormSubmit}
-          lightTheme
-        >
-          <RegisterFormContent />
-          <RegisterPageFormControls>
-            <Button
-              type="button"
-              onClick={() => setContactInformationSectionState("")}
-            >
-              Go back
-            </Button>
-          </RegisterPageFormControls>
-        </FormWithErrorHandling>
+          </>
+        )}
       </article>
     );
 

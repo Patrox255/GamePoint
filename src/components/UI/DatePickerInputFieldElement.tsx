@@ -639,7 +639,12 @@ export default function DatePickerInputFieldElement({
   inputFieldObjFromProps: IFormInputField;
 }) {
   const [datePickerState, setDatePickerState] = useState<datePickerState>("");
-  const [selectedDate, setSelectedDate] = useState<Date | string>("");
+  const [selectedDate, setSelectedDate] = useState<Date | string>(
+    inputFieldObjFromProps.defaultValue &&
+      typeof inputFieldObjFromProps.defaultValue === "object"
+      ? inputFieldObjFromProps.defaultValue
+      : ""
+  );
 
   const {
     queryDebouncingState: selectedDateDebounced,

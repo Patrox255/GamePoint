@@ -16,6 +16,7 @@ import { modifyCartQuantityAction } from "../store/customActions";
 import HeaderLinkOrHeaderAnimation from "../components/UI/headers/HeaderLinkOrHeaderAnimation";
 import { useNavigate } from "react-router-dom";
 import { IModifyProductQuantityPayload } from "../store/cartSlice";
+import useRetrieveContactInformation from "../hooks/accountRelated/useRetrieveContactInformation";
 
 const CartPageHeader = ({ children }: { children: ReactNode }) => (
   <header className="mb-6">
@@ -133,17 +134,38 @@ const AdditionalGameInformation = ({
 
 export default function CartPage() {
   const cart = useAppSelector((state) => state.cartSlice.cart);
+  const isLogged =
+    useAppSelector((state) => state.userAuthSlice.login) !== undefined;
 
-  const { data, error, isLoading } = useQuery({
+  const {
+    data: cartData,
+    error: cartError,
+    isLoading: cartIsLoading,
+  } = useQuery({
     queryFn: ({ signal }) => getCartDetails(signal, cart),
     queryKey: ["cart-details", cart.map((cartEntry) => cartEntry.id)],
     enabled: cart.length > 0,
     refetchInterval: 30000, // monitoring prices
   });
 
-  const cartDetails = data?.data;
+  const cartDetails = cartData?.data;
 
   const navigate = useNavigate();
+
+  const {
+    data: userContactInformationData,
+    error: userContactInformationError,
+    isLoading: userContactInformationIsLoading,
+  } = useRetrieveContactInformation();
+
+  const isLoading =
+    cartIsLoading || (isLogged && userContactInformationIsLoading);
+  const isReady =
+    cartData && (!isLogged || (userContactInformationData && isLogged));
+  const hasToProvideContactInformation =
+    isReady &&
+    isLogged &&
+    userContactInformationData?.data.additionalContactInformation.length === 0;
 
   let content;
   if (cart.length === 0)
@@ -152,11 +174,18 @@ export default function CartPage() {
         Currently your cart is empty. Feel free to add some products
       </CartPageHeader>
     );
-  if (error)
+  if (cartError)
     content = (
       <>
         <CartPageHeader>Failed to load your cart content!</CartPageHeader>
-        <Error message={error.message} />
+        <Error message={cartError.message} />
+      </>
+    );
+  if (isLogged && userContactInformationError)
+    content = (
+      <>
+        <CartPageHeader>Failed to load your account data!</CartPageHeader>
+        <Error message={userContactInformationError.message} />
       </>
     );
   if (isLoading)
@@ -166,8 +195,8 @@ export default function CartPage() {
         <LoadingFallback />
       </>
     );
-  if (cartDetails) {
-    const gamesWithQuantity = cartDetails.map((cartDetailsEntry) => ({
+  if (isReady) {
+    const gamesWithQuantity = cartDetails!.map((cartDetailsEntry) => ({
       ...cartDetailsEntry.id,
       quantity: cart.find(
         (cartEntry) => cartEntry.id === cartDetailsEntry.id._id
@@ -199,8 +228,18 @@ export default function CartPage() {
                 )}
               </span>
             </p>
-            <Button onClick={() => navigate("/order")}>
-              Fulfill your order
+            <Button
+              onClick={() =>
+                navigate(
+                  !hasToProvideContactInformation
+                    ? "/order"
+                    : '/user?panelSection="contact"'
+                )
+              }
+            >
+              {!hasToProvideContactInformation
+                ? "Fulfill your order"
+                : "Provide contact details to proceed"}
             </Button>
           </section>
         </article>

@@ -70,7 +70,12 @@ export default function ReviewContent() {
       onChange={handleContentChange}
     ></TextArea>
   ) : (
-    <p className="w-full h-full flex items-center">{reviewToRender.content}</p>
+    <p
+      className="w-full h-full whitespace-pre-wrap text-center"
+      dangerouslySetInnerHTML={{
+        __html: reviewToRender.content,
+      }} // safe to do so as review content went through html sanitize on the backend
+    ></p>
   );
   const criteria = serveAsAnAddReviewComponent
     ? ctxCriteria

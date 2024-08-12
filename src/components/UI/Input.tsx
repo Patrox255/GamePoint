@@ -48,6 +48,7 @@ interface IInputProps {
   options?: string[];
   customInputNumber?: boolean;
   lightThemeFromProps?: boolean;
+  defaultValue?: inputValue;
 }
 
 const Input = forwardRef<HTMLInputElement, IInputProps>(
@@ -77,6 +78,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       options,
       customInputNumber = false,
       lightThemeFromProps,
+      defaultValue,
     },
     ref
   ) => {
@@ -180,12 +182,24 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
         }}
         ref={ref}
         checked={checkedCheckbox}
+        defaultValue={
+          defaultValue && typeof defaultValue !== "object"
+            ? defaultValue
+            : undefined
+        }
       />
     );
 
     if (type === "select")
       content = (
-        <motion.select {...sharedPropsAcrossInputAndSelect}>
+        <motion.select
+          {...sharedPropsAcrossInputAndSelect}
+          defaultValue={
+            defaultValue && typeof defaultValue === "string"
+              ? defaultValue
+              : undefined
+          }
+        >
           {options?.map((option) => (
             <option key={option} value={option}>
               {option}

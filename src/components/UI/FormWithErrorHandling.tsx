@@ -1,6 +1,6 @@
 import { createContext, FormEvent, ReactNode, useEffect, useRef } from "react";
 import Error from "./Error";
-import { IOtherValidationInputAttributes } from "./Input";
+import { inputValue, IOtherValidationInputAttributes } from "./Input";
 import LoadingFallback from "./LoadingFallback";
 import InputFieldElement from "./InputFieldElement";
 import DatePickerInputFieldElement from "./DatePickerInputFieldElement";
@@ -27,6 +27,7 @@ export interface IFormInputField {
   instructionStr?: string;
   active?: boolean;
   selectOptions?: string[];
+  defaultValue?: inputValue;
 }
 
 export type FormInputFields = IFormInputField[];
