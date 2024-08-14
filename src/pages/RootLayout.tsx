@@ -1,20 +1,23 @@
+/* eslint-disable react-refresh/only-export-components */
 import { Outlet, useLocation } from "react-router-dom";
 import { ReactNode, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { useQuery } from "@tanstack/react-query";
+
 import Nav from "../components/UI/Nav";
 import Footer from "../components/UI/Footer";
-import { createPortal } from "react-dom";
 import LoginModal from "../components/UI/modals/LoginModal";
 import ModalContextProvider from "../store/ModalContext";
 import ModalContainer from "../components/UI/modals/ModalContainer";
 import ModalOverlay from "../components/UI/modals/ModalOverlay";
 import { getAuthData, getCart, queryClient } from "../lib/fetch";
-import { useQuery } from "@tanstack/react-query";
 import { useAppDispatch, useAppSelector } from "../hooks/reduxStore";
 import { userAuthSliceActions } from "../store/userAuthSlice";
 import { isEqual } from "lodash";
 import useCompareComplexForUseMemo from "../hooks/useCompareComplexForUseMemo";
 import { cartSliceActions } from "../store/cartSlice";
 import generateInitialStateFromSearchParamsOrSessionStorage from "../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
+import filterPropertiesFromObj from "../helpers/filterPropertiesFromObj";
 
 let initialRender = true;
 export const generateCartStateFromLocalStorage = () =>
@@ -35,6 +38,10 @@ const RootLayout = ({ children }: { children?: ReactNode }) => {
   const userAuthStateStable = useCompareComplexForUseMemo(
     useAppSelector((state) => state.userAuthSlice)
   );
+  const userAuthStateStableToCompareWithAuthRespones =
+    useCompareComplexForUseMemo(
+      filterPropertiesFromObj(userAuthStateStable, ["isLoading"])
+    );
   const { data, error, isLoading } = useQuery({
     queryKey: ["userAuth", pathname],
     queryFn: ({ signal }) => getAuthData(signal),
@@ -44,7 +51,7 @@ const RootLayout = ({ children }: { children?: ReactNode }) => {
   const cartSlice = useAppSelector((state) => state.cartSlice);
   const { optimisticUpdatingInProgress } = cartSlice;
   const cartStateStable = useCompareComplexForUseMemo(cartSlice.cart);
-  const { data: cartData } = useQuery({
+  const { data: cartData, isLoading: userCartDataIsLoading } = useQuery({
     queryKey: ["cart"],
     queryFn: ({ signal }) => getCart(signal),
     retry: false,
@@ -71,7 +78,10 @@ const RootLayout = ({ children }: { children?: ReactNode }) => {
 
   useEffect(() => {
     if (!data || !data.data) return;
-    if (!error && !isEqual(userAuthStateStable, data.data)) {
+    if (
+      !error &&
+      !isEqual(userAuthStateStableToCompareWithAuthRespones, data.data)
+    ) {
       {
         dispatch(
           userAuthSliceActions.setAuthData({
@@ -83,27 +93,40 @@ const RootLayout = ({ children }: { children?: ReactNode }) => {
     }
 
     if (error) dispatch(userAuthSliceActions.resetAuthData());
-  }, [cartStateStable, data, dispatch, error, userAuthStateStable]);
+  }, [
+    cartStateStable,
+    data,
+    dispatch,
+    error,
+    userAuthStateStableToCompareWithAuthRespones,
+  ]);
 
   useEffect(() => {
-    error && userAuthSliceActions.resetAuthData();
-  }, [error]);
+    error && dispatch(userAuthSliceActions.resetAuthData());
+  }, [error, dispatch]);
+
+  useEffect(() => {
+    userAuthStateStable.isLoading !== isLoading &&
+      dispatch(userAuthSliceActions.setIsFetching(isLoading));
+  }, [dispatch, isLoading, userAuthStateStable.isLoading]);
 
   useEffect(() => {
     if (!initialRender) return;
-    if (isLoading) return;
+    if (isLoading || userCartDataIsLoading) return;
     initialRender = false;
     if (userCartData || data?.data?.login || userAuthStateStable.login) return;
-    const cartStateFromSessionStorage = generateCartStateFromLocalStorage();
-    if (cartStateFromSessionStorage.length > 0)
-      dispatch(cartSliceActions.SET_CART(cartStateFromSessionStorage));
+    const cartStateFromLocalStorage = generateCartStateFromLocalStorage();
+    console.log(cartStateFromLocalStorage);
+    dispatch(cartSliceActions.SET_CART(cartStateFromLocalStorage));
   }, [
     searchParams,
     userCartData,
     dispatch,
-    isLoading,
     data?.data?.login,
     userAuthStateStable.login,
+    isLoading,
+    cartStateStable,
+    userCartDataIsLoading,
   ]);
 
   return (

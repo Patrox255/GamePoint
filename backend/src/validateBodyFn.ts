@@ -1,4 +1,4 @@
-import { Request } from "express";
+import { Request, Response } from "express";
 import { sameRegex } from "./helpers";
 import { IRegisterBodyFromRequest } from "./validateBodyEntries";
 
@@ -25,18 +25,42 @@ export interface IValidateBodyEntry<T extends IBodyFromRequestToValidate> {
   requestBodyName: keyof T;
 }
 
-export const validateBodyEntries = function <
+type IValidationErrorsArr = { message: string; errInputName: string }[];
+
+export function validateBodyEntries<
   T extends IBodyFromRequestToValidate
->({
+>(params: {
+  entries: IValidateBodyEntry<T>[];
+  req?: Request;
+  requestBodyEntriesObj?: T;
+  res: Response;
+  sendAResponseWithErrors?: boolean;
+}): IValidationErrorsArr | false;
+
+export function validateBodyEntries<
+  T extends IBodyFromRequestToValidate
+>(params: {
+  entries: IValidateBodyEntry<T>[];
+  req?: Request;
+  requestBodyEntriesObj?: T;
+  res?: undefined;
+  sendAResponseWithErrors: false;
+}): IValidationErrorsArr;
+
+export function validateBodyEntries<T extends IBodyFromRequestToValidate>({
   entries,
   req,
   requestBodyEntriesObj,
+  res,
+  sendAResponseWithErrors = true,
 }: {
   entries: IValidateBodyEntry<T>[];
   req?: Request;
   requestBodyEntriesObj?: T;
+  res?: Response;
+  sendAResponseWithErrors?: boolean;
 }) {
-  const errors: { message: string; errInputName: string }[] = [];
+  const errors: IValidationErrorsArr = [];
   const entriesWithValues = entries.map((entry) => ({
     ...entry,
     value: req
@@ -66,7 +90,11 @@ export const validateBodyEntries = function <
           `Please write a correct ${name}`
         )
       );
-    if (typeof value !== "object" && !optional && value === "")
+    if (
+      typeof value !== "object" &&
+      !optional &&
+      (value === "" || new String(value).trim() === "")
+    )
       errors.push(
         createBodyEntryErrSuppliedWithInputName(`${name} can't be empty!`)
       );
@@ -87,8 +115,10 @@ export const validateBodyEntries = function <
         )
       );
   });
-  return errors;
-};
+  if (errors.length === 0) return errors;
+  if (sendAResponseWithErrors) res!.status(422).json({ errors });
+  return sendAResponseWithErrors ? false : errors;
+}
 
 type validateHelperFn<T, payload extends object> = (
   validateHelperFnArg: {
@@ -189,7 +219,7 @@ export const validatePasswordFn = (password: unknown, name: string) => {
 
 export const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]+$/;
 export const firstAndLastNameRegex = /^[a-zA-ZÀ-ÿ' -]+$/;
-export const properDateFromInputTypeDateRegex = /\d{4}-\d{2}-\d{2}/;
+export const properDateFromInputTypeDateRegex = /^\d{4}-\d{2}-\d{2}$/;
 export const zipCodeRegex = /^[A-Za-z0-9\- ]{2,15}$/;
 
 export const firstAndLastNameValidateFn: bodyEntryValidateFn<

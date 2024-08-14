@@ -3,11 +3,13 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 export interface IUserAuthSliceState {
   isAdmin: boolean;
   login: string | undefined;
+  isLoading: boolean;
 }
 
 const initialState: IUserAuthSliceState = {
   isAdmin: false,
   login: undefined,
+  isLoading: false,
 };
 
 const userAuthSlice = createSlice({
@@ -20,11 +22,15 @@ const userAuthSlice = createSlice({
         isAdmin: boolean;
         login: string | undefined;
       }>
-    ) => action.payload,
+    ) => ({ ...action.payload, isLoading: false }),
     resetAuthData: () => ({
       isAdmin: false,
       login: undefined,
+      isLoading: false,
     }),
+    setIsFetching: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload;
+    },
   },
 });
 

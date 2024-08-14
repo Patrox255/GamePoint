@@ -1,16 +1,17 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import "./index.css";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Provider } from "react-redux";
+
+import "./index.css";
 import RootLayout from "./pages/RootLayout.tsx";
 import MainPage from "./pages/MainPage.tsx";
 import ErrorPage from "./pages/ErrorPage.tsx";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/fetch.ts";
 import ProductsPage, {
   loader as ProductsPageLoader,
 } from "./pages/ProductsPage.tsx";
-import { Provider } from "react-redux";
 import store from "./store/index.ts";
 import ProductPage, {
   loader as productPageLoader,
@@ -23,6 +24,7 @@ import VerifyEmailPage, {
 import CartPage from "./pages/CartPage.tsx";
 import UserPanelPage from "./pages/UserPanelPage.tsx";
 import { loader as userPanelLoader } from "./pages/UserPanelPage.tsx";
+import OrderPage, { loader as orderPageLoader } from "./pages/OrderPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -58,6 +60,11 @@ const router = createBrowserRouter([
       },
       { path: "cart", element: <CartPage /> },
       { path: "user", element: <UserPanelPage />, loader: userPanelLoader },
+      {
+        path: "order",
+        element: <OrderPage />,
+        loader: orderPageLoader,
+      },
     ],
   },
 ]);

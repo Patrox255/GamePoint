@@ -14,17 +14,21 @@ import Button from "../components/UI/Button";
 import InputFieldElement from "../components/UI/InputFieldElement";
 import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
 import RegisterFormContent from "../components/formRelated/RegisterFormContent";
+import { ContactInformationFormContentContext } from "../components/formRelated/ContactInformationFormContent";
 
 export const RegisterPageFormControls = ({
   additionalResetClickAction,
-  submitBtnText = "Register",
+  submitBtnTextFromProps = "Register",
   children,
 }: {
   additionalResetClickAction?: () => void;
-  submitBtnText?: string;
+  submitBtnTextFromProps?: string;
   children?: ReactNode;
 }) => {
   const { isPending } = useContext(FormWithErrorHandlingContext);
+  const submitBtnText =
+    useContext(ContactInformationFormContentContext).submitBtnText ||
+    submitBtnTextFromProps;
 
   return (
     <div className="form-controls flex gap-3 justify-between w-full py-6">

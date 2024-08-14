@@ -18,6 +18,7 @@ const CartItemSchema = new Schema<ICartItem>(
   { _id: false }
 );
 
+type userActiveAddiitionalContactInformation = mongoose.Types.ObjectId | null;
 export interface IUser {
   login: string;
   password: string;
@@ -25,8 +26,9 @@ export interface IUser {
   isAdmin?: boolean;
   emailVerified?: boolean;
   additionalContactInformation?: mongoose.Types.ObjectId[];
-  activeAdditionalContactInformation?: mongoose.Types.ObjectId;
+  activeAdditionalContactInformation?: userActiveAddiitionalContactInformation;
   cart?: ICartItem[];
+  orders?: mongoose.Types.ObjectId[];
 }
 
 const UserSchema = new Schema<IUser>({
@@ -50,6 +52,13 @@ const UserSchema = new Schema<IUser>({
   cart: [
     {
       type: CartItemSchema,
+      default: [],
+    },
+  ],
+  orders: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Order",
       default: [],
     },
   ],

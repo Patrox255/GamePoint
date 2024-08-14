@@ -1,10 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import MainWrapper from "../components/structure/MainWrapper";
 import Header from "../components/UI/headers/Header";
 import { useAppDispatch, useAppSelector } from "../hooks/reduxStore";
-import { getCartDetails } from "../lib/fetch";
-import { ReactNode, useCallback, useEffect, useState } from "react";
 import Error from "../components/UI/Error";
 import LoadingFallback from "../components/UI/LoadingFallback";
 import GamesResults from "../components/main/nav/GamesResults";
@@ -14,9 +13,11 @@ import Button from "../components/UI/Button";
 import Input from "../components/UI/Input";
 import { modifyCartQuantityAction } from "../store/customActions";
 import HeaderLinkOrHeaderAnimation from "../components/UI/headers/HeaderLinkOrHeaderAnimation";
-import { useNavigate } from "react-router-dom";
 import { IModifyProductQuantityPayload } from "../store/cartSlice";
 import useRetrieveContactInformation from "../hooks/accountRelated/useRetrieveContactInformation";
+import navigatePaths from "../helpers/navigatePaths";
+import useRetrieveCartDetails from "../hooks/useRetrieveCartDetails";
+import generateGamesWithQuantityOutOfCartDetailsEntries from "../helpers/generateGamesWithQuantityOutOfCartDetailsEntries";
 
 const CartPageHeader = ({ children }: { children: ReactNode }) => (
   <header className="mb-6">
@@ -133,23 +134,19 @@ const AdditionalGameInformation = ({
 };
 
 export default function CartPage() {
-  const cart = useAppSelector((state) => state.cartSlice.cart);
+  const {
+    cartDetailsData,
+    cartDetailsError,
+    cartDetailsIsLoading,
+    stateCartStable: cart,
+  } = useRetrieveCartDetails();
   const isLogged =
     useAppSelector((state) => state.userAuthSlice.login) !== undefined;
 
-  const {
-    data: cartData,
-    error: cartError,
-    isLoading: cartIsLoading,
-  } = useQuery({
-    queryFn: ({ signal }) => getCartDetails(signal, cart),
-    queryKey: ["cart-details", cart.map((cartEntry) => cartEntry.id)],
-    enabled: cart.length > 0,
-    refetchInterval: 30000, // monitoring prices
-  });
-
-  const cartDetails = cartData?.data;
-
+  const cartDetailsStable = useMemo(
+    () => cartDetailsData?.data,
+    [cartDetailsData]
+  );
   const navigate = useNavigate();
 
   const {
@@ -159,26 +156,39 @@ export default function CartPage() {
   } = useRetrieveContactInformation();
 
   const isLoading =
-    cartIsLoading || (isLogged && userContactInformationIsLoading);
+    cartDetailsIsLoading ||
+    (isLogged && userContactInformationIsLoading) ||
+    !cart;
   const isReady =
-    cartData && (!isLogged || (userContactInformationData && isLogged));
+    cartDetailsData && (!isLogged || (userContactInformationData && isLogged));
   const hasToProvideContactInformation =
     isReady &&
     isLogged &&
     userContactInformationData?.data.additionalContactInformation.length === 0;
 
+  const gamesWithQuantityStable = useMemo(
+    () =>
+      !cartDetailsStable
+        ? undefined
+        : generateGamesWithQuantityOutOfCartDetailsEntries(
+            cartDetailsStable,
+            cart!
+          ),
+    [cart, cartDetailsStable]
+  );
+
   let content;
-  if (cart.length === 0)
+  if (cart && cart.length === 0)
     content = (
       <CartPageHeader>
         Currently your cart is empty. Feel free to add some products
       </CartPageHeader>
     );
-  if (cartError)
+  if (cartDetailsError)
     content = (
       <>
         <CartPageHeader>Failed to load your cart content!</CartPageHeader>
-        <Error message={cartError.message} />
+        <Error message={cartDetailsError.message} />
       </>
     );
   if (isLogged && userContactInformationError)
@@ -196,19 +206,13 @@ export default function CartPage() {
       </>
     );
   if (isReady) {
-    const gamesWithQuantity = cartDetails!.map((cartDetailsEntry) => ({
-      ...cartDetailsEntry.id,
-      quantity: cart.find(
-        (cartEntry) => cartEntry.id === cartDetailsEntry.id._id
-      )!.quantity,
-    }));
     content = (
       <>
         <CartPageHeader>Your cart:</CartPageHeader>
         <article className="w-7/8 flex">
           <section className="w-3/4">
             <GamesResults
-              games={gamesWithQuantity}
+              games={gamesWithQuantityStable!}
               largeFormat
               moveHighlight={false}
               headerLinkInsteadOfWholeGameContainer={true}
@@ -220,7 +224,7 @@ export default function CartPage() {
               Total price:
               <span className="font-bold text-highlightRed text-xl">
                 {priceFormat.format(
-                  gamesWithQuantity.reduce(
+                  gamesWithQuantityStable!.reduce(
                     (totalPrice, game) =>
                       totalPrice + game.quantity * game.finalPrice,
                     0
@@ -233,7 +237,7 @@ export default function CartPage() {
                 navigate(
                   !hasToProvideContactInformation
                     ? "/order"
-                    : '/user?panelSection="contact"'
+                    : navigatePaths.userPanelContact
                 )
               }
             >

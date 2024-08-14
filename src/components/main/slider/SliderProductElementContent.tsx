@@ -199,10 +199,10 @@ export default function SliderProductElementContent({
             </div>
             <div className="price-product-page-container w-full flex justify-around">
               <PriceTag
-                price={element.price}
-                discount={element.discount}
+                priceFromProps={element.price}
+                discountFromProps={element.discount}
                 startAnimation={finishedLoadingDescription}
-                finalPrice={element.finalPrice}
+                finalPriceFromProps={element.finalPrice}
               />
               {children(element)}
             </div>

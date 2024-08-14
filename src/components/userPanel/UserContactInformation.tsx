@@ -2,13 +2,8 @@ import { createContext, useCallback, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useLoaderData } from "react-router-dom";
 
-import {
-  IActionMutateArgsContact,
-  RegisterPageFormControls,
-} from "../../pages/RegisterPage";
-import RegisterFormContent, {
-  IInputFieldsDefaultValues,
-} from "../formRelated/RegisterFormContent";
+import { IActionMutateArgsContact } from "../../pages/RegisterPage";
+import { IInputFieldsDefaultValues } from "../formRelated/RegisterFormContent";
 import FormWithErrorHandling, {
   FormActionBackendErrorResponse,
   FormActionBackendResponse,
@@ -26,9 +21,9 @@ import Error from "../UI/Error";
 import UserContactInformationOverviews, {
   AddANewContactDetailsEntry,
 } from "./UserContactInformationOverviews";
-import Button from "../UI/Button";
 import { IAdditionalContactInformation } from "../../models/additionalContactInformation.model";
 import useRetrieveContactInformation from "../../hooks/accountRelated/useRetrieveContactInformation";
+import ContactInformationFormContent from "../formRelated/ContactInformationFormContent";
 
 interface IActionMutateArgsContactUserPanelFormData {
   newContactInformation: IActionMutateArgsContact;
@@ -46,7 +41,7 @@ export const ChangeActiveUserContactInformationContext = createContext<{
   handleApplyClick: (newActiveAdditionalInformationId: string) => void;
   error: FormActionBackendErrorResponse | null;
   contactInformationArr: IAdditionalContactInformation[];
-  activeContactInformationOverviewIdFromReq: string;
+  activeContactInformationOverviewIdFromReq?: string;
   data?: FormActionBackendResponse;
   setContactInformationSectionState: React.Dispatch<
     React.SetStateAction<string>
@@ -55,7 +50,7 @@ export const ChangeActiveUserContactInformationContext = createContext<{
   handleApplyClick: () => {},
   error: null,
   contactInformationArr: [],
-  activeContactInformationOverviewIdFromReq: "",
+  activeContactInformationOverviewIdFromReq: undefined,
   data: undefined,
   setContactInformationSectionState: () => {},
 });
@@ -197,24 +192,19 @@ export default function UserContactInformation() {
         onSubmit={handleFormSubmit}
         lightTheme
       >
-        <RegisterFormContent
+        <ContactInformationFormContent
           defaultValuesObj={
             defaultContactInformationFormValues
               ? (defaultContactInformationFormValues as unknown as IInputFieldsDefaultValues)
               : undefined
           }
-        />
-        <RegisterPageFormControls
           submitBtnText={
             contactInformationSectionState === "add"
               ? "Add Entry"
               : "Edit Entry"
           }
-        >
-          <Button type="button" onClick={handleGoToContactInformationMainPage}>
-            Go back
-          </Button>
-        </RegisterPageFormControls>
+          goBackBtnClickHandler={handleGoToContactInformationMainPage}
+        />
       </FormWithErrorHandling>
     </article>
   );

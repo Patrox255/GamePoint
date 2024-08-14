@@ -71,6 +71,7 @@ const inputFieldsObjs: IInputFieldsObjs = {
       required: true,
       pattern: firstAndLastNamePattern,
     },
+    propertyNameToDisplay: "First name",
   },
   surName: {
     name: "surName",
@@ -79,12 +80,14 @@ const inputFieldsObjs: IInputFieldsObjs = {
       required: true,
       pattern: firstAndLastNamePattern,
     },
+    propertyNameToDisplay: "Surname",
   },
   dateOfBirth: {
     name: "dateOfBirth",
     placeholder: "Select your date of birth",
     otherValidationAttributes: { required: true },
     type: "date",
+    propertyNameToDisplay: "Date of birth",
   },
   country: {
     name: "country",
@@ -92,6 +95,7 @@ const inputFieldsObjs: IInputFieldsObjs = {
     otherValidationAttributes: { required: true },
     renderLabel: true,
     type: "select",
+    propertyNameToDisplay: "Country",
   },
   zipCode: {
     name: "zipCode",
@@ -100,27 +104,32 @@ const inputFieldsObjs: IInputFieldsObjs = {
       required: true,
       pattern: "^[A-Za-z0-9\\- ]{2,15}$",
     },
+    propertyNameToDisplay: "Zip code",
   },
   city: {
     name: "city",
     placeholder: "Enter your city name",
     otherValidationAttributes: { required: true },
+    propertyNameToDisplay: "City",
   },
   street: {
     name: "street",
     placeholder: "Enter your street name",
     otherValidationAttributes: { required: true },
+    propertyNameToDisplay: "Street",
   },
   house: {
     name: "house",
     placeholder: "Enter your house number",
     otherValidationAttributes: { required: true },
     renderPlaceholderInTheLabel: false,
+    propertyNameToDisplay: "House number",
   },
   flat: {
     name: "flat",
     placeholder: "Enter your flat number",
     renderLabel: false,
+    propertyNameToDisplay: "Flat number",
   },
   // Decided to omit using city, street, house and flat number regex as they are fairly unique for some countries
   // and it could possibly cause more harm than good
@@ -132,6 +141,7 @@ const inputFieldsObjs: IInputFieldsObjs = {
       // I didn't specify a sophisticated pattern for validating phone numbers as they can be fairly different and realistically
       // we should validate them by sending appropriate validation messages to them
     },
+    propertyNameToDisplay: "Phone number",
   },
 };
 

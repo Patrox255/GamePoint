@@ -1,6 +1,7 @@
-import { MouseEventHandler, ReactNode } from "react";
+import { MouseEventHandler, ReactNode, useContext } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import properties from "../../styles/properties";
+import { ContactInformationFormContentContext } from "../formRelated/ContactInformationFormContent";
 
 const defaultAdditionalTailwindCSS = { px: "px-6", py: "py-2" };
 
@@ -34,6 +35,10 @@ export default function Button({
   type?: "submit" | "reset" | "button";
   useRounded?: boolean;
 }) {
+  const onClickFromContactInformationFormCtx = useContext(
+    ContactInformationFormContentContext
+  ).goBackBtnClickHandler;
+
   const initialClasses = {
     opacity: 0.5,
     ...(useBgColor && { backgroundColor: properties.bodyBg }),
@@ -102,7 +107,7 @@ export default function Button({
         }
         disabled={(active && !canClickWhileActive) || disabled}
         key={passedKey}
-        onClick={onClick}
+        onClick={onClickFromContactInformationFormCtx || onClick}
       >
         {children}
       </motion.button>

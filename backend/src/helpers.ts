@@ -208,11 +208,11 @@ export const createCartWithGamesBasedOnReceivedCart = async function (
 ) {
   return await Promise.all(
     cart.map(async (cartEntry) => {
-      const { id } = cartEntry;
+      const { id, quantity } = cartEntry;
       if (!isValidObjectId(id)) return { relatedGame: null };
       const gameId = new mongoose.Types.ObjectId(id);
       const foundGame = await Game.findById(gameId);
-      return { ...cartEntry, relatedGame: foundGame, id: gameId };
+      return { relatedGame: foundGame, quantity };
     })
   );
 };
@@ -224,7 +224,7 @@ export const updateUserCartBasedOnReceivedOne = async function (
   const cartWithGames = await createCartWithGamesBasedOnReceivedCart(cart);
   const cartToSave = cartWithGames
     .filter((cartEntry) => cartEntry.relatedGame !== null)
-    .map((cartEntry) => filterPropertiesFromObj(cartEntry, ["relatedGame"]));
+    .map((cartEntry) => ({ ...cartEntry, id: cartEntry.relatedGame!._id }));
   await User.updateOne({ login }, { cart: cartToSave });
 };
 

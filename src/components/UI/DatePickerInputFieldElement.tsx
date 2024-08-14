@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
   MouseEvent,
@@ -30,6 +31,21 @@ import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo
 import Table, { tableCellIsDisabledFn, tableOnCellClickFn } from "./Table";
 
 export const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+export const createDateObjBasedOnDatePickerInputValue = (inputValue: string) =>
+  createDateNoTakingTimezoneIntoAccount(
+    inputValue
+      .match(dateRegex)![0]
+      .split("-")
+      .map((dateEntry, i) => (i != 1 ? +dateEntry : +dateEntry - 1))
+      .reduce<{ year?: number; month?: number; day?: number }>(
+        (acc, dateEntry, i) => {
+          acc[i === 0 ? "year" : i === 1 ? "month" : "day"] = dateEntry;
+          return acc;
+        },
+        {}
+      )
+  );
 
 type sliderProductElementChildrenFn = (
   element: unknown,
@@ -667,18 +683,8 @@ export default function DatePickerInputFieldElement({
       return selectedDateDebouncedStable;
     if (!dateRegex.test(selectedDateDebouncedStable)) return nowDate;
 
-    const dateToCheck = createDateNoTakingTimezoneIntoAccount(
+    const dateToCheck = createDateObjBasedOnDatePickerInputValue(
       selectedDateDebouncedStable
-        .match(dateRegex)![0]
-        .split("-")
-        .map((dateEntry, i) => (i != 1 ? +dateEntry : +dateEntry - 1))
-        .reduce<{ year?: number; month?: number; day?: number }>(
-          (acc, dateEntry, i) => {
-            acc[i === 0 ? "year" : i === 1 ? "month" : "day"] = dateEntry;
-            return acc;
-          },
-          {}
-        )
     );
     if (!dateInPossibleRange(dateToCheck)) return nowDate;
     return dateToCheck;

@@ -28,6 +28,7 @@ export interface IFormInputField {
   active?: boolean;
   selectOptions?: string[];
   defaultValue?: inputValue;
+  propertyNameToDisplay?: string;
 }
 
 export type FormInputFields = IFormInputField[];

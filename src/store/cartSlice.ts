@@ -7,11 +7,11 @@ export interface ICartStateArrEntry {
 }
 export type cartStateArr = ICartStateArrEntry[];
 export type cartState = {
-  cart: cartStateArr;
+  cart?: cartStateArr;
   optimisticUpdatingInProgress: boolean;
 };
 const initialState: cartState = {
-  cart: [],
+  cart: undefined,
   optimisticUpdatingInProgress: false,
 };
 
@@ -22,7 +22,10 @@ export interface IModifyProductQuantityPayload {
   newQuantity?: number;
 }
 
-export type cartDetails = { id: IGame; quantity: number }[];
+export interface ICartDetailsEntry {
+  relatedGame: IGame;
+}
+export type cartDetails = ICartDetailsEntry[];
 
 const cartSlice = createSlice({
   name: "cartSlice",
@@ -37,19 +40,19 @@ const cartSlice = createSlice({
       action: PayloadAction<IModifyProductQuantityPayload>
     ) => {
       const { productId, operation, newQuantity } = action.payload;
-      const { cart } = state;
+      const cart = state.cart;
+      if (!cart) return;
       const cartProduct = cart.find((product) => product.id === productId);
 
       if (!cartProduct) {
         return {
           ...state,
-          cart:
-            operation !== "decrease"
-              ? [
-                  ...cart,
-                  { id: productId, quantity: newQuantity ? newQuantity : 1 },
-                ]
-              : cart,
+          ...(operation !== "decrease" && {
+            cart: [
+              ...cart,
+              { id: productId, quantity: newQuantity ? newQuantity : 1 },
+            ],
+          }),
         };
       }
       const newProductQuantity =

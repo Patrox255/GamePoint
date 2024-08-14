@@ -1,6 +1,6 @@
 import { IMongooseDocument } from "./mongooseDocument.model";
 
-export interface IAdditionalContactInformation extends IMongooseDocument {
+export interface IAdditionalContactInformationFrontEnd {
   firstName: string;
   surName: string;
   dateOfBirth: Date;
@@ -12,3 +12,7 @@ export interface IAdditionalContactInformation extends IMongooseDocument {
   house: string;
   flat?: string;
 }
+
+export interface IAdditionalContactInformation
+  extends IAdditionalContactInformationFrontEnd,
+    IMongooseDocument {}

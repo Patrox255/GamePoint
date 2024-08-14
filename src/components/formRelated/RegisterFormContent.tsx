@@ -9,19 +9,24 @@ import DatePickerInputFieldElement from "../UI/DatePickerInputFieldElement";
 import LoadingFallback from "../UI/LoadingFallback";
 import Error from "../UI/Error";
 import { getCountries } from "../../lib/fetch";
-import { useMemo } from "react";
+import { useContext, useMemo } from "react";
 import { IInputFieldsObjs } from "../../lib/inputFieldsObjs";
 import { inputValue } from "../UI/Input";
+import { ContactInformationFormContentContext } from "./ContactInformationFormContent";
 
 export type IInputFieldsDefaultValues = {
   [key in keyof IInputFieldsObjs]: inputValue;
 };
 
 export default function RegisterFormContent({
-  defaultValuesObj,
+  defaultValuesObjFromProps,
 }: {
-  defaultValuesObj?: IInputFieldsDefaultValues;
+  defaultValuesObjFromProps?: IInputFieldsDefaultValues;
 }) {
+  const defaultValuesObj =
+    useContext(ContactInformationFormContentContext).defaultValuesObj ||
+    defaultValuesObjFromProps;
+
   const inputFieldsObjectsWithDefaultValues = useMemo(() => {
     const newInputFields: IInputFieldsObjs = {
       ...inputFieldsObjs,

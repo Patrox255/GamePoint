@@ -4,13 +4,17 @@ import { API_URL } from "./config";
 import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
 import { IOrderCustomizationProperty } from "../store/products/SearchCustomizationContext";
 import { IReview } from "../models/review.model";
-import { IActionMutateArgsRegister } from "../pages/RegisterPage";
+import {
+  IActionMutateArgsContact,
+  IActionMutateArgsRegister,
+} from "../pages/RegisterPage";
 import { cartDetails, cartStateArr } from "../store/cartSlice";
 import { ILoginActionMutateArgs } from "../components/UI/modals/LoginModal";
 import { IReviewDataToSend } from "../store/product/AddReviewContext";
 import { FormActionBackendResponse } from "../components/UI/FormWithErrorHandling";
 import { IActionMutateArgsContactUserPanel } from "../components/userPanel/UserContactInformation";
 import { IAdditionalContactInformation } from "../models/additionalContactInformation.model";
+import { IGameWithQuantityBasedOnCartDetailsEntry } from "../helpers/generateGamesWithQuantityOutOfCartDetailsEntries";
 
 export const queryClient = new QueryClient();
 
@@ -357,7 +361,7 @@ export const manageContactInformation = async function (
 
 export interface IRetrievedContactInformation {
   additionalContactInformation: IAdditionalContactInformation[];
-  activeAdditionalContactInformation: string;
+  activeAdditionalContactInformation: string | null;
 }
 
 export const retrieveContactInformation = async function (signal: AbortSignal) {
@@ -385,5 +389,28 @@ export const changeUserActiveAdditionalInformation = async function (
     method: "POST",
   });
 
+  return data;
+};
+
+export const validateContactInformationFormData = async function (
+  formData: IActionMutateArgsContact
+) {
+  const data = await getJSON<string>({
+    url: `${API_URL}/contact-information/validate`,
+    method: "POST",
+    body: formData,
+  });
+  return data;
+};
+
+export type IOrderToSendData = {
+  cartDetailsEntry: IGameWithQuantityBasedOnCartDetailsEntry[];
+};
+
+export const placeAnOrder = async function () {
+  const data = await getJSON<string>({
+    url: `${API_URL}/order`,
+    method: "POST",
+  });
   return data;
 };

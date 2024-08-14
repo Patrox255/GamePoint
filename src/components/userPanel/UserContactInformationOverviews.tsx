@@ -3,6 +3,7 @@ import Button from "../UI/Button";
 import { dateTimeFormat } from "../../helpers/dateTimeFormat";
 import { ChangeActiveUserContactInformationContext } from "./UserContactInformation";
 import Error from "../UI/Error";
+import { IAdditionalContactInformation } from "../../models/additionalContactInformation.model";
 
 export const AddANewContactDetailsEntry = function () {
   const { setContactInformationSectionState } = useContext(
@@ -16,20 +17,55 @@ export const AddANewContactDetailsEntry = function () {
   );
 };
 
-export default function UserContactInformationOverviews() {
+export default function UserContactInformationOverviews({
+  contactInformationArrFromProps,
+  handleApplyClickFromProps,
+  userActiveContactInformationIdFromProps,
+  omitShowingControlButtons = false,
+  externalContactInformationIdSet,
+  externalContactInformationIdState,
+  additionalTailwindClasses = "",
+}: {
+  contactInformationArrFromProps?: IAdditionalContactInformation[];
+  handleApplyClickFromProps?: (newContactInformationId: string) => void;
+  userActiveContactInformationIdFromProps?: string;
+  omitShowingControlButtons?: boolean;
+  externalContactInformationIdState?: string;
+  externalContactInformationIdSet?: React.Dispatch<
+    React.SetStateAction<string>
+  >;
+  additionalTailwindClasses?: string;
+}) {
   const {
-    activeContactInformationOverviewIdFromReq,
-    contactInformationArr,
+    activeContactInformationOverviewIdFromReq:
+      activeContactInformationOverviewIdFromCtx,
+    contactInformationArr: contactInformationArrFromCtx,
     error,
-    handleApplyClick,
+    handleApplyClick: handleApplyClickFromCtx,
     data,
     setContactInformationSectionState,
   } = useContext(ChangeActiveUserContactInformationContext);
 
+  const activeContactInformationOverviewIdFromReq =
+    activeContactInformationOverviewIdFromCtx ??
+    userActiveContactInformationIdFromProps;
+  const handleApplyClick = handleApplyClickFromCtx || handleApplyClickFromProps;
+  const contactInformationArr =
+    contactInformationArrFromProps || contactInformationArrFromCtx;
+
   const [
-    curActiveContactInformationOverviewId,
-    setCurActiveContactInformationOverviewId,
-  ] = useState<string>(activeContactInformationOverviewIdFromReq);
+    curActiveContactInformationOverviewIdState,
+    setCurActiveContactInformationOverviewIdState,
+  ] = useState<string>(activeContactInformationOverviewIdFromReq!);
+
+  if (
+    activeContactInformationOverviewIdFromReq === undefined &&
+    externalContactInformationIdState === undefined &&
+    !externalContactInformationIdSet
+  )
+    return (
+      <Error message="Has to provide initial contact information entry id or such a state managing this property by context or props for this component to operate properly!" />
+    );
 
   const validationOrOverallError = error
     ? Array.isArray(error)
@@ -39,9 +75,18 @@ export default function UserContactInformationOverviews() {
     ? data.data
     : undefined;
 
+  const curActiveContactInformationOverviewId =
+    externalContactInformationIdState ??
+    curActiveContactInformationOverviewIdState;
+  const setCurActiveContactInformationOverviewId =
+    externalContactInformationIdSet ||
+    setCurActiveContactInformationOverviewIdState;
+
   return (
     <>
-      <ul className="contact-information-overviews-container w-full flex justify-center items-center gap-4">
+      <ul
+        className={`contact-information-overviews-container w-full flex justify-center items-center gap-4 ${additionalTailwindClasses}`}
+      >
         {contactInformationArr.map((contactInformationEntry) => {
           const activeEntry =
             contactInformationEntry._id ===
@@ -84,30 +129,32 @@ export default function UserContactInformationOverviews() {
           );
         })}
       </ul>
-      <div className="user-contact-information-overviews-control flex gap-4 justify-center items-center py-12">
-        <Button
-          disabled={
-            curActiveContactInformationOverviewId ===
-            activeContactInformationOverviewIdFromReq
-          }
-          onClick={() =>
-            handleApplyClick(curActiveContactInformationOverviewId)
-          }
-        >
-          Set as active contact details
-        </Button>
-        <Button
-          disabled={curActiveContactInformationOverviewId === ""}
-          onClick={() =>
-            setContactInformationSectionState(
-              curActiveContactInformationOverviewId
-            )
-          }
-        >
-          Edit selected contact details
-        </Button>
-        <AddANewContactDetailsEntry />
-      </div>
+      {!omitShowingControlButtons && (
+        <div className="user-contact-information-overviews-control flex gap-4 justify-center items-center py-12">
+          <Button
+            disabled={
+              curActiveContactInformationOverviewId ===
+              activeContactInformationOverviewIdFromReq
+            }
+            onClick={() =>
+              handleApplyClick(curActiveContactInformationOverviewId)
+            }
+          >
+            Set as active contact details
+          </Button>
+          <Button
+            disabled={curActiveContactInformationOverviewId === ""}
+            onClick={() =>
+              setContactInformationSectionState(
+                curActiveContactInformationOverviewId
+              )
+            }
+          >
+            Edit selected contact details
+          </Button>
+          <AddANewContactDetailsEntry />
+        </div>
+      )}
       {validationOrOverallError && (
         <Error message={validationOrOverallError.message} smallVersion />
       )}

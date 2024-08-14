@@ -52,7 +52,7 @@ export default function Header({
             ? "cursor-pointer"
             : ""
           : colorTailwindClass
-      } ${additionalTailwindClasses}`}
+      } text-center ${additionalTailwindClasses}`}
       {...motionAnimationProperties}
       {...(usesHeaderLinkContext ? headerAnimationProps : {})}
     >

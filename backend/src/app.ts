@@ -13,7 +13,6 @@ import Publisher, { IPublisher } from "./models/publisher.model";
 import Developer, { IDeveloper } from "./models/developer.model";
 import User, { IUser } from "./models/user.model";
 import {
-  filterPropertiesFromObj,
   corsOptions,
   createDocumentsOfObjsAndInsert,
   dropCollectionsIfTheyExist,
@@ -36,6 +35,7 @@ import {
   getUserContactInformationByLogin,
   createAndVerifyDateOfBirthFromInput,
   verifyCreateAndInsertAdditionalContactInformationDocumentBasedOnRequestData,
+  filterPropertiesFromObj,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -48,6 +48,7 @@ import {
   addReviewEntries,
   cartDataEntries,
   changeActiveContactInformationEntries,
+  contactInformationEntries,
   IAddReviewEntriesFromRequest,
   ICartDataEntriesFromRequest,
   IChangeActiveContactInformationEntriesFromRequest,
@@ -1044,12 +1045,14 @@ const startServer = async () => {
         try {
           const { login, password, cart } = req.body as ILoginBodyFromRequest;
 
-          const stringBodyEntriesErrors = validateBodyEntries({
-            entries: loginBodyEntriesWithCart,
-            req,
-          });
-          const errors = [...stringBodyEntriesErrors];
-          if (errors.length > 0) return res.status(422).json({ errors });
+          if (
+            !validateBodyEntries({
+              entries: loginBodyEntriesWithCart,
+              req,
+              res,
+            })
+          )
+            return;
 
           const foundUser = await User.findOne({
             login: { $eq: login },
@@ -1119,8 +1122,8 @@ const startServer = async () => {
           const {
             token: { login },
           } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
-          const errors = validateBodyEntries({ entries: cartDataEntries, req });
-          if (errors.length > 0) return res.sendStatus(422);
+          if (!validateBodyEntries({ entries: cartDataEntries, req, res }))
+            return;
           const { cart } = req.body as ICartDataEntriesFromRequest;
           await updateUserCartBasedOnReceivedOne(cart, login!);
           return res.sendStatus(200);
@@ -1135,26 +1138,25 @@ const startServer = async () => {
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const { cart } = req.body as ICartDataEntriesFromRequest;
-          const errors = validateBodyEntries({
-            entries: cartDataEntries.map((cartDataEntry) => ({
-              ...cartDataEntry,
-              optional: false,
-            })),
-            req,
-          });
-          if (errors.length > 0) return res.sendStatus(422);
+          if (
+            !validateBodyEntries({
+              entries: cartDataEntries.map((cartDataEntry) => ({
+                ...cartDataEntry,
+                optional: false,
+              })),
+              req,
+              res,
+            })
+          )
+            return;
           const cartWithGames = await createCartWithGamesBasedOnReceivedCart(
             cart
           );
           const cartToSend = cartWithGames
             .filter((cartEntry) => cartEntry.relatedGame !== null)
-            .map((cartEntry) => ({
-              ...filterPropertiesFromObj(cartEntry, [
-                "relatedGame",
-                "quantity",
-              ]),
-              id: cartEntry.relatedGame,
-            }));
+            .map((cartEntry) =>
+              filterPropertiesFromObj(cartEntry, ["quantity"])
+            );
           return res.status(200).json(cartToSend);
         } catch (e) {
           next(e);
@@ -1195,17 +1197,20 @@ const startServer = async () => {
             expandedContactInformation !== undefined;
           const validateBodyEntriesArgObj = { req };
 
-          const errors = !includedContactInformation
-            ? validateBodyEntries({
-                ...validateBodyEntriesArgObj,
-                entries: registerBodyEntries.slice(0, 4),
-              })
-            : validateBodyEntries({
-                ...validateBodyEntriesArgObj,
-                entries: registerBodyEntries,
-              });
-
-          if (errors.length > 0) return res.status(422).json({ errors });
+          if (
+            !includedContactInformation
+              ? !validateBodyEntries({
+                  ...validateBodyEntriesArgObj,
+                  entries: registerBodyEntries.slice(0, 4),
+                  res,
+                })
+              : !validateBodyEntries({
+                  ...validateBodyEntriesArgObj,
+                  entries: registerBodyEntries,
+                  res,
+                })
+          )
+            return;
 
           let dateOfBirthToSave: Date | false;
           if (includedContactInformation) {
@@ -1297,12 +1302,14 @@ const startServer = async () => {
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const { uId, providedRegistrationCode, registrationCode } = req.body;
-          const verifyEmailEntriesErrors = validateBodyEntries({
-            entries: verifyEmailEntries,
-            req,
-          });
-          if (verifyEmailEntriesErrors.length > 0)
-            return res.status(422).json({ errors: verifyEmailEntriesErrors });
+          if (
+            !validateBodyEntries({
+              entries: verifyEmailEntries,
+              req,
+              res,
+            })
+          )
+            return;
 
           const foundUser = await User.findById(uId);
           if (!foundUser)
@@ -1336,11 +1343,14 @@ const startServer = async () => {
       verifyJwt,
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          const errors = validateBodyEntries({
-            entries: addReviewEntries,
-            req,
-          });
-          if (errors.length > 0) return res.status(422).json({ errors });
+          if (
+            !validateBodyEntries({
+              entries: addReviewEntries,
+              req,
+              res,
+            })
+          )
+            return;
 
           const { criteria, reviewContent, gameId } =
             req.body as IAddReviewEntriesFromRequest;
@@ -1400,11 +1410,14 @@ const startServer = async () => {
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const { reviewId } = req.body as IRemoveReviewEntriesFromRequest;
-          const errors = validateBodyEntries({
-            entries: removeReviewEntries,
-            req,
-          });
-          if (errors.length > 0) return res.status(422).json({ errors });
+          if (
+            !validateBodyEntries({
+              entries: removeReviewEntries,
+              req,
+              res,
+            })
+          )
+            return;
 
           const {
             token: { userId },
@@ -1476,12 +1489,14 @@ const startServer = async () => {
         const { newContactInformation, updateContactInformationId } =
           req.body as IModifyOrAddContactInformationEntriesFromRequest;
 
-        const errors =
-          validateBodyEntries<IContactInformationEntriesFromRequest>({
+        if (
+          !validateBodyEntries<IContactInformationEntriesFromRequest>({
             requestBodyEntriesObj: newContactInformation,
             entries: modifyOrAddContactInformationValidationEntries,
-          });
-        if (errors.length > 0) return res.status(422).json({ errors });
+            res,
+          })
+        )
+          return;
 
         const dateOfBirthToSave = createAndVerifyDateOfBirthFromInput(
           newContactInformation.dateOfBirth,
@@ -1556,11 +1571,14 @@ const startServer = async () => {
             token: { login },
           } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
 
-          const errors = validateBodyEntries({
-            entries: changeActiveContactInformationEntries,
-            req,
-          });
-          if (errors.length > 0) return res.status(422).json({ errors });
+          if (
+            !validateBodyEntries({
+              entries: changeActiveContactInformationEntries,
+              req,
+              res,
+            })
+          )
+            return;
           const { newActiveAdditionalInformationEntryId } =
             req.body as IChangeActiveContactInformationEntriesFromRequest;
 
@@ -1606,6 +1624,18 @@ const startServer = async () => {
         }
       }
     );
+
+    app.post("/contact-information/validate", (req, res) => {
+      if (
+        !validateBodyEntries<IContactInformationEntriesFromRequest>({
+          req,
+          entries: contactInformationEntries,
+          res,
+        })
+      )
+        return;
+      return res.sendStatus(200);
+    });
 
     const server = app.listen(port);
 

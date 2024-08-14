@@ -40,19 +40,6 @@ export const loginBodyEntries: IValidateBodyEntry<ILoginBodyFromRequest>[] = [
 export const loginBodyEntriesWithCart: IValidateBodyEntry<ILoginBodyFromRequest>[] =
   [...loginBodyEntries, cartDataEntry];
 
-// export interface IContactInformationEntriesFromRequest {
-//   firstName: string;
-//   surName: string;
-//   dateOfBirth: string;
-//   phoneNr: string;
-//   country: string;
-//   zipCode: string;
-//   city: string;
-//   street: string;
-//   house: string;
-//   flat?: string;
-// }
-
 export interface IContactInformationEntriesFromRequest
   extends IAdditionalContactInformationWithoutDateOfBirth,
     IBodyFromRequestToValidate {

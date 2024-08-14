@@ -1,10 +1,14 @@
 import mongoose, { Schema, Types } from "mongoose";
 import slugify from "slugify";
 
-export interface IGame {
-  title: string;
+export interface IProductPriceInformation {
   price: number;
   discount: number;
+  finalPrice?: number;
+}
+
+export interface IGame extends IProductPriceInformation {
+  title: string;
   releaseDate: Date;
   genres: Types.ObjectId[];
   platforms: Types.ObjectId[];
@@ -13,7 +17,6 @@ export interface IGame {
   popularity?: number;
   artworks?: string[];
   summary: string;
-  finalPrice?: number;
   slug?: string;
   storyLine?: string;
   reviews?: Types.ObjectId[];

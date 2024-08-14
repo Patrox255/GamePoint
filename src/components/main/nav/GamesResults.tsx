@@ -10,8 +10,12 @@ import Header from "../../UI/headers/Header";
 const gameContainerClasses =
   "w-full grid grid-cols-gameSearchBarResult items-center gap-2 px-6";
 
-const GameResultContext = createContext<{ game: IGame | undefined }>({
+export const GameResultContext = createContext<{
+  game: IGame | undefined;
+  showQuantityAndFinalPrice: boolean;
+}>({
   game: undefined,
+  showQuantityAndFinalPrice: false,
 });
 
 const GameLink = ({
@@ -44,6 +48,7 @@ export default function GamesResults<T extends IGame>({
   moveHighlight = true,
   headerLinkInsteadOfWholeGameContainer = false,
   AdditionalGameInformation,
+  showQuantityAndFinalPrice = false,
 }: {
   games: T[];
   largeFormat?: boolean;
@@ -51,6 +56,7 @@ export default function GamesResults<T extends IGame>({
   moveHighlight?: boolean;
   headerLinkInsteadOfWholeGameContainer?: boolean;
   AdditionalGameInformation?: ({ game }: { game: T }) => ReactNode;
+  showQuantityAndFinalPrice?: boolean;
 }) {
   const GameContainer = useCallback(
     ({ children }: { children: ReactNode }) =>
@@ -106,7 +112,9 @@ export default function GamesResults<T extends IGame>({
             whileHover="highlighted"
             layout="size"
           >
-            <GameResultContext.Provider value={{ game }}>
+            <GameResultContext.Provider
+              value={{ game, showQuantityAndFinalPrice }}
+            >
               <GameContainer>
                 <figure className="grid grid-cols-2 items-center gap-2 justify-center">
                   {game.artworks.length !== 0 ? (
@@ -141,9 +149,6 @@ export default function GamesResults<T extends IGame>({
                 </figure>
                 <div className="game-additional-information flex justify-center items-center gap-2 flex-wrap">
                   <PriceTag
-                    price={game.price}
-                    discount={game.discount}
-                    finalPrice={game.finalPrice}
                     startAnimation
                     {...(!largeFormat && {
                       removeOriginalPriceAfterAnimation: true,

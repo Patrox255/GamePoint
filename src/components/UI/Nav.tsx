@@ -67,7 +67,9 @@ const Nav = memo(() => {
     // when logout fails also result of this response doesn't change so that won't trigger any change in state nor reevaluation of the logic in RootLayout
   });
 
-  const { login, isAdmin } = useAppSelector((state) => state.userAuthSlice);
+  const { login, isAdmin, isLoading } = useAppSelector(
+    (state) => state.userAuthSlice
+  );
 
   const stableMutateFn = useCallback(() => mutate(), [mutate]);
   const isOnUserPanelPage = pathname.startsWith("/user");
@@ -90,10 +92,46 @@ const Nav = memo(() => {
   }, [isAdmin, isOnUserPanelPage, stableMutateFn]);
 
   const showSearchBar = !pathname.includes("verify-email");
-  const cartState = useAppSelector((state) => state.cartSlice);
-  const cartTotalQuantity = cartState.cart.reduce(
-    (quantity, product) => quantity + product.quantity,
-    0
+  const { cart } = useAppSelector((state) => state.cartSlice);
+  const cartTotalQuantity = cart
+    ? cart.reduce((quantity, product) => quantity + product.quantity, 0)
+    : undefined;
+
+  const userRelatedElement = isLoading ? undefined : !isLogged ? (
+    <Button onClick={() => setLoginModalOpen(true)}>Log in</Button>
+  ) : (
+    <DropDownMenuWrapper widthTailwindClass="w-auto">
+      <Button>
+        {/* <LinkToDifferentPageWithCurrentPageInformation
+          to="/user/panel"
+          className="w-full h-full block"
+        > */}
+        <div className="flex items-center justify-center">
+          <UserSVG className="w-8 h-8" />
+          {login}
+        </div>
+        {/* </LinkToDifferentPageWithCurrentPageInformation> */}
+      </Button>
+      <DropDownMenuDroppedElementsContainer
+        customPaddingsTailwindClasses={{ px: "0" }}
+      >
+        <ul className="user-panel-nav w-full flex flex-col gap-6 text-center">
+          {userPanelLinks.map((userPanelLink) => (
+            <HeaderLinkSearchParamsContextProvider
+              otherSearchParams={{
+                panelSection: userPanelLink.userPanelParam,
+              }}
+              key={userPanelLink.header}
+            >
+              <NavUserPanelLink
+                header={userPanelLink.header}
+                actionOnClick={userPanelLink.actionOnClick}
+              />
+            </HeaderLinkSearchParamsContextProvider>
+          ))}
+        </ul>
+      </DropDownMenuDroppedElementsContainer>
+    </DropDownMenuWrapper>
   );
 
   return (
@@ -116,57 +154,23 @@ const Nav = memo(() => {
             </Link>
           </>
         )}
-        {!isLogged && (
-          <Button onClick={() => setLoginModalOpen(true)}>Log in</Button>
-        )}
-        {isLogged && (
-          <DropDownMenuWrapper widthTailwindClass="w-auto">
-            <Button>
-              {/* <LinkToDifferentPageWithCurrentPageInformation
-                to="/user/panel"
-                className="w-full h-full block"
-              > */}
-              <div className="flex items-center justify-center">
-                <UserSVG className="w-8 h-8" />
-                {login}
-              </div>
-              {/* </LinkToDifferentPageWithCurrentPageInformation> */}
-            </Button>
-            <DropDownMenuDroppedElementsContainer
-              customPaddingsTailwindClasses={{ px: "0" }}
+        {userRelatedElement}
+        {cart && (
+          <Link to="/cart">
+            <AnimatedSVG
+              svgPath={svgPathBase.cartSVG}
+              additionalTailwindClasses="w-12"
+              defaultFill={properties.bodyBg}
+              useVariants={true}
             >
-              <ul className="user-panel-nav w-full flex flex-col gap-6 text-center">
-                {userPanelLinks.map((userPanelLink) => (
-                  <HeaderLinkSearchParamsContextProvider
-                    otherSearchParams={{
-                      panelSection: userPanelLink.userPanelParam,
-                    }}
-                    key={userPanelLink.header}
-                  >
-                    <NavUserPanelLink
-                      header={userPanelLink.header}
-                      actionOnClick={userPanelLink.actionOnClick}
-                    />
-                  </HeaderLinkSearchParamsContextProvider>
-                ))}
-              </ul>
-            </DropDownMenuDroppedElementsContainer>
-          </DropDownMenuWrapper>
+              {cartTotalQuantity ? (
+                <motion.span className="cart-total-quantity self-end cursor-default">
+                  {cartTotalQuantity}
+                </motion.span>
+              ) : undefined}
+            </AnimatedSVG>
+          </Link>
         )}
-        <Link to="/cart">
-          <AnimatedSVG
-            svgPath={svgPathBase.cartSVG}
-            additionalTailwindClasses="w-12"
-            defaultFill={properties.bodyBg}
-            useVariants={true}
-          >
-            {cartTotalQuantity ? (
-              <motion.span className="cart-total-quantity self-end cursor-default">
-                {cartTotalQuantity}
-              </motion.span>
-            ) : undefined}
-          </AnimatedSVG>
-        </Link>
       </div>
     </nav>
   );

@@ -55,7 +55,7 @@ export default function LoginModal() {
 
   const onSubmitStable = useCallback(
     (formDataObj: ILoginActionMutateArgs) => {
-      mutate({ ...formDataObj, cart });
+      mutate({ ...formDataObj, cart: cart || [] });
     },
     [mutate, cart]
   );
