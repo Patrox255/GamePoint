@@ -1,6 +1,6 @@
 import { useCallback, useContext, useMemo } from "react";
 
-import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContext";
+import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContentContext";
 import inputFieldsObjs, { IInputFieldsObjs } from "../../lib/inputFieldsObjs";
 import { IFormInputField } from "../UI/FormWithErrorHandling";
 import { dateTimeFormat } from "../../helpers/dateTimeFormat";

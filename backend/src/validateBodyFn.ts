@@ -219,7 +219,7 @@ export const validatePasswordFn = (password: unknown, name: string) => {
 
 export const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]+$/;
 export const firstAndLastNameRegex = /^[a-zA-ZÀ-ÿ' -]+$/;
-export const properDateFromInputTypeDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+export const properDateFromInputTypeDateRegex = /^\d{4}-\d{1,2}-\d{1,2}$/;
 export const zipCodeRegex = /^[A-Za-z0-9\- ]{2,15}$/;
 
 export const firstAndLastNameValidateFn: bodyEntryValidateFn<

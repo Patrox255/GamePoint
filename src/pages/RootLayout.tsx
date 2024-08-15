@@ -116,7 +116,6 @@ const RootLayout = ({ children }: { children?: ReactNode }) => {
     initialRender = false;
     if (userCartData || data?.data?.login || userAuthStateStable.login) return;
     const cartStateFromLocalStorage = generateCartStateFromLocalStorage();
-    console.log(cartStateFromLocalStorage);
     dispatch(cartSliceActions.SET_CART(cartStateFromLocalStorage));
   }, [
     searchParams,

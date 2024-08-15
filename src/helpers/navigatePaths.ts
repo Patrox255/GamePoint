@@ -1,3 +1,5 @@
+const userPanelPathName = "/user";
 export default {
-  userPanelContact: '/user?panelSection="contact"',
+  userPanelContact: `${userPanelPathName}?panelSection="contact"`,
+  userOrders: `${userPanelPathName}?panelSection="orders"`,
 };

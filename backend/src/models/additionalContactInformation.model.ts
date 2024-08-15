@@ -17,7 +17,7 @@ export interface IAdditionalContactInformation
   dateOfBirth: Date;
 }
 
-const AdditionalContactInformationSchema =
+export const AdditionalContactInformationSchema =
   new Schema<IAdditionalContactInformation>({
     firstName: { type: String, required: true },
     surName: { type: String, required: true },

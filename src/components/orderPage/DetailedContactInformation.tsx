@@ -1,7 +1,7 @@
 import { useContext } from "react";
 
 import Header from "../UI/headers/Header";
-import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContext";
+import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContentContext";
 import Error from "../UI/Error";
 import FilledContactInformationInputFieldsRepresentation from "./FilledContactInformationInputFieldsRepresentation";
 import { OrderSummarySectionWrapper } from "./OrderSummary";

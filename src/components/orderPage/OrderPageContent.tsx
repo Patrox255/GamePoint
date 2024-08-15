@@ -1,31 +1,59 @@
 import { useMutation } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import FormWithErrorHandling from "../UI/FormWithErrorHandling";
+import FormWithErrorHandling, {
+  FormActionBackendErrorResponse,
+} from "../UI/FormWithErrorHandling";
 import ContactInformationFormContent from "../formRelated/ContactInformationFormContent";
-import { validateContactInformationFormData } from "../../lib/fetch";
+import {
+  IOrderResponseFromFetchFn,
+  IOrderResponseGuest,
+  IOrderResponseLoggedUser,
+  IPlaceAnOrderDataObject,
+  placeAnOrder,
+  queryClient,
+  validateContactInformationFromGuestOrder,
+} from "../../lib/fetch";
 import { IActionMutateArgsContact } from "../../pages/RegisterPage";
 import OrderPageHeader from "./OrderPageHeader";
 import useRetrieveContactInformation from "../../hooks/accountRelated/useRetrieveContactInformation";
 import OrderUserContactCustomization from "./OrderUserContactCustomization";
 import { OrderUserContactCustomizationContext } from "../../store/orderPage/OrderUserContactCustomizationContext";
-import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContext";
+import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContentContext";
 import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
 import { createDateObjBasedOnDatePickerInputValue } from "../UI/DatePickerInputFieldElement";
-import { IAdditionalContactInformationFrontEnd } from "../../models/additionalContactInformation.model";
+import {
+  IAdditionalContactInformation,
+  IAdditionalContactInformationFrontEnd,
+} from "../../models/additionalContactInformation.model";
 import { IInputFieldsDefaultValues } from "../formRelated/RegisterFormContent";
 import OrderSummary from "./OrderSummary";
 import LoadingFallback from "../UI/LoadingFallback";
+import { IGameWithQuantityBasedOnCartDetailsEntry } from "../../helpers/generateGamesWithQuantityOutOfCartDetailsEntries";
+import transformObjPropertiesFromDateToAppropriateStringForBackend from "../../helpers/transformObjPropertyFromDateToAppropriateStringForBackend";
+import navigatePaths from "../../helpers/navigatePaths";
+import TimedOutActionWithProgressBar from "../UI/TimedOutActionWithProgressBar";
+import { useAppDispatch, useAppSelector } from "../../hooks/reduxStore";
+import { cartSliceActions } from "../../store/cartSlice";
+import { OrderPageContentIsLoggedContext } from "../../store/orderPage/OrderPageContentIsLoggedContext";
 
-export default function OrderPageContent({ isLogged }: { isLogged: boolean }) {
+export type IAdditionalContactInformationFromGuestOrder =
+  IActionMutateArgsContact & { email: string };
+
+export default function OrderPageContent() {
+  const navigate = useNavigate();
+  const isLogged = useContext(OrderPageContentIsLoggedContext);
+
   const [
     contactInformationFromFormToProvide,
     setContactInformationFromFormToProvide,
-  ] = useState<IAdditionalContactInformationFrontEnd | undefined>();
+  ] = useState<
+    (IAdditionalContactInformationFrontEnd & { email: string }) | undefined
+  >();
   const [orderStepState, setOrderStepState] = useState<
     "form" | "contact-customization" | "summary"
   >(isLogged ? "contact-customization" : "form");
-  console.log(contactInformationFromFormToProvide);
 
   const {
     data: validateContactInformationData,
@@ -33,7 +61,7 @@ export default function OrderPageContent({ isLogged }: { isLogged: boolean }) {
     isPending: validateContactInformationIsPending,
     mutate: validateContactInformationMutate,
   } = useMutation({
-    mutationFn: validateContactInformationFormData,
+    mutationFn: validateContactInformationFromGuestOrder,
     onSuccess: (_, formData) => {
       setContactInformationFromFormToProvide({
         ...formData,
@@ -84,6 +112,74 @@ export default function OrderPageContent({ isLogged }: { isLogged: boolean }) {
     () => setOrderStepState(isLogged ? "contact-customization" : "form"),
     [isLogged]
   );
+
+  const {
+    mutate: placeAnOrderMutate,
+    data: placeAnOrderData,
+    error: placeAnOrderError,
+    isPending: placeAnOrderIsPending,
+  } = useMutation<
+    IOrderResponseFromFetchFn,
+    FormActionBackendErrorResponse,
+    IPlaceAnOrderDataObject
+  >({
+    mutationFn: placeAnOrder,
+  });
+
+  const dispatch = useAppDispatch();
+
+  const orderPlacedSuccessfully =
+    placeAnOrderData?.data &&
+    (placeAnOrderData.data as IOrderResponseGuest | IOrderResponseLoggedUser)
+      .savedOrderId
+      ? true
+      : false;
+
+  const handleRedirectUponSuccessfulOrder = useCallback(() => {
+    const actionUponSuccessFn = async () => {
+      navigate(navigatePaths.userOrders, { replace: true });
+      dispatch(cartSliceActions.SET_CART([]));
+      await queryClient.invalidateQueries({ queryKey: ["cart"] });
+    };
+
+    actionUponSuccessFn();
+  }, [dispatch, navigate]);
+
+  const handlePlaceAnOrder = useCallback(
+    (orderedGamesDetails: IGameWithQuantityBasedOnCartDetailsEntry[]) => {
+      const datePropertiesArrToTransform = ["dateOfBirth"];
+      placeAnOrderMutate({
+        ...(contactInformationFromFormToProvideStable
+          ? {
+              contactInformationForGuests:
+                transformObjPropertiesFromDateToAppropriateStringForBackend(
+                  contactInformationFromFormToProvideStable,
+                  datePropertiesArrToTransform as (keyof IAdditionalContactInformationFrontEnd)[]
+                ),
+            }
+          : {
+              contactInformationForLoggedUsers:
+                transformObjPropertiesFromDateToAppropriateStringForBackend(
+                  selectedUserContactInformation!,
+                  datePropertiesArrToTransform as (keyof IAdditionalContactInformation)[]
+                ),
+            }),
+        orderedGamesDetails,
+      });
+    },
+    [
+      contactInformationFromFormToProvideStable,
+      placeAnOrderMutate,
+      selectedUserContactInformation,
+    ]
+  );
+
+  const cart = useAppSelector((state) => state.cartSlice.cart);
+
+  useEffect(() => {
+    if (cart && cart.length === 0 && !orderPlacedSuccessfully)
+      navigate("/cart", { replace: true });
+  }, [cart, navigate, orderPlacedSuccessfully]);
 
   if (orderStepState === "contact-customization")
     content = (
@@ -139,6 +235,11 @@ export default function OrderPageContent({ isLogged }: { isLogged: boolean }) {
           contactInformationToRender:
             (selectedUserContactInformation as unknown as IActionMutateArgsContact) ||
             contactInformationFromFormToProvideStable,
+          handlePlaceAnOrder,
+          placeAnOrderData,
+          placeAnOrderError,
+          placeAnOrderIsPending,
+          orderPlacedSuccessfully,
         }}
       >
         <OrderSummary handleGoBack={handleGoBackFromSummarySection} />
@@ -148,6 +249,12 @@ export default function OrderPageContent({ isLogged }: { isLogged: boolean }) {
   return (
     <article className="order-page-content-wrapper flex flex-col w-full px-4 justify-center items-center">
       {content}
+      {orderPlacedSuccessfully && (
+        <TimedOutActionWithProgressBar
+          timeBeforeFiringAnAction={5000}
+          action={handleRedirectUponSuccessfulOrder}
+        />
+      )}
     </article>
   );
 }

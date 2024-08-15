@@ -49,21 +49,28 @@ import {
   cartDataEntries,
   changeActiveContactInformationEntries,
   contactInformationEntries,
+  contactInformationForGuestsEntries,
   IAddReviewEntriesFromRequest,
   ICartDataEntriesFromRequest,
   IChangeActiveContactInformationEntriesFromRequest,
   IContactInformationEntriesFromRequest,
   ILoginBodyFromRequest,
   IModifyOrAddContactInformationEntriesFromRequest,
+  IOrderDataFromRequest,
+  IOrderDataFromRequestContactInformationForGuests,
+  IOrderDataFromRequestOrderedGamesDetails,
   IRegisterBodyFromRequest,
   IRemoveReviewEntriesFromRequest,
   loginBodyEntriesWithCart,
   modifyOrAddContactInformationValidationEntries,
+  orderedGamesEntries,
   registerBodyEntries,
   removeReviewEntries,
   verifyEmailEntries,
 } from "./validateBodyEntries";
 import { validateBodyEntries } from "./validateBodyFn";
+import { IOrderItem } from "./models/orderItem.model";
+import Order, { IOrder } from "./models/order.model";
 
 const app = express();
 const port = 3000;
@@ -1627,14 +1634,183 @@ const startServer = async () => {
 
     app.post("/contact-information/validate", (req, res) => {
       if (
-        !validateBodyEntries<IContactInformationEntriesFromRequest>({
+        !validateBodyEntries<IOrderDataFromRequestContactInformationForGuests>({
           req,
-          entries: contactInformationEntries,
+          entries: contactInformationForGuestsEntries,
           res,
         })
       )
         return;
       return res.sendStatus(200);
+    });
+
+    app.post("/order", onlyAccessJwt, async (req, res, next) => {
+      try {
+        const {
+          orderedGamesDetails,
+          contactInformationForGuests,
+          contactInformationForLoggedUsers,
+        } = req.body as IOrderDataFromRequest;
+
+        const { token } = req as IRequestAdditionAfterAccessJwtfMiddleware &
+          Request;
+        const userId = token?.userId;
+
+        if (contactInformationForLoggedUsers && !userId)
+          return res.status(403).json({
+            message:
+              "You are not allowed to access such contact details entry!",
+          });
+
+        if (!contactInformationForLoggedUsers && !contactInformationForGuests)
+          return res.status(422).json({
+            errors: [
+              {
+                message:
+                  "You have to provide your contact information by typing it into the form or selecting one of your contact details entries in case you are logged in!",
+                errInputName: "",
+              },
+            ],
+          });
+
+        if (
+          !validateBodyEntries<IOrderDataFromRequestOrderedGamesDetails>({
+            entries: orderedGamesEntries,
+            requestBodyEntriesObj: { orderedGamesDetails },
+            res,
+          })
+        )
+          return;
+
+        if (
+          contactInformationForGuests &&
+          !validateBodyEntries<IOrderDataFromRequestContactInformationForGuests>(
+            {
+              entries: contactInformationForGuestsEntries,
+              res,
+              requestBodyEntriesObj: contactInformationForGuests,
+            }
+          )
+        )
+          return;
+
+        if (
+          contactInformationForLoggedUsers &&
+          !validateBodyEntries<IContactInformationEntriesFromRequest>({
+            entries: contactInformationEntries,
+            res,
+            requestBodyEntriesObj: contactInformationForLoggedUsers,
+          })
+        )
+          return;
+
+        let orderItems: IOrderItem[] = [];
+        try {
+          orderItems = await Promise.all(
+            orderedGamesDetails.map(async (orderedGamesDetailsEntry) => {
+              if (!isValidObjectId(orderedGamesDetailsEntry._id))
+                throw new Error(
+                  "One of your order games has an incorrect identificator provided!"
+                );
+              const relatedGame = await Game.findById(
+                orderedGamesDetailsEntry._id
+              );
+              if (!relatedGame)
+                throw new Error(
+                  "One of your order games might have just been deleted!"
+                );
+              (["price", "discount", "finalPrice"] as (keyof IGame)[]).forEach(
+                (gamePriceRelatedProperty) => {
+                  if (
+                    relatedGame[gamePriceRelatedProperty] !==
+                    orderedGamesDetailsEntry[gamePriceRelatedProperty]
+                  )
+                    throw new Error(
+                      "Price for one of the games that You wanted to order might have just been changed!"
+                    );
+                }
+              );
+              const { price, discount, finalPrice, quantity } =
+                orderedGamesDetailsEntry;
+              return {
+                price,
+                discount,
+                finalPrice: finalPrice!,
+                quantity,
+                gameId: relatedGame._id,
+              };
+            })
+          );
+        } catch (e) {
+          return res.status(200).json({
+            message: `${
+              (e as Error).message || "Failed to retrieve order games data!"
+            } Please try refreshing the page.`,
+          });
+        }
+
+        const contactInformation = contactInformationForGuests
+          ? contactInformationForGuests
+          : contactInformationForLoggedUsers!;
+        const contactInformationDateOfBirth =
+          createAndVerifyDateOfBirthFromInput(
+            contactInformation.dateOfBirth,
+            res
+          );
+        if (!contactInformationDateOfBirth) return;
+
+        const salt = await bcrypt.genSalt();
+        const accessCode = await bcrypt.hash(generateRandomStr(8), salt);
+        const orderToSave: IOrder = {
+          items: orderItems,
+          orderContactInformation: {
+            ...contactInformation,
+            dateOfBirth: contactInformationDateOfBirth,
+          },
+          accessCode,
+        };
+        const session = await startSession();
+        session.startTransaction();
+
+        const { newObjs } = await createDocumentsOfObjsAndInsert(
+          [orderToSave],
+          Order,
+          session
+        );
+        const savedOrderId = newObjs[0]._id!;
+        const responseBody = { savedOrderId };
+        if (!userId) {
+          await session.commitTransaction();
+          return res
+            .status(200)
+            .json({
+              ...responseBody,
+              accessCode,
+              email: contactInformationForGuests!.email,
+            });
+        }
+
+        const relatedUser = await User.findById(userId).session(session);
+        if (!relatedUser) {
+          await session.abortTransaction();
+          return res
+            .status(200)
+            .json({ message: "Failed to find your account information!" });
+        }
+        try {
+          await relatedUser
+            .updateOne({ $push: { orders: savedOrderId }, cart: [] })
+            .session(session);
+        } catch (e) {
+          await session.abortTransaction();
+          throw e;
+        }
+
+        await session.commitTransaction();
+        return res.status(200).json(responseBody);
+      } catch (e) {
+        next(e);
+      }
     });
 
     const server = app.listen(port);

@@ -4,7 +4,7 @@ import { getCartDetails } from "../lib/fetch";
 import { useAppSelector } from "./reduxStore";
 import useCompareComplexForUseMemo from "./useCompareComplexForUseMemo";
 
-export default function useRetrieveCartDetails() {
+export default function useRetrieveCartDetails(enabled: boolean = true) {
   const cart = useCompareComplexForUseMemo(
     useAppSelector((state) => state.cartSlice.cart)
   );
@@ -21,7 +21,7 @@ export default function useRetrieveCartDetails() {
       "cart-details",
       cartForQueryToAvoidErrors.map((cartEntry) => cartEntry.id),
     ],
-    enabled: canLookForCartDetails,
+    enabled: canLookForCartDetails && enabled,
     refetchInterval: 30000, // monitoring prices
   });
   return {

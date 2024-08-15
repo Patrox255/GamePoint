@@ -9,7 +9,7 @@ import DatePickerInputFieldElement from "../UI/DatePickerInputFieldElement";
 import LoadingFallback from "../UI/LoadingFallback";
 import Error from "../UI/Error";
 import { getCountries } from "../../lib/fetch";
-import { useContext, useMemo } from "react";
+import { ReactNode, useContext, useMemo } from "react";
 import { IInputFieldsObjs } from "../../lib/inputFieldsObjs";
 import { inputValue } from "../UI/Input";
 import { ContactInformationFormContentContext } from "./ContactInformationFormContent";
@@ -20,8 +20,12 @@ export type IInputFieldsDefaultValues = {
 
 export default function RegisterFormContent({
   defaultValuesObjFromProps,
+  children,
 }: {
   defaultValuesObjFromProps?: IInputFieldsDefaultValues;
+  children?: (
+    inputFieldsObjectsWithDefaultValues: IInputFieldsObjs
+  ) => ReactNode;
 }) {
   const defaultValuesObj =
     useContext(ContactInformationFormContentContext).defaultValuesObj ||
@@ -58,6 +62,7 @@ export default function RegisterFormContent({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
+      {children && children(inputFieldsObjectsWithDefaultValues)}
       <InputFieldSingleRow>
         <InputFieldElement
           inputFieldObjFromProps={inputFieldsObjectsWithDefaultValues.firstName}

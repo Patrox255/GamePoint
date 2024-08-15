@@ -4,10 +4,7 @@ import { API_URL } from "./config";
 import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
 import { IOrderCustomizationProperty } from "../store/products/SearchCustomizationContext";
 import { IReview } from "../models/review.model";
-import {
-  IActionMutateArgsContact,
-  IActionMutateArgsRegister,
-} from "../pages/RegisterPage";
+import { IActionMutateArgsRegister } from "../pages/RegisterPage";
 import { cartDetails, cartStateArr } from "../store/cartSlice";
 import { ILoginActionMutateArgs } from "../components/UI/modals/LoginModal";
 import { IReviewDataToSend } from "../store/product/AddReviewContext";
@@ -15,6 +12,7 @@ import { FormActionBackendResponse } from "../components/UI/FormWithErrorHandlin
 import { IActionMutateArgsContactUserPanel } from "../components/userPanel/UserContactInformation";
 import { IAdditionalContactInformation } from "../models/additionalContactInformation.model";
 import { IGameWithQuantityBasedOnCartDetailsEntry } from "../helpers/generateGamesWithQuantityOutOfCartDetailsEntries";
+import { IAdditionalContactInformationFromGuestOrder } from "../components/orderPage/OrderPageContent";
 
 export const queryClient = new QueryClient();
 
@@ -276,12 +274,14 @@ export const verifyEmailGuard = async function (
   return data;
 };
 
+type IDataOrErrorObjBackendResponse<T = string> = T | { message: string };
+
 export const verifyEmail = async (verifyEmailData: {
   uId: string;
   providedRegistrationCode: string;
   registrationCode: string;
 }) => {
-  const data = await getJSON<string | { message: string }>({
+  const data = await getJSON<IDataOrErrorObjBackendResponse>({
     url: `${API_URL}/verify-email`,
     method: "POST",
     body: verifyEmailData,
@@ -392,8 +392,8 @@ export const changeUserActiveAdditionalInformation = async function (
   return data;
 };
 
-export const validateContactInformationFormData = async function (
-  formData: IActionMutateArgsContact
+export const validateContactInformationFromGuestOrder = async function (
+  formData: IAdditionalContactInformationFromGuestOrder
 ) {
   const data = await getJSON<string>({
     url: `${API_URL}/contact-information/validate`,
@@ -406,11 +406,46 @@ export const validateContactInformationFormData = async function (
 export type IOrderToSendData = {
   cartDetailsEntry: IGameWithQuantityBasedOnCartDetailsEntry[];
 };
+export type IPlaceAnOrderDataObject =
+  | {
+      contactInformationForGuests: IAdditionalContactInformationFromGuestOrder;
+      contactInformationForLoggedUsers?: undefined;
+      orderedGamesDetails: IGameWithQuantityBasedOnCartDetailsEntry[];
+    }
+  | {
+      contactInformationForGuests?: undefined;
+      contactInformationForLoggedUsers: Omit<
+        IAdditionalContactInformation,
+        "dateOfBirth"
+      > & { dateOfBirth: string };
+      orderedGamesDetails: IGameWithQuantityBasedOnCartDetailsEntry[];
+    };
 
-export const placeAnOrder = async function () {
-  const data = await getJSON<string>({
+export type IOrderResponseLoggedUser = { savedOrderId: string };
+export type IOrderResponseGuest = {
+  accessCode: string;
+  email: string;
+} & IOrderResponseLoggedUser;
+export type IOrderResponse = IDataOrErrorObjBackendResponse<
+  IOrderResponseLoggedUser | IOrderResponseGuest
+>;
+export type IOrderResponseFromFetchFn = { data: IOrderResponse };
+export const placeAnOrder: (
+  params: IPlaceAnOrderDataObject
+) => Promise<IOrderResponseFromFetchFn> = async function ({
+  orderedGamesDetails,
+  contactInformationForGuests,
+  contactInformationForLoggedUsers,
+}) {
+  const data = await getJSON<IOrderResponse>({
     url: `${API_URL}/order`,
     method: "POST",
+    body: {
+      orderedGamesDetails,
+      ...(contactInformationForGuests
+        ? { contactInformationForGuests }
+        : { contactInformationForLoggedUsers }),
+    },
   });
   return data;
 };

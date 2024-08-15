@@ -1,4 +1,6 @@
+import mongoose from "mongoose";
 import { IAdditionalContactInformationWithoutDateOfBirth } from "./models/additionalContactInformation.model";
+import { IGame } from "./models/game.model";
 import {
   emailRegex,
   firstAndLastNameValidateFn,
@@ -268,3 +270,49 @@ export interface IModifyOrAddContactInformationEntriesFromRequest {
 
 export const modifyOrAddContactInformationValidationEntries: IValidateBodyEntry<IContactInformationEntriesFromRequest>[] =
   [...contactInformationEntries];
+
+export interface IOrderDataFromRequestOrderedGamesDetails
+  extends IBodyFromRequestToValidate {
+  orderedGamesDetails: (IGame & {
+    quantity: number;
+    _id: mongoose.Types.ObjectId;
+  })[];
+}
+
+export const orderedGamesEntries: IValidateBodyEntry<IOrderDataFromRequestOrderedGamesDetails>[] =
+  [
+    {
+      type: "object",
+      name: "Details of your ordered games",
+      requestBodyName: "orderedGamesDetails",
+    },
+  ];
+
+export interface IOrderDataFromRequestContactInformationForGuests
+  extends IBodyFromRequestToValidate {
+  contactInformationForGuests?: IContactInformationEntriesFromRequest & {
+    email: string;
+  };
+}
+
+type IContactInformationForGuestsEntry =
+  IValidateBodyEntry<IOrderDataFromRequestContactInformationForGuests>;
+type contactInformationForGuestsEntriesArr =
+  IContactInformationForGuestsEntry[];
+export const contactInformationForGuestsEntries: contactInformationForGuestsEntriesArr =
+  [
+    ...(contactInformationEntries as unknown as contactInformationForGuestsEntriesArr),
+    registerBodyEntries.find(
+      (registerBodyEntry) => registerBodyEntry.requestBodyName === "email"
+    ) as unknown as IContactInformationForGuestsEntry,
+  ];
+
+export interface IOrderDataFromRequestContactInformationForLoggedUsers
+  extends IBodyFromRequestToValidate {
+  contactInformationForLoggedUsers?: IContactInformationEntriesFromRequest;
+}
+
+export interface IOrderDataFromRequest
+  extends IOrderDataFromRequestOrderedGamesDetails,
+    IOrderDataFromRequestContactInformationForGuests,
+    IOrderDataFromRequestContactInformationForLoggedUsers {}

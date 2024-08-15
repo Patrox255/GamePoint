@@ -57,6 +57,7 @@ const inputFieldsObjs: IInputFieldsObjs = {
       required: true,
       pattern: "^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z0-9]+$",
     },
+    propertyNameToDisplay: "E-mail address",
   },
   expandedContactInformation: {
     name: "expandedContactInformation",
