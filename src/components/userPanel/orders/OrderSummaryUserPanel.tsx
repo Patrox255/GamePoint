@@ -36,8 +36,6 @@ export default function OrderSummaryUserPanel() {
       : checkOrderIdError
     : null;
 
-  console.log(error, checkOrderIdError);
-
   const handleRedirectBack = useCallback(() => {
     const parentPath = pathname.split("/").slice(0, -1).join("/") + search; // had to manually remove the last part of the current pathname
     // as apparently when current route consists only of params then redirection to the one route above doesn't quite work well

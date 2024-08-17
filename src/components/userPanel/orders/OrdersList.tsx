@@ -114,7 +114,7 @@ export default function OrdersList() {
     );
   if (ordersDetails)
     content = (
-      <ul className="user-orders-list flex w-full flex-col justify-center items-center">
+      <ul className="user-orders-list flex w-full flex-col justify-center items-center gap-4">
         {ordersDetails.map((ordersDetailsItem) => {
           const orderTotalValue = ordersDetailsItem.items.reduce(
             (acc, orderItem) => acc + orderItem.quantity * orderItem.finalPrice,

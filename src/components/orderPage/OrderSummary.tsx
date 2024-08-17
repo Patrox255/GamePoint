@@ -96,7 +96,7 @@ export default function OrderSummary({
 
   const placeAnOrderClickCallback = useCallback(
     () =>
-      !serveAsPlacingOrderSummary && gamesWithQuantityStable
+      serveAsPlacingOrderSummary && gamesWithQuantityStable
         ? handlePlaceAnOrder(gamesWithQuantityStable)
         : null,
     [gamesWithQuantityStable, handlePlaceAnOrder, serveAsPlacingOrderSummary]
