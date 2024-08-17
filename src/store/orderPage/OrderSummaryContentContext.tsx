@@ -1,27 +1,16 @@
 import { createContext } from "react";
 import { IActionMutateArgsContact } from "../../pages/RegisterPage";
-import { IGameWithQuantityBasedOnCartDetailsEntry } from "../../helpers/generateGamesWithQuantityOutOfCartDetailsEntries";
-import { FormActionBackendErrorResponse } from "../../components/UI/FormWithErrorHandling";
 import { IAdditionalContactInformationFromGuestOrder } from "../../components/orderPage/OrderPageContent";
-import { IOrderResponseFromFetchFn } from "../../lib/fetch";
+import { IAdditionalContactInformation } from "../../models/additionalContactInformation.model";
 
 export const OrderSummaryContentContext = createContext<{
   contactInformationToRender:
     | IActionMutateArgsContact
     | IAdditionalContactInformationFromGuestOrder
+    | IAdditionalContactInformation
     | undefined;
-  handlePlaceAnOrder: (
-    orderedGamesDetails: IGameWithQuantityBasedOnCartDetailsEntry[]
-  ) => void;
-  placeAnOrderIsPending: boolean;
-  placeAnOrderData: IOrderResponseFromFetchFn | undefined;
-  placeAnOrderError: FormActionBackendErrorResponse | null;
-  orderPlacedSuccessfully: boolean;
+  serveAsPlacingOrderSummary?: boolean;
 }>({
   contactInformationToRender: undefined,
-  handlePlaceAnOrder: () => {},
-  placeAnOrderIsPending: false,
-  placeAnOrderData: undefined,
-  placeAnOrderError: null,
-  orderPlacedSuccessfully: false,
+  serveAsPlacingOrderSummary: false,
 });

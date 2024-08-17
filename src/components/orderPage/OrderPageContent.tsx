@@ -37,6 +37,7 @@ import TimedOutActionWithProgressBar from "../UI/TimedOutActionWithProgressBar";
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxStore";
 import { cartSliceActions } from "../../store/cartSlice";
 import { OrderPageContentIsLoggedContext } from "../../store/orderPage/OrderPageContentIsLoggedContext";
+import NewOrderSummaryContextProvider from "../../store/orderPage/NewOrderSummaryContext";
 
 export type IAdditionalContactInformationFromGuestOrder =
   IActionMutateArgsContact & { email: string };
@@ -235,14 +236,18 @@ export default function OrderPageContent() {
           contactInformationToRender:
             (selectedUserContactInformation as unknown as IActionMutateArgsContact) ||
             contactInformationFromFormToProvideStable,
-          handlePlaceAnOrder,
-          placeAnOrderData,
-          placeAnOrderError,
-          placeAnOrderIsPending,
-          orderPlacedSuccessfully,
+          serveAsPlacingOrderSummary: true,
         }}
       >
-        <OrderSummary handleGoBack={handleGoBackFromSummarySection} />
+        <NewOrderSummaryContextProvider
+          handlePlaceAnOrder={handlePlaceAnOrder}
+          orderPlacedSuccessfully={orderPlacedSuccessfully}
+          placeAnOrderData={placeAnOrderData}
+          placeAnOrderError={placeAnOrderError}
+          placeAnOrderIsPending={placeAnOrderIsPending}
+        >
+          <OrderSummary handleGoBack={handleGoBackFromSummarySection} />
+        </NewOrderSummaryContextProvider>
       </OrderSummaryContentContext.Provider>
     );
 

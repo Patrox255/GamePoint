@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 import { IAdditionalContactInformationWithoutDateOfBirth } from "./models/additionalContactInformation.model";
 import { IGame } from "./models/game.model";
 import {
@@ -316,3 +316,21 @@ export interface IOrderDataFromRequest
   extends IOrderDataFromRequestOrderedGamesDetails,
     IOrderDataFromRequestContactInformationForGuests,
     IOrderDataFromRequestContactInformationForLoggedUsers {}
+
+export interface ICheckOrderIdBodyFromRequest
+  extends IBodyFromRequestToValidate {
+  orderId: string;
+}
+
+export const checkOrderIdEntries: IValidateBodyEntry<ICheckOrderIdBodyFromRequest>[] =
+  [
+    {
+      requestBodyName: "orderId",
+      name: "Order identificator",
+      type: "string",
+      validateFn: (val) =>
+        isValidObjectId(val)
+          ? true
+          : { message: "Provided order identificator isn't valid!" },
+    },
+  ];

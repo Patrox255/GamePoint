@@ -3,7 +3,7 @@ import { useCallback, useContext, useMemo } from "react";
 import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContentContext";
 import inputFieldsObjs, { IInputFieldsObjs } from "../../lib/inputFieldsObjs";
 import { IFormInputField } from "../UI/FormWithErrorHandling";
-import { dateTimeFormat } from "../../helpers/dateTimeFormat";
+import { dateFormat } from "../../helpers/dateTimeFormat";
 
 const customLookingContactInformationInputFieldsPropertiesNames = [
   "firstName",
@@ -59,7 +59,7 @@ const FilledContactInformationInputFieldRepresentation = function ({
     >
       {inputFieldObj.propertyNameToDisplay}:{" "}
       {inputFieldObj.type === "date"
-        ? dateTimeFormat.format(inputFieldValue as unknown as Date)
+        ? dateFormat.format(inputFieldValue as unknown as Date)
         : inputFieldValue}
     </section>
   );

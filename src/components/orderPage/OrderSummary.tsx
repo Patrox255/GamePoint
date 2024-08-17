@@ -10,15 +10,17 @@ import Button from "../UI/Button";
 import DetailedContactInformation from "./DetailedContactInformation";
 import OrderPageHeader from "./OrderPageHeader";
 import OrderCartInformation from "./OrderCartInformation";
-import useRetrieveCartDetails from "../../hooks/useRetrieveCartDetails";
 import { cartStateArr } from "../../store/cartSlice";
-import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContentContext";
 import Error from "../UI/Error";
 import LoadingFallback from "../UI/LoadingFallback";
 import generateGamesWithQuantityOutOfCartDetailsEntries, {
   IGameWithQuantityBasedOnCartDetailsEntry,
 } from "../../helpers/generateGamesWithQuantityOutOfCartDetailsEntries";
 import Header from "../UI/headers/Header";
+import { NewOrderSummaryContext } from "../../store/orderPage/NewOrderSummaryContext";
+import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
+import { useAppSelector } from "../../hooks/reduxStore";
+import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContentContext";
 
 export const OrderSummarySectionWrapper = ({
   children,
@@ -53,23 +55,27 @@ export const OrderSummaryCartInformationContext = createContext<{
 
 export default function OrderSummary({
   handleGoBack,
+  gamesWithQuantityStableFromProps,
 }: {
   handleGoBack: () => void;
+  gamesWithQuantityStableFromProps?: IGameWithQuantityBasedOnCartDetailsEntry[];
 }) {
   const {
-    handlePlaceAnOrder,
-    placeAnOrderData,
-    placeAnOrderError,
-    placeAnOrderIsPending,
-    orderPlacedSuccessfully,
-  } = useContext(OrderSummaryContentContext);
-
-  const {
     cartDetailsData,
-    cartDetailsError,
     cartDetailsIsLoading,
-    stateCartStable,
-  } = useRetrieveCartDetails(orderPlacedSuccessfully !== true);
+    handlePlaceAnOrder,
+    btnDisabledDueToOrderQueryState,
+    couldNotGetCartDetails,
+    orderPlacedSuccessfully,
+    placeAnOrderErrorToRender,
+    placeAnOrderIsPending,
+    placeAnOrderValidationErrors,
+    cartDetailsError,
+  } = useContext(NewOrderSummaryContext);
+  const { serveAsPlacingOrderSummary } = useContext(OrderSummaryContentContext);
+  const stateCartStable = useCompareComplexForUseMemo(
+    useAppSelector((state) => state.cartSlice.cart)
+  );
 
   const cartDetailsStable = useMemo(
     () => cartDetailsData?.data,
@@ -78,44 +84,25 @@ export default function OrderSummary({
   const gamesWithQuantityStable = useMemo(
     () =>
       !cartDetailsStable
-        ? undefined
+        ? gamesWithQuantityStableFromProps
+          ? gamesWithQuantityStableFromProps
+          : undefined
         : generateGamesWithQuantityOutOfCartDetailsEntries(
             cartDetailsStable,
             stateCartStable!
           ),
-    [cartDetailsStable, stateCartStable]
+    [cartDetailsStable, gamesWithQuantityStableFromProps, stateCartStable]
   );
-
-  const placeAnOrderValidationErrors =
-    placeAnOrderError &&
-    Array.isArray(placeAnOrderError) &&
-    placeAnOrderError.length > 0
-      ? placeAnOrderError
-      : null;
-  const placeAnOrderErrorToRender =
-    placeAnOrderError && !Array.isArray(placeAnOrderError)
-      ? placeAnOrderError
-      : placeAnOrderData?.data && (placeAnOrderData.data as Error).message
-      ? (placeAnOrderData?.data as Error)
-      : null;
-
-  const placeAnOrderBtnDisabled =
-    cartDetailsIsLoading || stateCartStable === undefined;
-  const couldNotGetCartDetails =
-    (!cartDetailsData || cartDetailsError) && !cartDetailsIsLoading
-      ? true
-      : false;
 
   const placeAnOrderClickCallback = useCallback(
     () =>
-      gamesWithQuantityStable
+      !serveAsPlacingOrderSummary && gamesWithQuantityStable
         ? handlePlaceAnOrder(gamesWithQuantityStable)
         : null,
-    [gamesWithQuantityStable, handlePlaceAnOrder]
+    [gamesWithQuantityStable, handlePlaceAnOrder, serveAsPlacingOrderSummary]
   );
-
-  const btnDisabledDueToOrderQueryState =
-    orderPlacedSuccessfully || placeAnOrderIsPending;
+  const placeAnOrderBtnDisabled =
+    cartDetailsIsLoading || stateCartStable === undefined;
 
   return (
     <>
@@ -140,41 +127,48 @@ export default function OrderSummary({
         >
           Go back
         </Button>
-        <Button
-          disabled={
-            placeAnOrderBtnDisabled ||
-            couldNotGetCartDetails ||
-            btnDisabledDueToOrderQueryState
-          }
-          onClick={placeAnOrderClickCallback}
-        >
-          {placeAnOrderBtnDisabled
-            ? "Getting order data..."
-            : couldNotGetCartDetails
-            ? "Failed to retrieve cart data"
-            : orderPlacedSuccessfully
-            ? "Order has been successfully placed!"
-            : placeAnOrderIsPending
-            ? "Processing..."
-            : "Place the order"}
-        </Button>
-      </section>
-      <section className="order-status-information w-full text-center">
-        {placeAnOrderErrorToRender && (
-          <Error message={placeAnOrderErrorToRender.message} smallVersion />
-        )}
-        {placeAnOrderValidationErrors &&
-          placeAnOrderValidationErrors.map((placeAnOrderValidationError) => (
-            <Error message={placeAnOrderValidationError.message} smallVersion />
-          ))}
-        {placeAnOrderIsPending && <LoadingFallback />}
-        {orderPlacedSuccessfully && (
-          <Header>
-            Order placed successfully! You will be redirected to your orders
-            panel in 5 seconds.
-          </Header>
+        {serveAsPlacingOrderSummary && (
+          <Button
+            disabled={
+              placeAnOrderBtnDisabled ||
+              couldNotGetCartDetails ||
+              btnDisabledDueToOrderQueryState
+            }
+            onClick={placeAnOrderClickCallback}
+          >
+            {placeAnOrderBtnDisabled
+              ? "Getting order data..."
+              : couldNotGetCartDetails
+              ? "Failed to retrieve cart data"
+              : orderPlacedSuccessfully
+              ? "Order has been successfully placed!"
+              : placeAnOrderIsPending
+              ? "Processing..."
+              : "Place the order"}
+          </Button>
         )}
       </section>
+      {serveAsPlacingOrderSummary && (
+        <section className="order-status-information w-full text-center">
+          {placeAnOrderErrorToRender && (
+            <Error message={placeAnOrderErrorToRender.message} smallVersion />
+          )}
+          {placeAnOrderValidationErrors &&
+            placeAnOrderValidationErrors.map((placeAnOrderValidationError) => (
+              <Error
+                message={placeAnOrderValidationError.message}
+                smallVersion
+              />
+            ))}
+          {placeAnOrderIsPending && <LoadingFallback />}
+          {orderPlacedSuccessfully && (
+            <Header>
+              Order placed successfully! You will be redirected to your orders
+              panel in 5 seconds.
+            </Header>
+          )}
+        </section>
+      )}
     </>
   );
 }

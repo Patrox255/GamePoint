@@ -36,6 +36,7 @@ import {
   createAndVerifyDateOfBirthFromInput,
   verifyCreateAndInsertAdditionalContactInformationDocumentBasedOnRequestData,
   filterPropertiesFromObj,
+  retrieveUserDocumentWithPopulatedOrdersDetails,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -48,11 +49,13 @@ import {
   addReviewEntries,
   cartDataEntries,
   changeActiveContactInformationEntries,
+  checkOrderIdEntries,
   contactInformationEntries,
   contactInformationForGuestsEntries,
   IAddReviewEntriesFromRequest,
   ICartDataEntriesFromRequest,
   IChangeActiveContactInformationEntriesFromRequest,
+  ICheckOrderIdBodyFromRequest,
   IContactInformationEntriesFromRequest,
   ILoginBodyFromRequest,
   IModifyOrAddContactInformationEntriesFromRequest,
@@ -1103,10 +1106,21 @@ const startServer = async () => {
       }
     );
 
-    app.get("/auth", verifyJwt, (req: Request, res: Response) => {
-      const { token } = req as Request &
-        IRequestAdditionAfterVerifyJwtfMiddleware;
-      return res.status(200).json(token);
+    app.get("/auth", verifyJwt, async (req, res, next) => {
+      try {
+        const { token } = req as Request &
+          IRequestAdditionAfterVerifyJwtfMiddleware;
+
+        const relatedUser = await User.findById(token.userId).populate(
+          "orders"
+        );
+        const userOrdersAmount = relatedUser!.orders!.length || 0;
+        return res
+          .status(200)
+          .json({ ...token, ordersAmount: userOrdersAmount });
+      } catch (e) {
+        next(e);
+      }
     });
 
     app.get("/cart", verifyJwt, async (req: Request, res: Response) => {
@@ -1781,13 +1795,11 @@ const startServer = async () => {
         const responseBody = { savedOrderId };
         if (!userId) {
           await session.commitTransaction();
-          return res
-            .status(200)
-            .json({
-              ...responseBody,
-              accessCode,
-              email: contactInformationForGuests!.email,
-            });
+          return res.status(200).json({
+            ...responseBody,
+            accessCode,
+            email: contactInformationForGuests!.email,
+          });
         }
 
         const relatedUser = await User.findById(userId).session(session);
@@ -1808,6 +1820,51 @@ const startServer = async () => {
 
         await session.commitTransaction();
         return res.status(200).json(responseBody);
+      } catch (e) {
+        next(e);
+      }
+    });
+
+    app.get("/order", verifyJwt, async (req, res, next) => {
+      try {
+        const {
+          token: { userId },
+        } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+
+        const relatedUser =
+          await retrieveUserDocumentWithPopulatedOrdersDetails(userId!);
+        // no checking as after verifyJwt it has to be true
+        const orders = relatedUser!.orders;
+        return res.status(200).json({ orders });
+      } catch (e) {
+        next(e);
+      }
+    });
+
+    app.post("/order/checkId", verifyJwt, async (req, res, next) => {
+      try {
+        const {
+          token: { userId },
+        } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+        if (
+          !validateBodyEntries({
+            entries: checkOrderIdEntries,
+            res,
+            req,
+          })
+        )
+          return;
+        const relatedUser =
+          await retrieveUserDocumentWithPopulatedOrdersDetails(userId!);
+        const { orderId } = req.body as ICheckOrderIdBodyFromRequest;
+
+        if (
+          !relatedUser?.orders?.find(
+            (orderEntry) => orderEntry._id.toString() === orderId
+          )
+        )
+          return res.sendStatus(403);
+        return res.sendStatus(200);
       } catch (e) {
         next(e);
       }

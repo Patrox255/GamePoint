@@ -7,12 +7,12 @@ export async function authGuardFn(requestURL: string) {
   try {
     const pathName = new URL(requestURL).pathname;
     const {
-      data: { isAdmin, login },
+      data: { isAdmin, login, userId },
     } = await queryClient.fetchQuery<IGetAuthResponse>({
       queryKey: ["userAuth", pathName],
       queryFn: ({ signal }) => getAuthData(signal),
     });
-    return { isAdmin, login };
+    return { isAdmin, login, userId };
   } catch (e) {
     return false;
   }

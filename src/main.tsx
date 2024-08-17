@@ -59,7 +59,17 @@ const router = createBrowserRouter([
         action: VerifyEmailPageAction,
       },
       { path: "cart", element: <CartPage /> },
-      { path: "user", element: <UserPanelPage />, loader: userPanelLoader },
+      {
+        path: "user",
+        element: <UserPanelPage />,
+        loader: userPanelLoader,
+        children: [
+          {
+            path: ":orderId",
+            element: <UserPanelPage />,
+          },
+        ],
+      },
       {
         path: "order",
         element: <OrderPage />,

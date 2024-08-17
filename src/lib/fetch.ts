@@ -13,6 +13,7 @@ import { IActionMutateArgsContactUserPanel } from "../components/userPanel/UserC
 import { IAdditionalContactInformation } from "../models/additionalContactInformation.model";
 import { IGameWithQuantityBasedOnCartDetailsEntry } from "../helpers/generateGamesWithQuantityOutOfCartDetailsEntries";
 import { IAdditionalContactInformationFromGuestOrder } from "../components/orderPage/OrderPageContent";
+import { IOrder } from "../models/order.model";
 
 export const queryClient = new QueryClient();
 
@@ -218,6 +219,7 @@ export interface IGetAuthDataResponse {
   isAdmin: boolean;
   login: string;
   userId: string;
+  ordersAmount: number;
 }
 
 export interface IGetAuthResponse {
@@ -274,7 +276,9 @@ export const verifyEmailGuard = async function (
   return data;
 };
 
-type IDataOrErrorObjBackendResponse<T = string> = T | { message: string };
+export type IDataOrErrorObjBackendResponse<T = string> =
+  | T
+  | { message: string };
 
 export const verifyEmail = async (verifyEmailData: {
   uId: string;
@@ -447,5 +451,42 @@ export const placeAnOrder: (
         : { contactInformationForLoggedUsers }),
     },
   });
+  return data;
+};
+
+export type IRetrieveOrdersDetailsBackendResponse = { orders: IOrder[] };
+export const retrieveUserOrdersDetails = async function (signal: AbortSignal) {
+  const data = await getJSON<
+    IDataOrErrorObjBackendResponse<IRetrieveOrdersDetailsBackendResponse>
+  >({
+    url: `${API_URL}/order`,
+    signal,
+  });
+  const orders =
+    data.data &&
+    typeof data.data === "object" &&
+    (data.data as IRetrieveOrdersDetailsBackendResponse).orders;
+  if (orders)
+    orders.forEach((order) => {
+      order.date = new Date(order.date);
+      order.orderContactInformation.dateOfBirth = new Date(
+        order.orderContactInformation.dateOfBirth
+      );
+    });
+
+  return data;
+};
+
+export const checkOrderId = async function (
+  orderId: string,
+  signal: AbortSignal
+) {
+  const data = await getJSON<string>({
+    url: `${API_URL}/order/checkId`,
+    body: { orderId },
+    method: "POST",
+    signal,
+  });
+
   return data;
 };

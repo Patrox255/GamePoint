@@ -12,13 +12,13 @@ import Button from "../components/UI/Button";
 import { validateJSONValue } from "../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
 import { userPanelEntries } from "../components/UI/Nav";
 import AnimatedAppearance from "../components/UI/AnimatedAppearance";
-import UserOrders from "../components/userPanel/UserOrders";
+import UserOrdersManager from "../components/userPanel/orders/UserOrdersManager";
 import UserContactInformation from "../components/userPanel/UserContactInformation";
 import UserAdminPanel from "../components/userPanel/UserAdminPanel";
 import { useStateWithSearchParams } from "../hooks/useStateWithSearchParams";
 
 const panelSectionsComponents: { [key: string]: ReactNode } = {
-  orders: <UserOrders />,
+  orders: <UserOrdersManager />,
   contact: <UserContactInformation />,
   admin: <UserAdminPanel />,
 };
@@ -28,6 +28,7 @@ export interface IUserPanelLoaderData {
   panelSection: string;
   isAdmin: boolean;
   login: string;
+  userId: string;
 }
 
 export const userPanelPageSectionTransitionProperties = {
@@ -130,7 +131,7 @@ export const loader: LoaderFunction = async function ({ request }) {
   )
     return redirect(previousPagePathName);
 
-  const { isAdmin, login } = authGuardFnRes;
+  const { isAdmin, login, userId } = authGuardFnRes;
   if (
     !isAdmin &&
     possiblePanelSections.find(
@@ -140,5 +141,5 @@ export const loader: LoaderFunction = async function ({ request }) {
   )
     return redirect(previousPagePathName);
 
-  return { panelSection, isAdmin, login };
+  return { panelSection, isAdmin, login, userId };
 };

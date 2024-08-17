@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { ReactNode, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -10,7 +10,7 @@ import LoginModal from "../components/UI/modals/LoginModal";
 import ModalContextProvider from "../store/ModalContext";
 import ModalContainer from "../components/UI/modals/ModalContainer";
 import ModalOverlay from "../components/UI/modals/ModalOverlay";
-import { getAuthData, getCart, queryClient } from "../lib/fetch";
+import { getCart, queryClient } from "../lib/fetch";
 import { useAppDispatch, useAppSelector } from "../hooks/reduxStore";
 import { userAuthSliceActions } from "../store/userAuthSlice";
 import { isEqual } from "lodash";
@@ -18,6 +18,7 @@ import useCompareComplexForUseMemo from "../hooks/useCompareComplexForUseMemo";
 import { cartSliceActions } from "../store/cartSlice";
 import generateInitialStateFromSearchParamsOrSessionStorage from "../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
 import filterPropertiesFromObj from "../helpers/filterPropertiesFromObj";
+import useGetAuthData from "../hooks/accountRelated/useGetAuthData";
 
 let initialRender = true;
 export const generateCartStateFromLocalStorage = () =>
@@ -32,7 +33,11 @@ export const generateCartStateFromLocalStorage = () =>
   );
 
 const RootLayout = ({ children }: { children?: ReactNode }) => {
-  const { pathname, search } = useLocation();
+  const {
+    authData: { data, error, isLoading },
+    location,
+  } = useGetAuthData();
+  const { search } = location;
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
   const dispatch = useAppDispatch();
   const userAuthStateStable = useCompareComplexForUseMemo(
@@ -42,11 +47,6 @@ const RootLayout = ({ children }: { children?: ReactNode }) => {
     useCompareComplexForUseMemo(
       filterPropertiesFromObj(userAuthStateStable, ["isLoading"])
     );
-  const { data, error, isLoading } = useQuery({
-    queryKey: ["userAuth", pathname],
-    queryFn: ({ signal }) => getAuthData(signal),
-    retry: false,
-  });
 
   const cartSlice = useAppSelector((state) => state.cartSlice);
   const { optimisticUpdatingInProgress } = cartSlice;

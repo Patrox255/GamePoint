@@ -5,9 +5,14 @@ import { IPlatform } from "./platform.model";
 import { IPublisher } from "./publisher.model";
 import { IReview } from "./review.model";
 
-export interface IGame extends IMongooseDocument {
-  title: string;
+export interface IProductPriceInformation {
   price: number;
+  finalPrice: number;
+  discount: number;
+}
+
+export interface IGame extends IMongooseDocument, IProductPriceInformation {
+  title: string;
   discount: number;
   releaseDate: Date;
   genres: IGenre[];
@@ -17,7 +22,6 @@ export interface IGame extends IMongooseDocument {
   popularity?: number;
   artworks: string[];
   summary: string;
-  finalPrice: number;
   slug?: string;
   storyLine?: string;
   reviews: IReview[];

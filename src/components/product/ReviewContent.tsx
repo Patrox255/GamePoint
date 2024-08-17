@@ -11,7 +11,7 @@ import properties from "../../styles/properties";
 import AnimatedAppearance from "../UI/AnimatedAppearance";
 import { isEqual } from "lodash";
 import { IReview } from "../../models/review.model";
-import { dateTimeFormat } from "../../helpers/dateTimeFormat";
+import { dateFormat } from "../../helpers/dateTimeFormat";
 import svgPathBase from "../UI/svg/svgPathBase";
 import { useAppSelector } from "../../hooks/reduxStore";
 import Error from "../UI/Error";
@@ -129,7 +129,7 @@ export default function ReviewContent() {
                 <Header usePaddingBottom={false}>
                   {reviewToRender.userId.login}
                 </Header>
-                &nbsp; on {dateTimeFormat.format(new Date(reviewToRender.date))}
+                &nbsp; on {dateFormat.format(new Date(reviewToRender.date))}
               </div>
             )}
             {reviewContent}

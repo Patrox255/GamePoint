@@ -4,12 +4,14 @@ export interface IUserAuthSliceState {
   isAdmin: boolean;
   login: string | undefined;
   isLoading: boolean;
+  ordersAmount: number;
 }
 
 const initialState: IUserAuthSliceState = {
   isAdmin: false,
   login: undefined,
   isLoading: false,
+  ordersAmount: 0,
 };
 
 const userAuthSlice = createSlice({
@@ -18,15 +20,13 @@ const userAuthSlice = createSlice({
   reducers: {
     setAuthData: (
       _,
-      action: PayloadAction<{
-        isAdmin: boolean;
-        login: string | undefined;
-      }>
+      action: PayloadAction<Omit<IUserAuthSliceState, "isLoading">>
     ) => ({ ...action.payload, isLoading: false }),
     resetAuthData: () => ({
       isAdmin: false,
       login: undefined,
       isLoading: false,
+      ordersAmount: 0,
     }),
     setIsFetching: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;

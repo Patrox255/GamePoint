@@ -3,9 +3,13 @@ import { useEffect, useState } from "react";
 export default function TimedOutActionWithProgressBar({
   action,
   timeBeforeFiringAnAction,
+  negativeResult = false,
+  darkerBg = false,
 }: {
   action: () => void;
   timeBeforeFiringAnAction: number;
+  negativeResult?: boolean;
+  darkerBg?: boolean;
 }) {
   const [timeElapsed, setTimeElapsed] = useState(0);
 
@@ -24,7 +28,9 @@ export default function TimedOutActionWithProgressBar({
     <progress
       max={timeBeforeFiringAnAction}
       value={timeElapsed}
-      className="w-full mt-3 bg-bodyBg h-1"
+      className={`${negativeResult ? "red-indicator " : ""}${
+        darkerBg ? "darkerBg " : ""
+      }w-full mt-3 bg-bodyBg h-1`}
     ></progress>
   );
 }

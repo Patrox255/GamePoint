@@ -409,3 +409,13 @@ export const verifyCreateAndInsertAdditionalContactInformationDocumentBasedOnReq
     );
     return { newObjs, documents };
   };
+
+export const retrieveUserDocumentWithPopulatedOrdersDetails = async function (
+  userId: string | mongoose.Types.ObjectId
+) {
+  const user = await User.findById(userId).populate({
+    path: "orders",
+    populate: { path: "items.gameId", model: "Game" },
+  });
+  return user;
+};

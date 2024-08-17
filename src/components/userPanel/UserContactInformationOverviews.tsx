@@ -1,6 +1,6 @@
 import { useContext, useState } from "react";
 import Button from "../UI/Button";
-import { dateTimeFormat } from "../../helpers/dateTimeFormat";
+import { dateFormat } from "../../helpers/dateTimeFormat";
 import { ChangeActiveUserContactInformationContext } from "./UserContactInformation";
 import Error from "../UI/Error";
 import { IAdditionalContactInformation } from "../../models/additionalContactInformation.model";
@@ -110,9 +110,7 @@ export default function UserContactInformationOverviews({
                   {contactInformationEntry.firstName}&nbsp;
                   {contactInformationEntry.surName}
                 </p>
-                <p>
-                  {dateTimeFormat.format(contactInformationEntry.dateOfBirth)}
-                </p>
+                <p>{dateFormat.format(contactInformationEntry.dateOfBirth)}</p>
                 <p>{contactInformationEntry.phoneNr}</p>
                 <p>
                   {contactInformationEntry.zipCode}&nbsp;

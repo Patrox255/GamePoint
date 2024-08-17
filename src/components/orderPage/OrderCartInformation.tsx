@@ -7,6 +7,7 @@ import {
   OrderSummaryCartInformationContext,
   OrderSummarySectionWrapper,
 } from "./OrderSummary";
+import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContentContext";
 
 export default function OrderCartInformation() {
   const {
@@ -15,9 +16,10 @@ export default function OrderCartInformation() {
     cartDetailsIsLoading,
     stateCartStable,
   } = useContext(OrderSummaryCartInformationContext);
+  const { serveAsPlacingOrderSummary } = useContext(OrderSummaryContentContext);
 
   let content;
-  if (!stateCartStable || cartDetailsIsLoading)
+  if ((!stateCartStable || cartDetailsIsLoading) && !serveAsPlacingOrderSummary)
     content = (
       <LoadingFallback customText="Loading your order products details..." />
     );

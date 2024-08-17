@@ -212,8 +212,16 @@ progress[value]::-webkit-progress-bar {
   border-radius: 2px;
 }
 
+progress[value].darkerBg::-webkit-progress-bar {
+  @apply bg-darkerBg;
+}
+
 progress[value]::-webkit-progress-value {
   @apply bg-highlightGreen;
+}
+
+progress[value].red-indicator::-webkit-progress-value {
+  @apply bg-highlightRed;
 }
 
 progress {
