@@ -7,10 +7,8 @@ import {
   retrieveAmountOfGamesByQuery,
 } from "../../lib/fetch";
 import { useStateWithSearchParams } from "../../hooks/useStateWithSearchParams";
-import {
-  IOrderCustomizationProperty,
-  SearchCustomizationContext,
-} from "./SearchCustomizationContext";
+import { SearchCustomizationContext } from "./SearchCustomizationContext";
+import { IOrderCustomizationProperty } from "../../hooks/useHandleElementsOrderCustomizationState";
 
 export const ProductsContext = createContext<{
   games: IGame[];

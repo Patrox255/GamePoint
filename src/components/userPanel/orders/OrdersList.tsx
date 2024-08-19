@@ -13,7 +13,12 @@ import Error from "../../UI/Error";
 import LoadingFallback from "../../UI/LoadingFallback";
 import Header from "../../UI/headers/Header";
 import createUrlWithCurrentSearchParams from "../../../helpers/createUrlWithCurrentSearchParams";
-import { UserOrdersManagerOrdersDetailsContext } from "../../../store/userPanel/UserOrdersManagerOrdersDetailsContext";
+import {
+  userOrdersComponentsMotionProperties,
+  UserOrdersManagerOrdersDetailsContext,
+} from "../../../store/userPanel/UserOrdersManagerOrdersDetailsContext";
+import PagesElement from "../../UI/PagesElement";
+import { MAX_ORDERS_PER_PAGE } from "../../../lib/config";
 
 export const OrdersDetailsError = () => (
   <Error
@@ -114,7 +119,10 @@ export default function OrdersList() {
     );
   if (ordersDetails)
     content = (
-      <ul className="user-orders-list flex w-full flex-col justify-center items-center gap-4">
+      <motion.ul
+        className="user-orders-list flex w-full flex-col justify-center items-center gap-4"
+        {...userOrdersComponentsMotionProperties}
+      >
         {ordersDetails.map((ordersDetailsItem) => {
           const orderTotalValue = ordersDetailsItem.items.reduce(
             (acc, orderItem) => acc + orderItem.quantity * orderItem.finalPrice,
@@ -142,7 +150,8 @@ export default function OrdersList() {
           return (
             <motion.li
               className="w-full justify-center items-center flex flex-wrap bg-bodyBg px-4 py-8 rounded-xl gap-2 text-xs sm:text-base cursor-pointer"
-              initial={{ opacity: 0.7 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.7 }}
               whileHover={{ opacity: 1 }}
               key={ordersDetailsItem._id}
               onClick={() =>
@@ -179,8 +188,20 @@ export default function OrdersList() {
             </motion.li>
           );
         })}
-      </ul>
+      </motion.ul>
     );
 
-  return content;
+  return (
+    <>
+      {content}
+      {ordersAmount !== 0 && (
+        <article className="orders-pages-wrapper pt-4">
+          <PagesElement
+            amountOfElementsPerPage={MAX_ORDERS_PER_PAGE}
+            totalAmountOfElementsToDisplayOnPages={ordersAmount}
+          />
+        </article>
+      )}
+    </>
+  );
 }

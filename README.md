@@ -77,6 +77,7 @@ Create a file called '.env' inside the root directory of the back-end side of th
  JWTSECRET=your_jwt_secret_for_access_tokens
  MONGO_URL=your_mongo_db_url
  FRONTEND_URLS=your_frontend_urls_to_allow_in_cors (a string with each URL separated by a comma)
+ MAX_ORDERS_PER_PAGE=your_choice_of_maximum_number_of_orders_which_will_be_displayed_at_one_time_on_user_panel_page
 ```
 
 10. Run back-end server

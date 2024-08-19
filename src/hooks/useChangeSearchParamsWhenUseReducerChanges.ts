@@ -22,6 +22,7 @@ export default function useChangeSearchParamsAndSessionStorageWhenUseReducerChan
   omitChangingSearchParams = false,
   useDebouncedState = true,
   provideSearchParamNameToDispatch = false,
+  manuallyPrepareStateBeforeSavingInSessionStorageAndSearchParamsToSaveSomeSpaceFnStable,
 }: {
   stateNormalProperty: T;
   stateDebouncedProperty?: T;
@@ -37,6 +38,9 @@ export default function useChangeSearchParamsAndSessionStorageWhenUseReducerChan
   omitChangingSearchParams?: boolean;
   useDebouncedState?: boolean;
   provideSearchParamNameToDispatch?: boolean;
+  manuallyPrepareStateBeforeSavingInSessionStorageAndSearchParamsToSaveSomeSpaceFnStable?: (
+    stateToSave: T
+  ) => T;
 }) {
   // This is used when the provided dispatchCallback is able to perform an action which in result can also modify multiple state
   // properties from different instances of this hook and then without this we would try to update our search params at the same
@@ -91,10 +95,14 @@ export default function useChangeSearchParamsAndSessionStorageWhenUseReducerChan
   const debouncedUpdate = useMemo(
     () =>
       debounce((stateNormalPropertyMemoized: T) => {
-        sessionStorage.setItem(
-          searchParamName,
-          JSON.stringify(stateNormalPropertyMemoized)
+        const stateToSaveJSON = JSON.stringify(
+          manuallyPrepareStateBeforeSavingInSessionStorageAndSearchParamsToSaveSomeSpaceFnStable
+            ? manuallyPrepareStateBeforeSavingInSessionStorageAndSearchParamsToSaveSomeSpaceFnStable(
+                stateNormalPropertyMemoized
+              )
+            : stateNormalPropertyMemoized
         );
+        sessionStorage.setItem(searchParamName, stateToSaveJSON);
         if (useDebouncedState)
           provideSearchParamNameToDispatch
             ? dispatchCallbackFn(stateNormalPropertyMemoized, searchParamName)
@@ -102,10 +110,7 @@ export default function useChangeSearchParamsAndSessionStorageWhenUseReducerChan
                 stateNormalPropertyMemoized
               );
         if (omitChangingSearchParams) return;
-        searchParams.set(
-          searchParamName,
-          JSON.stringify(stateNormalPropertyMemoized)
-        );
+        searchParams.set(searchParamName, stateToSaveJSON);
         navigate(createUrlWithCurrentSearchParams({ searchParams, pathname }), {
           replace: true,
         });
@@ -114,6 +119,7 @@ export default function useChangeSearchParamsAndSessionStorageWhenUseReducerChan
       timeToWait,
       idOfDeeperStateThatIsSentAndDispatchCanChangeIt,
       searchParamName,
+      manuallyPrepareStateBeforeSavingInSessionStorageAndSearchParamsToSaveSomeSpaceFnStable,
       useDebouncedState,
       provideSearchParamNameToDispatch,
       dispatchCallbackFn,

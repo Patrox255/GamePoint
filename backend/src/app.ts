@@ -1830,18 +1830,30 @@ const startServer = async () => {
         const {
           token: { userId },
         } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+        const { pageNr } = await parseQueries(req);
+        await validateQueriesTypes([["number", pageNr]]);
+        const MAX_ORDERS_PER_PAGE = accessEnvironmentVariable(
+          "MAX_ORDERS_PER_PAGE"
+        );
 
         const relatedUser =
           await retrieveUserDocumentWithPopulatedOrdersDetails(userId!);
         // no checking as after verifyJwt it has to be true
-        const orders = relatedUser!.orders;
+        let orders: IOrder[];
+        orders = relatedUser!.orders as unknown as IOrder[];
+        orders.sort((o1, o2) => +o2.date! - +o1.date!);
+        if (pageNr !== undefined)
+          orders = orders.slice(
+            pageNr * +MAX_ORDERS_PER_PAGE,
+            (pageNr + 1) * +MAX_ORDERS_PER_PAGE
+          );
         return res.status(200).json({ orders });
       } catch (e) {
         next(e);
       }
     });
 
-    app.post("/order/checkId", verifyJwt, async (req, res, next) => {
+    app.post("/order/data", verifyJwt, async (req, res, next) => {
       try {
         const {
           token: { userId },
@@ -1857,14 +1869,12 @@ const startServer = async () => {
         const relatedUser =
           await retrieveUserDocumentWithPopulatedOrdersDetails(userId!);
         const { orderId } = req.body as ICheckOrderIdBodyFromRequest;
+        const order = relatedUser?.orders?.find(
+          (order) => order._id.toString() === orderId
+        );
 
-        if (
-          !relatedUser?.orders?.find(
-            (orderEntry) => orderEntry._id.toString() === orderId
-          )
-        )
-          return res.sendStatus(403);
-        return res.sendStatus(200);
+        if (!order) return res.sendStatus(403);
+        return res.status(200).json(order);
       } catch (e) {
         next(e);
       }

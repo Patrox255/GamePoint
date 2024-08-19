@@ -2,7 +2,6 @@ import { QueryClient } from "@tanstack/react-query";
 import { IGame } from "../models/game.model";
 import { API_URL } from "./config";
 import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
-import { IOrderCustomizationProperty } from "../store/products/SearchCustomizationContext";
 import { IReview } from "../models/review.model";
 import { IActionMutateArgsRegister } from "../pages/RegisterPage";
 import { cartDetails, cartStateArr } from "../store/cartSlice";
@@ -14,6 +13,7 @@ import { IAdditionalContactInformation } from "../models/additionalContactInform
 import { IGameWithQuantityBasedOnCartDetailsEntry } from "../helpers/generateGamesWithQuantityOutOfCartDetailsEntries";
 import { IAdditionalContactInformationFromGuestOrder } from "../components/orderPage/OrderPageContent";
 import { IOrder } from "../models/order.model";
+import { IOrderCustomizationProperty } from "../hooks/useHandleElementsOrderCustomizationState";
 
 export const queryClient = new QueryClient();
 
@@ -454,39 +454,47 @@ export const placeAnOrder: (
   return data;
 };
 
+const parseDatesOfReceivedOrders = (orders: IOrder[]) => {
+  orders.forEach((order) => {
+    order.date = new Date(order.date);
+    order.orderContactInformation.dateOfBirth = new Date(
+      order.orderContactInformation.dateOfBirth
+    );
+  });
+};
+
 export type IRetrieveOrdersDetailsBackendResponse = { orders: IOrder[] };
-export const retrieveUserOrdersDetails = async function (signal: AbortSignal) {
+export const retrieveUserOrdersDetails = async function (
+  signal: AbortSignal,
+  pageNr: number
+) {
   const data = await getJSON<
     IDataOrErrorObjBackendResponse<IRetrieveOrdersDetailsBackendResponse>
   >({
-    url: `${API_URL}/order`,
+    url: generateUrlEndpointWithSearchParams(`${API_URL}/order`, { pageNr }),
     signal,
   });
   const orders =
     data.data &&
     typeof data.data === "object" &&
     (data.data as IRetrieveOrdersDetailsBackendResponse).orders;
-  if (orders)
-    orders.forEach((order) => {
-      order.date = new Date(order.date);
-      order.orderContactInformation.dateOfBirth = new Date(
-        order.orderContactInformation.dateOfBirth
-      );
-    });
+  if (orders) parseDatesOfReceivedOrders(orders);
 
   return data;
 };
 
-export const checkOrderId = async function (
+export const retrieveOrderData = async function (
   orderId: string,
   signal: AbortSignal
 ) {
-  const data = await getJSON<string>({
-    url: `${API_URL}/order/checkId`,
+  const data = await getJSON<IOrder>({
+    url: `${API_URL}/order/data`,
     body: { orderId },
     method: "POST",
     signal,
   });
+
+  if (data.data) parseDatesOfReceivedOrders([data.data]);
 
   return data;
 };

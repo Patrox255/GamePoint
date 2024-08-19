@@ -1,12 +1,4 @@
-import {
-  createContext,
-  ReactNode,
-  Reducer,
-  useCallback,
-  useMemo,
-  useReducer,
-  useState,
-} from "react";
+import { createContext, ReactNode, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useInput } from "../../hooks/useInput";
@@ -18,14 +10,10 @@ import useCreateUseReducerStateForCustomizationComponentWithInputAndTags, {
   ISelectedTags,
   ISelectedTagsReducer,
 } from "../../hooks/searchCustomizationRelated/useCreateUseReducerStateForCustomizationComponentWithInputAndTags";
-import useChangeSearchParamsAndSessionStorageWhenUseReducerChanges from "../../hooks/useChangeSearchParamsWhenUseReducerChanges";
-
-type IOrderCustomizationPropertyValues = "" | "1" | "-1";
-
-export interface IOrderCustomizationProperty {
-  value: IOrderCustomizationPropertyValues;
-  order: number;
-}
+import useHandleElementsOrderCustomizationState, {
+  IOrderCustomizationProperty,
+  IOrderCustomizationReducer,
+} from "../../hooks/useHandleElementsOrderCustomizationState";
 
 interface IOrderCustomization {
   popularity: IOrderCustomizationProperty;
@@ -34,15 +22,6 @@ interface IOrderCustomization {
   debouncedPopularity: IOrderCustomizationProperty;
   debouncedTitle: IOrderCustomizationProperty;
   debouncedPrice: IOrderCustomizationProperty;
-}
-
-interface IOrderCustomizationReducer {
-  type: orderCustomizationReducerActionTypes;
-  payload: {
-    fieldName: "popularity" | "title" | "price";
-    newState: IOrderCustomizationPropertyValues | IOrderCustomizationProperty;
-    debouncingExecution?: boolean;
-  };
 }
 
 export interface ISearchCustomizationContext {
@@ -93,77 +72,6 @@ export const SearchCustomizationContext =
     selectedPublishersState: {} as ISelectedTags,
     selectedPublishersDispatch: () => {},
   });
-
-type orderCustomizationReducerActionTypes =
-  | "CHANGE_PROPERTY_VALUE"
-  | "CHANGE_PROPERTY";
-
-const orderCustomizationReducer: Reducer<
-  IOrderCustomization,
-  IOrderCustomizationReducer
-> = function (state, action) {
-  const { fieldName, debouncingExecution = false, newState } = action.payload;
-  const debouncedFieldName = `debounced${fieldName.replace(
-    fieldName[0],
-    fieldName[0].toUpperCase()
-  )}` as "debouncedPopularity" | "debouncedTitle" | "debouncedPrice";
-  const currentStateProperty = debouncingExecution
-    ? state[debouncedFieldName]
-    : state[fieldName];
-  switch (action.type) {
-    case "CHANGE_PROPERTY_VALUE": {
-      const removeStateProperty = newState === "";
-      const usedStateProperties = [...Object.entries(state)].filter(
-        (entry) =>
-          (!debouncingExecution
-            ? !entry[0].startsWith("debounced")
-            : entry[0].startsWith("debounced")) &&
-          (!debouncingExecution
-            ? entry[0] !== fieldName
-            : entry[0] !==
-              `debounced${fieldName.replace(
-                fieldName[0],
-                fieldName[0].toUpperCase()
-              )}`) &&
-          !isNaN(entry[1].order)
-      );
-      const orderedPropertiesToOverrideOldOnesIfRemovingProperty =
-        Object.fromEntries(
-          usedStateProperties
-            .sort((a, b) => a[1].order - b[1].order)
-            .map((entry, i) => [entry[0], { ...entry[1], order: i }])
-        );
-      const newPropertyObj = {
-        value: newState,
-        order: removeStateProperty
-          ? NaN
-          : isNaN(currentStateProperty.order)
-          ? usedStateProperties.length
-          : currentStateProperty.order,
-      };
-      const updatedStateProperties = {
-        ...(debouncingExecution
-          ? { [debouncedFieldName]: newPropertyObj }
-          : { [fieldName]: newPropertyObj }),
-        ...(removeStateProperty
-          ? orderedPropertiesToOverrideOldOnesIfRemovingProperty
-          : undefined),
-      };
-      const updatedState = {
-        ...state,
-        ...updatedStateProperties,
-      };
-      return updatedState;
-    }
-    case "CHANGE_PROPERTY":
-      return {
-        ...state,
-        [debouncingExecution ? debouncedFieldName : fieldName]: newState,
-      };
-    default:
-      return state;
-  }
-};
 
 export default function SearchCustomizationContextProvider({
   children,
@@ -220,105 +128,11 @@ export default function SearchCustomizationContextProvider({
     sameTimeOccurrenceChanceId: "priceRange",
   });
 
-  const defaultOrderCustomizationProperty = {
-    value: "",
-    order: NaN,
-  };
-
-  const initialOrderCustomizationState: IOrderCustomization = {
-    popularity: generateInitialStateFromSearchParamsOrSessionStorage(
-      defaultOrderCustomizationProperty,
-      searchParams,
-      "popularity",
-      true
-    ),
-    price: generateInitialStateFromSearchParamsOrSessionStorage(
-      defaultOrderCustomizationProperty,
-      searchParams,
-      "price",
-      true
-    ),
-    title: generateInitialStateFromSearchParamsOrSessionStorage(
-      defaultOrderCustomizationProperty,
-      searchParams,
-      "title",
-      true
-    ),
-    debouncedPopularity: generateInitialStateFromSearchParamsOrSessionStorage(
-      defaultOrderCustomizationProperty,
-      searchParams,
-      "popularity",
-      true
-    ),
-    debouncedPrice: generateInitialStateFromSearchParamsOrSessionStorage(
-      defaultOrderCustomizationProperty,
-      searchParams,
-      "price",
-      true
-    ),
-    debouncedTitle: generateInitialStateFromSearchParamsOrSessionStorage(
-      defaultOrderCustomizationProperty,
-      searchParams,
-      "title",
-      true
-    ),
-  };
-  const [orderCustomizationState, orderCustomizationDispatch] = useReducer(
-    orderCustomizationReducer,
-    initialOrderCustomizationState
-  );
-
-  const {
-    debouncedPopularity,
-    debouncedPrice,
-    debouncedTitle,
-    popularity,
-    price,
-    title,
-  } = orderCustomizationState;
-
-  const orderCustomizationHookData = {
-    location,
-    navigate,
-    idOfDeeperStateThatIsSentAndDispatchCanChangeIt: "orderCustomization",
-    provideSearchParamNameToDispatch: true,
-  };
-
-  const orderCustomizationHookCallback = useCallback(
-    (newState: IOrderCustomizationProperty, searchParamName: string) => {
-      orderCustomizationDispatch({
-        type: "CHANGE_PROPERTY",
-        payload: {
-          fieldName: searchParamName as "popularity" | "title" | "price",
-          debouncingExecution: true,
-          newState,
-        },
-      });
-    },
-    []
-  );
-
-  useChangeSearchParamsAndSessionStorageWhenUseReducerChanges({
-    dispatchCallbackFn: orderCustomizationHookCallback,
-    searchParamName: "popularity",
-    stateNormalProperty: popularity,
-    stateDebouncedProperty: debouncedPopularity,
-    ...orderCustomizationHookData,
-  });
-  useChangeSearchParamsAndSessionStorageWhenUseReducerChanges({
-    dispatchCallbackFn: orderCustomizationHookCallback,
-    searchParamName: "price",
-    stateNormalProperty: price,
-    stateDebouncedProperty: debouncedPrice,
-    ...orderCustomizationHookData,
-  });
-  useChangeSearchParamsAndSessionStorageWhenUseReducerChanges({
-    dispatchCallbackFn: orderCustomizationHookCallback,
-    searchParamName: "title",
-    stateNormalProperty: title,
-    stateDebouncedProperty: debouncedTitle,
-    ...orderCustomizationHookData,
-  });
+  const { orderCustomizationDispatch, orderCustomizationState } =
+    useHandleElementsOrderCustomizationState(
+      ["popularity", "price", "title"],
+      "searchCustomizationOrder"
+    );
 
   const {
     state: discountActive,

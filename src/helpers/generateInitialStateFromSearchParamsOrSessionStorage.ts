@@ -1,3 +1,5 @@
+import { cloneDeepWith } from "lodash";
+
 export const validateJSONValue = <T>(
   JSONValue: string | null,
   initialState: T,
@@ -18,9 +20,10 @@ export const validateJSONValue = <T>(
     typeof result === "object" &&
     stateIsAnObjectWithPossibleNaNPropertyValues
   )
-    for (const [key, value] of Object.entries(result)) {
-      if (value === null) result[key] = NaN;
-    }
+    // for (const [key, value] of Object.entries(result)) {
+    //   if (value === null) result[key] = NaN;
+    // }
+    result = cloneDeepWith(result, (value) => (value === null ? NaN : value));
   return result;
 };
 

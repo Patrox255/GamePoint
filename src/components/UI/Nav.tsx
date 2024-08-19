@@ -23,9 +23,11 @@ import { HeaderLinkSearchParamsContextProvider } from "./headers/HeaderLinkOrHea
 
 let initialRender = true;
 
+export type possibleUserPanelParams = "orders" | "contact" | "admin" | "logout";
+
 export interface IUserPanelEntry {
   header: string;
-  userPanelParam: string;
+  userPanelParam: possibleUserPanelParams;
   enabled?: boolean;
   actionOnClick?: () => void;
   adminRestricted?: boolean;
@@ -36,7 +38,7 @@ export const userPanelEntries: IUserPanelEntry[] = [
   { header: "Contact Information", userPanelParam: "contact" },
   { header: "Admin Panel", userPanelParam: "admin", adminRestricted: true },
   { header: "Log out", userPanelParam: "logout" },
-];
+] as const;
 
 const Nav = memo(() => {
   const { pathname, search } = useLocation();
@@ -78,11 +80,12 @@ const Nav = memo(() => {
     return userPanelEntries
       .map((userPanelEntry) => ({
         ...userPanelEntry,
-        enabled: userPanelEntry.adminRestricted
-          ? isAdmin
-          : userPanelEntry.userPanelParam !== "logout" && isOnUserPanelPage
-          ? false
-          : undefined,
+        enabled:
+          userPanelEntry.userPanelParam !== "logout" && isOnUserPanelPage
+            ? false
+            : userPanelEntry.adminRestricted
+            ? isAdmin
+            : undefined,
         actionOnClick:
           userPanelEntry.userPanelParam === "logout"
             ? stableMutateFn

@@ -1,28 +1,42 @@
 /* eslint-disable react-refresh/only-export-components */
-import { ReactNode, useCallback, useMemo } from "react";
-import { AnimatePresence } from "framer-motion";
+import { ReactNode, useCallback } from "react";
 import { LoaderFunction, redirect, useLoaderData } from "react-router-dom";
-import { motion } from "framer-motion";
 
 import MainWrapper from "../components/structure/MainWrapper";
 import Header from "../components/UI/headers/Header";
 import createSearchParamsFromRequestURL from "../helpers/createSearchParamsFromRequestURL";
 import { authGuardFn } from "../helpers/authGuard";
-import Button from "../components/UI/Button";
 import { validateJSONValue } from "../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
-import { userPanelEntries } from "../components/UI/Nav";
+import {
+  possibleUserPanelParams,
+  userPanelEntries,
+} from "../components/UI/Nav";
 import AnimatedAppearance from "../components/UI/AnimatedAppearance";
 import UserOrdersManager from "../components/userPanel/orders/UserOrdersManager";
 import UserContactInformation from "../components/userPanel/UserContactInformation";
 import UserAdminPanel from "../components/userPanel/UserAdminPanel";
-import { useStateWithSearchParams } from "../hooks/useStateWithSearchParams";
+import filterPropertiesFromObj from "../helpers/filterPropertiesFromObj";
+import TabsComponent, {
+  ITagsObjDefault,
+} from "../components/structure/TabsComponent";
 
 const panelSectionsComponents: { [key: string]: ReactNode } = {
   orders: <UserOrdersManager />,
   contact: <UserContactInformation />,
   admin: <UserAdminPanel />,
 };
-const possiblePanelSections = userPanelEntries.slice(0, -1);
+
+type panelSectionsTagsObjs = ITagsObjDefault<possibleUserPanelParams>[];
+const possiblePanelSections = userPanelEntries.slice(0, -1).map((userEntry) =>
+  filterPropertiesFromObj(
+    {
+      ...userEntry,
+      tagName: userEntry.userPanelParam,
+      ComponentToRender: panelSectionsComponents[userEntry.userPanelParam],
+    },
+    ["userPanelParam"]
+  )
+) as panelSectionsTagsObjs;
 
 export interface IUserPanelLoaderData {
   panelSection: string;
@@ -31,36 +45,21 @@ export interface IUserPanelLoaderData {
   userId: string;
 }
 
-export const userPanelPageSectionTransitionProperties = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit: { opacity: 0 },
-  transition: { duration: 0.5 },
-};
-
 export default function UserPanelPage() {
   const { panelSection, isAdmin } = useLoaderData() as IUserPanelLoaderData;
-  const {
-    state: panelState,
-    setStateWithSearchParams: setPanelState,
-    debouncingState: debouncingPanelState,
-  } = useStateWithSearchParams(panelSection, "panelSection");
-  const availablePanelSections = useMemo(
-    () =>
+
+  const generateAvailableTabsFromAllFnStable = useCallback(
+    (tags: panelSectionsTagsObjs) =>
       isAdmin
-        ? possiblePanelSections
-        : possiblePanelSections.filter(
-            (possiblePanelSection) => !possiblePanelSection.adminRestricted
+        ? tags
+        : tags.filter(
+            (tag) =>
+              !userPanelEntries.find(
+                (userPanelEntry) =>
+                  userPanelEntry.userPanelParam === tag.tagName
+              )?.adminRestricted
           ),
     [isAdmin]
-  );
-  const curActivePanelSectionEntry = availablePanelSections.find(
-    (availablePanelSection) =>
-      availablePanelSection.userPanelParam === panelState
-  )!;
-  const CurPanelSectionComponent = useCallback(
-    () => panelSectionsComponents[panelState],
-    [panelState]
   );
 
   return (
@@ -74,39 +73,14 @@ export default function UserPanelPage() {
           Account Management
         </Header>
         <article className="w-4/5 flex justify-center items-center flex-col px-8 py-8 bg-darkerBg rounded-xl">
-          <nav className="user-panel-nav flex gap-4">
-            {availablePanelSections.map((availablePanelSection) => {
-              const active =
-                availablePanelSection === curActivePanelSectionEntry;
-              const disabled = active || panelState !== debouncingPanelState;
-              return (
-                <Button
-                  onClick={
-                    !disabled
-                      ? () =>
-                          setPanelState(availablePanelSection.userPanelParam)
-                      : undefined
-                  }
-                  disabled={disabled}
-                  key={`${availablePanelSection.userPanelParam}${
-                    disabled ? "-disabled" : ""
-                  }`}
-                  active={active}
-                >
-                  {availablePanelSection.header}
-                </Button>
-              );
-            })}
-          </nav>
-          <AnimatePresence mode="wait">
-            <motion.article
-              {...userPanelPageSectionTransitionProperties}
-              key={`user-panel-content-${curActivePanelSectionEntry.userPanelParam}`}
-              className="py-8 w-full flex justify-center items-center text-center flex-col"
-            >
-              <CurPanelSectionComponent />
-            </motion.article>
-          </AnimatePresence>
+          <TabsComponent
+            defaultTabsStateValue={panelSection}
+            possibleTabsStable={possiblePanelSections}
+            sessionStorageAndSearchParamEntryNameIfYouWantToUseThem="panelSection"
+            generateAvailableTabsFromAllFnStable={
+              generateAvailableTabsFromAllFnStable
+            }
+          />
         </article>
       </AnimatedAppearance>
     </MainWrapper>
@@ -122,11 +96,11 @@ export const loader: LoaderFunction = async function ({ request }) {
   const panelSection =
     (panelSectionFromSearchParams
       ? validateJSONValue(panelSectionFromSearchParams, "")
-      : false) || possiblePanelSections[0].userPanelParam;
+      : false) || possiblePanelSections[0].tagName;
   if (
     !authGuardFnRes ||
     !possiblePanelSections
-      .map((availablePanelSection) => availablePanelSection.userPanelParam)
+      .map((availablePanelSection) => availablePanelSection.tagName)
       .includes(panelSection)
   )
     return redirect(previousPagePathName);
@@ -134,9 +108,8 @@ export const loader: LoaderFunction = async function ({ request }) {
   const { isAdmin, login, userId } = authGuardFnRes;
   if (
     !isAdmin &&
-    possiblePanelSections.find(
-      (possiblePanelSection) =>
-        possiblePanelSection.userPanelParam === panelSection
+    userPanelEntries.find(
+      (userPanelEntry) => userPanelEntry.userPanelParam === panelSection
     )?.adminRestricted
   )
     return redirect(previousPagePathName);

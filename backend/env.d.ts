@@ -5,6 +5,7 @@ export interface IProcessEnvVariables {
   SECRET: string;
   MONGO_URL: string;
   FRONTEND_URLS: string;
+  MAX_ORDERS_PER_PAGE: string;
 }
 
 declare namespace NodeJS {

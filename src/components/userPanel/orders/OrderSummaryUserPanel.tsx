@@ -4,20 +4,23 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-import { IUserOrdersManagerParams } from "./UserOrdersManager";
 import { useQuery } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
+import { motion } from "framer-motion";
+
+import { IUserOrdersManagerParams } from "./UserOrdersManager";
 import { IUserPanelLoaderData } from "../../../pages/UserPanelPage";
-import { checkOrderId } from "../../../lib/fetch";
 import { FormActionBackendErrorResponse } from "../../UI/FormWithErrorHandling";
-import { useCallback, useContext, useMemo } from "react";
 import LoadingFallback from "../../UI/LoadingFallback";
 import Error from "../../UI/Error";
 import TimedOutActionWithProgressBar from "../../UI/TimedOutActionWithProgressBar";
-import { UserOrdersManagerOrdersDetailsContext } from "../../../store/userPanel/UserOrdersManagerOrdersDetailsContext";
-import { OrdersDetailsError } from "./OrdersList";
+import { userOrdersComponentsMotionProperties } from "../../../store/userPanel/UserOrdersManagerOrdersDetailsContext";
 import { OrderSummaryContentContext } from "../../../store/orderPage/OrderSummaryContentContext";
 import OrderSummary from "../../orderPage/OrderSummary";
 import transformOrderItemsToGamesWithQuantity from "../../../helpers/transformOrderItemsToGamesWithQuantity";
+import filterPropertiesFromObj from "../../../helpers/filterPropertiesFromObj";
+import { retrieveOrderData } from "../../../lib/fetch";
+import { IOrder } from "../../../models/order.model";
 
 export default function OrderSummaryUserPanel() {
   const { userId } = useLoaderData() as IUserPanelLoaderData;
@@ -25,15 +28,18 @@ export default function OrderSummaryUserPanel() {
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
 
-  const { error: checkOrderIdError, isLoading: checkOrderIdIsLoading } =
-    useQuery<{ data: string }, FormActionBackendErrorResponse>({
-      queryKey: ["orderIdValidate", userId, orderId],
-      queryFn: ({ signal }) => checkOrderId(orderId!, signal),
-    });
-  const error = checkOrderIdError
-    ? Array.isArray(checkOrderIdError)
-      ? checkOrderIdError[0]
-      : checkOrderIdError
+  const {
+    error: requestedOrderError,
+    isLoading: requestedOrderIsLoading,
+    data: requestedOrderData,
+  } = useQuery<{ data: IOrder }, FormActionBackendErrorResponse>({
+    queryKey: ["orderIdValidate", userId, orderId],
+    queryFn: ({ signal }) => retrieveOrderData(orderId!, signal),
+  });
+  const error = requestedOrderError
+    ? Array.isArray(requestedOrderError)
+      ? requestedOrderError[0]
+      : requestedOrderError
     : null;
 
   const handleRedirectBack = useCallback(() => {
@@ -42,20 +48,13 @@ export default function OrderSummaryUserPanel() {
     navigate(parentPath, { replace: true });
   }, [navigate, pathname, search]);
 
-  const { ordersDetails, ordersDetailsError, ordersDetailsIsLoading } =
-    useContext(UserOrdersManagerOrdersDetailsContext);
   const selectedOrder = useMemo(
-    () =>
-      ordersDetails
-        ? ordersDetails.find(
-            (ordersDetailsEntry) => ordersDetailsEntry._id === orderId
-          )
-        : undefined,
-    [orderId, ordersDetails]
+    () => (requestedOrderData?.data ? requestedOrderData.data : undefined),
+    [requestedOrderData]
   );
 
   let content;
-  if (checkOrderIdIsLoading)
+  if (requestedOrderIsLoading)
     content = <LoadingFallback customText="Retrieving order data..." />;
   else if (error)
     content = (
@@ -72,9 +71,6 @@ export default function OrderSummaryUserPanel() {
         />
       </article>
     );
-  else if (ordersDetailsError) content = <OrdersDetailsError />;
-  else if (ordersDetailsIsLoading)
-    content = <LoadingFallback customText="Loading your order data..." />;
   else if (!selectedOrder)
     content = (
       <Error
@@ -98,5 +94,13 @@ export default function OrderSummaryUserPanel() {
       </OrderSummaryContentContext.Provider>
     );
 
-  return content;
+  return (
+    <motion.article
+      {...filterPropertiesFromObj(userOrdersComponentsMotionProperties, [
+        "exit",
+      ])}
+    >
+      {content}
+    </motion.article>
+  );
 }
