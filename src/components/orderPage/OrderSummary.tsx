@@ -46,11 +46,13 @@ export const OrderSummaryCartInformationContext = createContext<{
   cartDetailsError: Error | null;
   cartDetailsIsLoading: boolean;
   stateCartStable: cartStateArr | undefined;
+  cartTotalPrice: number | undefined;
 }>({
   gamesWithQuantityStable: undefined,
   cartDetailsError: null,
   cartDetailsIsLoading: false,
   stateCartStable: undefined,
+  cartTotalPrice: undefined,
 });
 
 export default function OrderSummary({
@@ -78,9 +80,10 @@ export default function OrderSummary({
   );
 
   const cartDetailsStable = useMemo(
-    () => cartDetailsData?.data,
+    () => cartDetailsData?.data?.cart,
     [cartDetailsData]
   );
+  const cartTotalPrice = cartDetailsData?.data?.cartTotalPrice;
   const gamesWithQuantityStable = useMemo(
     () =>
       !cartDetailsStable
@@ -115,6 +118,7 @@ export default function OrderSummary({
             cartDetailsError,
             cartDetailsIsLoading,
             stateCartStable,
+            cartTotalPrice,
           }}
         >
           <OrderCartInformation />

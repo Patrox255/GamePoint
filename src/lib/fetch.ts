@@ -14,6 +14,7 @@ import { IGameWithQuantityBasedOnCartDetailsEntry } from "../helpers/generateGam
 import { IAdditionalContactInformationFromGuestOrder } from "../components/orderPage/OrderPageContent";
 import { IOrder } from "../models/order.model";
 import { IOrderCustomizationProperty } from "../hooks/useHandleElementsOrderCustomizationState";
+import { IOrdersSortOnlyDebouncedProperties } from "../store/userPanel/UserOrdersManagerOrdersDetailsContext";
 
 export const queryClient = new QueryClient();
 
@@ -317,11 +318,15 @@ export const sendCart = async function (
   return data;
 };
 
+export type ICartDetailsReceivedObj = {
+  cart: cartDetails;
+  cartTotalPrice: number;
+};
 export const getCartDetails = async function (
   signal: AbortSignal,
   cart: cartStateArr
 ) {
-  const data = await getJSON<cartDetails>({
+  const data = await getJSON<ICartDetailsReceivedObj>({
     url: `${API_URL}/cart-details`,
     body: { cart },
     signal,
@@ -466,12 +471,16 @@ const parseDatesOfReceivedOrders = (orders: IOrder[]) => {
 export type IRetrieveOrdersDetailsBackendResponse = { orders: IOrder[] };
 export const retrieveUserOrdersDetails = async function (
   signal: AbortSignal,
-  pageNr: number
+  pageNr: number,
+  sortProperties: IOrdersSortOnlyDebouncedProperties
 ) {
   const data = await getJSON<
     IDataOrErrorObjBackendResponse<IRetrieveOrdersDetailsBackendResponse>
   >({
-    url: generateUrlEndpointWithSearchParams(`${API_URL}/order`, { pageNr }),
+    url: generateUrlEndpointWithSearchParams(`${API_URL}/order`, {
+      pageNr,
+      sortProperties,
+    }),
     signal,
   });
   const orders =

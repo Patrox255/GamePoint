@@ -3,8 +3,15 @@ import { ProductsContext } from "../../store/products/ProductsContext";
 import Error from "../UI/Error";
 import LoadingFallback from "../UI/LoadingFallback";
 import GamesResults from "../main/nav/GamesResults";
-import OrderCustomization from "./SearchCustomization/OrderCustomization";
+import OrderCustomization from "../UI/OrderCustomization";
 import PagesElement from "../UI/PagesElement";
+import { SearchCustomizationContext } from "../../store/products/SearchCustomizationContext";
+
+const appropriateDisplayNamesForGamesOrderEntries = {
+  popularity: "Popularity",
+  price: "Price",
+  title: "Title",
+};
 
 export default function FetchedGames() {
   const {
@@ -17,6 +24,11 @@ export default function FetchedGames() {
     totalGamesAmountForQuery,
   } = useContext(ProductsContext);
 
+  const {
+    orderCustomizationState: orderCustomizationStateStable,
+    orderCustomizationDispatch,
+  } = useContext(SearchCustomizationContext);
+
   let content;
   const showGames = games && Array.isArray(games) && !isLoading && !isError;
   if (isError) content = <Error message={error?.message} />;
@@ -25,7 +37,13 @@ export default function FetchedGames() {
     content = (
       <>
         <GamesResults games={games} largeFormat>
-          <OrderCustomization />
+          <OrderCustomization
+            orderCustomizationObjStable={orderCustomizationStateStable}
+            appropriateDisplayNamesEntriesStable={
+              appropriateDisplayNamesForGamesOrderEntries
+            }
+            orderCustomizationDispatch={orderCustomizationDispatch}
+          />
         </GamesResults>
         <nav className="pages py-8">
           <PagesElement

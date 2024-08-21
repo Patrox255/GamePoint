@@ -3,6 +3,7 @@ import generateInitialStateFromSearchParamsOrSessionStorage from "../helpers/gen
 import { useLocation, useNavigate } from "react-router-dom";
 import useChangeSearchParamsAndSessionStorageWhenUseReducerChanges from "./useChangeSearchParamsWhenUseReducerChanges";
 import { isEqual } from "lodash";
+import useCompareComplexForUseMemo from "./useCompareComplexForUseMemo";
 
 export type IOrderCustomizationPropertyValues = "" | "1" | "-1";
 
@@ -11,10 +12,21 @@ export interface IOrderCustomizationProperty {
   order: number;
 }
 
+export type IOrderCustomizationStateObj<fieldsNames extends string = string> = {
+  [key in fieldsNames]: IOrderCustomizationProperty;
+};
+
+// for context declaration
+export type IOrderCustomizationStateObjWithDebouncedFields<
+  fieldsNames extends string
+> = IOrderCustomizationStateObj<fieldsNames> &
+  IObjWithPropertiesTransformedToDebouncedOnes<
+    IOrderCustomizationStateObj<fieldsNames>
+  >;
+
 export type IOrderCustomizationReducer = {
   type: orderCustomizationReducerActionTypes;
   payload: {
-    // fieldName: "popularity" | "title" | "price";
     fieldName: string;
     newState:
       | IOrderCustomizationPropertyValues
@@ -24,7 +36,7 @@ export type IOrderCustomizationReducer = {
 };
 
 type IOrderCustomizationStateWithoutDetailedFieldsNamesAsNowCantAccessThem =
-  Record<string, IOrderCustomizationProperty>;
+  IOrderCustomizationStateObj;
 
 type orderCustomizationReducerActionTypes =
   | "CHANGE_PROPERTY_VALUE"
@@ -127,9 +139,9 @@ const defaultOrderCustomizationProperty = {
 };
 
 const defaultOrderCustomizationStateGeneratorFn = <T>(
-  orderCustomizationFieldsNames: string[]
+  orderCustomizationFieldsNames: string[] | readonly string[]
 ) =>
-  orderCustomizationFieldsNames.reduce(
+  [...orderCustomizationFieldsNames].reduce(
     (acc, curFieldName) => ({
       ...acc,
       [curFieldName]: defaultOrderCustomizationProperty,
@@ -139,50 +151,102 @@ const defaultOrderCustomizationStateGeneratorFn = <T>(
     {}
   ) as T;
 
-type IObjWithPropertiesTransformedToDebouncedOnes<T> = {
+export type IObjWithPropertiesTransformedToDebouncedOnes<T> = {
   [K in keyof T as `debounced${Capitalize<string & K>}`]: T[K];
+};
+
+type IOrderCustomizationDefaultStateFieldsValuesEntry = {
+  defaultValue: IOrderCustomizationPropertyValues;
+  defaultOrder?: number;
 };
 
 export default function useHandleElementsOrderCustomizationState<
   orderCustomizationFieldsNames extends string
->(
-  orderCustomizationFieldsNamesStable: orderCustomizationFieldsNames[],
-  orderCustomizationSearchParamAndSessionStorageEntryName: string
-) {
+>({
+  orderCustomizationFieldsNamesStable,
+  orderCustomizationSearchParamAndSessionStorageEntryName,
+  orderCustomizationDefaultStateFieldsValuesStable,
+  omitChangingSearchParams,
+}: {
+  orderCustomizationFieldsNamesStable:
+    | orderCustomizationFieldsNames[]
+    | readonly orderCustomizationFieldsNames[];
+  orderCustomizationSearchParamAndSessionStorageEntryName: string;
+  orderCustomizationDefaultStateFieldsValuesStable?: {
+    [key in orderCustomizationFieldsNames]?: IOrderCustomizationDefaultStateFieldsValuesEntry;
+  };
+  omitChangingSearchParams?: boolean;
+}) {
   const navigate = useNavigate();
   const location = useLocation();
   const { search } = location;
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
-  type IOrderCustomizationNormalFieldsPartOfState = {
-    [key in orderCustomizationFieldsNames]: IOrderCustomizationProperty;
-  };
+  type IOrderCustomizationNormalFieldsPartOfState =
+    IOrderCustomizationStateObj<orderCustomizationFieldsNames>;
   type IOrderCustomizationState = IOrderCustomizationNormalFieldsPartOfState &
     IObjWithPropertiesTransformedToDebouncedOnes<IOrderCustomizationNormalFieldsPartOfState>;
-  const initialOrderCustomizationState = useMemo(
-    () => ({
-      ...defaultOrderCustomizationStateGeneratorFn<IOrderCustomizationState>(
-        orderCustomizationFieldsNamesStable
-      ),
-      ...generateInitialStateFromSearchParamsOrSessionStorage(
+  const initialOrderCustomizationState = useMemo(() => {
+    const stateFromSearchParamsOrSessionStorage =
+      generateInitialStateFromSearchParamsOrSessionStorage(
         {},
         searchParams,
         orderCustomizationSearchParamAndSessionStorageEntryName,
         true
+      );
+    if (
+      orderCustomizationDefaultStateFieldsValuesStable &&
+      [...Object.entries(stateFromSearchParamsOrSessionStorage)].length === 0
+    ) {
+      const defaultFieldsValuesEntries = [
+        ...Object.entries(orderCustomizationDefaultStateFieldsValuesStable),
+      ] as [
+        orderCustomizationFieldsNames,
+        IOrderCustomizationDefaultStateFieldsValuesEntry
+      ][];
+      if (defaultFieldsValuesEntries.length !== 0)
+        defaultFieldsValuesEntries.forEach(
+          (defaultFieldsValuesEntry, index) => {
+            const fieldPropertyValueBasedOnDefaultValueEntry: IOrderCustomizationProperty =
+              {
+                value: defaultFieldsValuesEntry[1].defaultValue,
+                order: defaultFieldsValuesEntry[1].defaultOrder ?? index,
+              };
+            [
+              defaultFieldsValuesEntry[0],
+              generateDebouncedVariableNameFromNormalOne(
+                defaultFieldsValuesEntry[0]
+              ),
+            ].forEach(
+              (fieldNamePropertyToChangeInSessionOrSearchParamsState) =>
+                (stateFromSearchParamsOrSessionStorage[
+                  fieldNamePropertyToChangeInSessionOrSearchParamsState
+                ] = fieldPropertyValueBasedOnDefaultValueEntry)
+            );
+          }
+        );
+    }
+
+    return {
+      ...defaultOrderCustomizationStateGeneratorFn<IOrderCustomizationState>(
+        orderCustomizationFieldsNamesStable
       ),
-    }),
-    [
-      orderCustomizationFieldsNamesStable,
-      orderCustomizationSearchParamAndSessionStorageEntryName,
-      searchParams,
-    ]
-  );
+      ...stateFromSearchParamsOrSessionStorage,
+    };
+  }, [
+    orderCustomizationDefaultStateFieldsValuesStable,
+    orderCustomizationFieldsNamesStable,
+    orderCustomizationSearchParamAndSessionStorageEntryName,
+    searchParams,
+  ]);
 
   const [orderCustomizationState, orderCustomizationDispatch] = useReducer(
     orderCustomizationReducer,
     initialOrderCustomizationState
   );
   const orderCustomizationStateToSend: IOrderCustomizationState =
-    orderCustomizationState as unknown as IOrderCustomizationState;
+    useCompareComplexForUseMemo(
+      orderCustomizationState as unknown as IOrderCustomizationState
+    );
 
   const orderCustomizationHookCallback = useCallback(
     (newState: IOrderCustomizationState, searchParamName: string) => {
@@ -223,10 +287,11 @@ export default function useHandleElementsOrderCustomizationState<
     stateNormalProperty: orderCustomizationStateToSend,
     useDebouncedState: true,
     manuallyPrepareStateBeforeSavingInSessionStorageAndSearchParamsToSaveSomeSpaceFnStable,
+    omitChangingSearchParams: omitChangingSearchParams,
   });
 
   return {
-    orderCustomizationState: orderCustomizationStateToSend,
+    orderCustomizationStateStable: orderCustomizationStateToSend,
     orderCustomizationDispatch,
   };
 }

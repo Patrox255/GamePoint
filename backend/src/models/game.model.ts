@@ -1,5 +1,6 @@
 import mongoose, { Schema, Types } from "mongoose";
 import slugify from "slugify";
+import { calcShopPrice } from "../helpers";
 
 export interface IProductPriceInformation {
   price: number;
@@ -41,7 +42,7 @@ const GameSchema = new Schema<IGame>({
 });
 
 GameSchema.pre("save", function (next) {
-  this.finalPrice = Math.trunc(this.price * (100 - this.discount)) / 100;
+  this.finalPrice = calcShopPrice(this.price * (100 - this.discount));
   this.slug = slugify(this.title, { lower: true });
   next();
 });
@@ -57,7 +58,7 @@ GameSchema.pre("findOneAndUpdate", async function (next) {
   const docToUpdate = (await this.model.findOne(this.getQuery())) as IGame;
   const price = update.price ? update.price : docToUpdate.price;
   const discount = update.discount ? update.discount : docToUpdate.discount;
-  update.finalPrice = Math.trunc(price * (100 - discount)) / 100;
+  update.finalPrice = calcShopPrice(price * (100 - discount));
   update.slug = update.title
     ? slugify(update.title, { lower: true })
     : docToUpdate.slug;

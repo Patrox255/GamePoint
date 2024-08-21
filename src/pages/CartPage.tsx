@@ -144,7 +144,7 @@ export default function CartPage() {
     useAppSelector((state) => state.userAuthSlice.login) !== undefined;
 
   const cartDetailsStable = useMemo(
-    () => cartDetailsData?.data,
+    () => cartDetailsData?.data?.cart,
     [cartDetailsData]
   );
   const navigate = useNavigate();
@@ -223,13 +223,7 @@ export default function CartPage() {
             <p className="text-lg flex items-center gap-2">
               Total price:
               <span className="font-bold text-highlightRed text-xl">
-                {priceFormat.format(
-                  gamesWithQuantityStable!.reduce(
-                    (totalPrice, game) =>
-                      totalPrice + game.quantity * game.finalPrice,
-                    0
-                  )
-                )}
+                {priceFormat.format(cartDetailsData?.data?.cartTotalPrice)}
               </span>
             </p>
             <Button

@@ -37,6 +37,9 @@ import {
   verifyCreateAndInsertAdditionalContactInformationDocumentBasedOnRequestData,
   filterPropertiesFromObj,
   retrieveUserDocumentWithPopulatedOrdersDetails,
+  IOrderCustomizationProperty,
+  generateOrderObj,
+  calcTotalGamesPrice,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -249,48 +252,20 @@ const startServer = async () => {
             "platforms",
           ]);
 
-          interface IOrderCustomizationProperty {
-            value: "" | "1" | "-1";
-            order: number;
-          }
-
-          const generateOrderObj = (
-            properties: {
-              obj: IOrderCustomizationProperty;
-              name: string;
-            }[]
-          ) => {
-            const sortProperties: { [key: string]: mongoose.SortOrder } = {};
-            properties
-              .filter(
-                (property) =>
-                  property.obj &&
-                  (property.obj.value === "1" || property.obj.value === "-1")
-              )
-              .sort((a, b) => a.obj.order - b.obj.order)
-              .forEach((property) => {
-                sortProperties[property.name] = Number(property.obj.value) as
-                  | 1
-                  | -1;
-              });
-            return sortProperties;
-          };
-
-          let sortProperties: { [key: string]: mongoose.SortOrder } =
-            generateOrderObj([
-              {
-                obj: popularityOrder as IOrderCustomizationProperty,
-                name: "popularity",
-              },
-              {
-                obj: priceOrder as IOrderCustomizationProperty,
-                name: "finalPrice",
-              },
-              {
-                obj: titleOrder as IOrderCustomizationProperty,
-                name: "title",
-              },
-            ]);
+          let sortProperties = generateOrderObj([
+            {
+              obj: popularityOrder as IOrderCustomizationProperty,
+              name: "popularity",
+            },
+            {
+              obj: priceOrder as IOrderCustomizationProperty,
+              name: "finalPrice",
+            },
+            {
+              obj: titleOrder as IOrderCustomizationProperty,
+              name: "title",
+            },
+          ]);
           if (most_popular === 1) sortProperties = { popularity: -1, date: -1 };
           mongooseQuery.sort(sortProperties);
           mongooseQuery.skip(
@@ -1173,12 +1148,23 @@ const startServer = async () => {
           const cartWithGames = await createCartWithGamesBasedOnReceivedCart(
             cart
           );
+          const cartTotalPrice = calcTotalGamesPrice(
+            cartWithGames.map((cartWithGamesEntry) => {
+              const {
+                relatedGame: { finalPrice },
+                quantity,
+              } = cartWithGamesEntry as typeof cartWithGamesEntry & {
+                relatedGame: IGame;
+              };
+              return { finalPrice: finalPrice!, quantity };
+            })
+          );
           const cartToSend = cartWithGames
             .filter((cartEntry) => cartEntry.relatedGame !== null)
             .map((cartEntry) =>
               filterPropertiesFromObj(cartEntry, ["quantity"])
             );
-          return res.status(200).json(cartToSend);
+          return res.status(200).json({ cart: cartToSend, cartTotalPrice });
         } catch (e) {
           next(e);
         }
@@ -1775,6 +1761,7 @@ const startServer = async () => {
 
         const salt = await bcrypt.genSalt();
         const accessCode = await bcrypt.hash(generateRandomStr(8), salt);
+        const totalValue = calcTotalGamesPrice(orderItems);
         const orderToSave: IOrder = {
           items: orderItems,
           orderContactInformation: {
@@ -1782,6 +1769,7 @@ const startServer = async () => {
             dateOfBirth: contactInformationDateOfBirth,
           },
           accessCode,
+          totalValue,
         };
         const session = await startSession();
         session.startTransaction();
@@ -1830,8 +1818,11 @@ const startServer = async () => {
         const {
           token: { userId },
         } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
-        const { pageNr } = await parseQueries(req);
-        await validateQueriesTypes([["number", pageNr]]);
+        const { pageNr, sortProperties } = await parseQueries(req);
+        await validateQueriesTypes([
+          ["number", pageNr],
+          ["object", sortProperties],
+        ]);
         const MAX_ORDERS_PER_PAGE = accessEnvironmentVariable(
           "MAX_ORDERS_PER_PAGE"
         );
@@ -1841,7 +1832,23 @@ const startServer = async () => {
         // no checking as after verifyJwt it has to be true
         let orders: IOrder[];
         orders = relatedUser!.orders as unknown as IOrder[];
-        orders.sort((o1, o2) => +o2.date! - +o1.date!);
+        const { debouncedDate, debouncedTotalValue } = sortProperties;
+        const sortPropertiesNotEmpty = generateOrderObj([
+          { name: "date", obj: debouncedDate },
+          { name: "totalValue", obj: debouncedTotalValue },
+        ]);
+        console.log(sortPropertiesNotEmpty);
+        Object.entries(sortPropertiesNotEmpty)
+          .reverse()
+          .forEach(([propertyName, propertyOrder]) =>
+            orders.sort((o1, o2) => {
+              const subtraction =
+                +o1[propertyName as keyof typeof o1]! -
+                +o2[propertyName as keyof typeof o2]!;
+              if (propertyOrder === 1) return subtraction;
+              return -subtraction;
+            })
+          );
         if (pageNr !== undefined)
           orders = orders.slice(
             pageNr * +MAX_ORDERS_PER_PAGE,

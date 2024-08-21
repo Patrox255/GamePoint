@@ -11,18 +11,19 @@ import useCreateUseReducerStateForCustomizationComponentWithInputAndTags, {
   ISelectedTagsReducer,
 } from "../../hooks/searchCustomizationRelated/useCreateUseReducerStateForCustomizationComponentWithInputAndTags";
 import useHandleElementsOrderCustomizationState, {
-  IOrderCustomizationProperty,
   IOrderCustomizationReducer,
+  IOrderCustomizationStateObjWithDebouncedFields,
 } from "../../hooks/useHandleElementsOrderCustomizationState";
 
-interface IOrderCustomization {
-  popularity: IOrderCustomizationProperty;
-  title: IOrderCustomizationProperty;
-  price: IOrderCustomizationProperty;
-  debouncedPopularity: IOrderCustomizationProperty;
-  debouncedTitle: IOrderCustomizationProperty;
-  debouncedPrice: IOrderCustomizationProperty;
-}
+type IOrderCustomization = IOrderCustomizationStateObjWithDebouncedFields<
+  (typeof searchCustomizationOrderFieldsNames)[number]
+>;
+
+const searchCustomizationOrderFieldsNames = [
+  "popularity",
+  "price",
+  "title",
+] as const;
 
 export interface ISearchCustomizationContext {
   minPrice: number;
@@ -128,11 +129,12 @@ export default function SearchCustomizationContextProvider({
     sameTimeOccurrenceChanceId: "priceRange",
   });
 
-  const { orderCustomizationDispatch, orderCustomizationState } =
-    useHandleElementsOrderCustomizationState(
-      ["popularity", "price", "title"],
-      "searchCustomizationOrder"
-    );
+  const { orderCustomizationDispatch, orderCustomizationStateStable } =
+    useHandleElementsOrderCustomizationState({
+      orderCustomizationFieldsNamesStable: searchCustomizationOrderFieldsNames,
+      orderCustomizationSearchParamAndSessionStorageEntryName:
+        "searchCustomizationOrder",
+    });
 
   const {
     state: discountActive,
@@ -190,7 +192,7 @@ export default function SearchCustomizationContextProvider({
         minQueryDebouncingState,
         maxQueryDebouncingState,
         searchTermDebouncingState,
-        orderCustomizationState,
+        orderCustomizationState: orderCustomizationStateStable,
         orderCustomizationDispatch,
         discountActive,
         setDiscountActive,

@@ -10,6 +10,26 @@ import {
 } from "../../lib/fetch";
 import { useAppSelector } from "../../hooks/reduxStore";
 import { PagesManagerContext } from "../products/PagesManagerContext";
+import useHandleElementsOrderCustomizationState, {
+  IOrderCustomizationReducer,
+  IOrderCustomizationStateObj,
+  IOrderCustomizationStateObjWithDebouncedFields,
+} from "../../hooks/useHandleElementsOrderCustomizationState";
+import {
+  createDebouncedKeys,
+  createOrderCustomizationObjWithOnlyOrWithoutDebouncedProperties,
+} from "../../components/UI/OrderCustomization";
+
+export type IOrdersSortProperties =
+  IOrderCustomizationStateObjWithDebouncedFields<ordersSortPropertiesFieldsNames>;
+
+const ordersSortPropertiesFieldsNames = ["date", "totalValue"] as const;
+type ordersSortPropertiesFieldsNames =
+  (typeof ordersSortPropertiesFieldsNames)[number];
+
+export type IOrdersSortOnlyDebouncedProperties = IOrderCustomizationStateObj<
+  createDebouncedKeys<ordersSortPropertiesFieldsNames>
+>;
 
 export const userOrdersComponentsMotionProperties: AnimationProps = {
   initial: {
@@ -23,10 +43,14 @@ export const UserOrdersManagerOrdersDetailsContext = createContext<{
   ordersDetails: false | IOrder[];
   ordersDetailsError: Error | null;
   ordersDetailsIsLoading: boolean;
+  ordersSortPropertiesStable: IOrdersSortProperties | undefined;
+  ordersSortDispatch: React.Dispatch<IOrderCustomizationReducer>;
 }>({
   ordersDetails: false,
   ordersDetailsError: null,
   ordersDetailsIsLoading: false,
+  ordersSortPropertiesStable: undefined,
+  ordersSortDispatch: () => {},
 });
 
 export default function UserOrdersManagerOrdersDetailsContextProvider({
@@ -38,6 +62,24 @@ export default function UserOrdersManagerOrdersDetailsContextProvider({
     (state) => state.userAuthSlice.ordersAmount
   );
   const login = useAppSelector((state) => state.userAuthSlice.login);
+  const { orderCustomizationDispatch, orderCustomizationStateStable } =
+    useHandleElementsOrderCustomizationState({
+      orderCustomizationFieldsNamesStable: ordersSortPropertiesFieldsNames,
+      orderCustomizationSearchParamAndSessionStorageEntryName:
+        "ordersSortingProperties",
+      orderCustomizationDefaultStateFieldsValuesStable: {
+        date: { defaultValue: "-1" },
+      },
+      omitChangingSearchParams: true,
+    });
+  const ordersSortPropertiesToSend = useMemo(
+    () =>
+      createOrderCustomizationObjWithOnlyOrWithoutDebouncedProperties(
+        orderCustomizationStateStable,
+        false
+      ),
+    [orderCustomizationStateStable]
+  );
 
   const { pageNr } = useContext(PagesManagerContext);
 
@@ -46,8 +88,9 @@ export default function UserOrdersManagerOrdersDetailsContextProvider({
     error: ordersDetailsError,
     isLoading: ordersDetailsIsLoading,
   } = useQuery({
-    queryFn: ({ signal }) => retrieveUserOrdersDetails(signal, pageNr),
-    queryKey: ["orders", login, pageNr],
+    queryFn: ({ signal }) =>
+      retrieveUserOrdersDetails(signal, pageNr, ordersSortPropertiesToSend),
+    queryKey: ["orders", login, ordersSortPropertiesToSend, pageNr],
     enabled: ordersAmount > 0,
   });
 
@@ -58,11 +101,15 @@ export default function UserOrdersManagerOrdersDetailsContextProvider({
     [ordersDetailsData]
   );
 
-  console.log(ordersDetails ? ordersDetails.length : undefined);
-
   return (
     <UserOrdersManagerOrdersDetailsContext.Provider
-      value={{ ordersDetails, ordersDetailsError, ordersDetailsIsLoading }}
+      value={{
+        ordersDetails,
+        ordersDetailsError,
+        ordersDetailsIsLoading,
+        ordersSortDispatch: orderCustomizationDispatch,
+        ordersSortPropertiesStable: orderCustomizationStateStable,
+      }}
     >
       {children}
     </UserOrdersManagerOrdersDetailsContext.Provider>

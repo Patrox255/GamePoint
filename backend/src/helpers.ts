@@ -419,3 +419,40 @@ export const retrieveUserDocumentWithPopulatedOrdersDetails = async function (
   });
   return user;
 };
+
+export interface IOrderCustomizationProperty {
+  value: "" | "1" | "-1";
+  order: number;
+}
+
+export const generateOrderObj = (
+  properties: {
+    obj: IOrderCustomizationProperty;
+    name: string;
+  }[]
+) => {
+  const sortProperties: { [key: string]: mongoose.SortOrder } = {};
+  properties
+    .filter(
+      (property) =>
+        property.obj &&
+        (property.obj.value === "1" || property.obj.value === "-1")
+    )
+    .sort((a, b) => a.obj.order - b.obj.order)
+    .forEach((property) => {
+      sortProperties[property.name] = Number(property.obj.value) as 1 | -1;
+    });
+  return sortProperties;
+};
+
+export const calcShopPrice = (price: number) => Math.trunc(price * 100) / 100;
+
+export const calcTotalGamesPrice = <
+  T extends { quantity: number; finalPrice: number }
+>(
+  games: T[]
+) =>
+  games.reduce(
+    (acc, game) => acc + calcShopPrice(game.finalPrice * game.quantity),
+    0
+  );

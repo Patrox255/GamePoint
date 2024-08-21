@@ -2,12 +2,14 @@ import { createContext, ReactNode } from "react";
 
 import useRetrieveCartDetails from "../../hooks/useRetrieveCartDetails";
 import { IGameWithQuantityBasedOnCartDetailsEntry } from "../../helpers/generateGamesWithQuantityOutOfCartDetailsEntries";
-import { IOrderResponseFromFetchFn } from "../../lib/fetch";
+import {
+  ICartDetailsReceivedObj,
+  IOrderResponseFromFetchFn,
+} from "../../lib/fetch";
 import {
   FormActionBackendErrorResponse,
   ValidationErrorsArr,
 } from "../../components/UI/FormWithErrorHandling";
-import { cartDetails } from "../cartSlice";
 
 export interface INewOrderSummaryContextPartFromOrderPageContent {
   placeAnOrderData: IOrderResponseFromFetchFn | undefined;
@@ -25,7 +27,7 @@ export const NewOrderSummaryContext = createContext<
     placeAnOrderErrorToRender: Error | null;
     couldNotGetCartDetails: boolean;
     btnDisabledDueToOrderQueryState: boolean;
-    cartDetailsData: { data: cartDetails } | undefined;
+    cartDetailsData: { data: ICartDetailsReceivedObj } | undefined;
     cartDetailsIsLoading: boolean;
     cartDetailsError: Error | null;
   }

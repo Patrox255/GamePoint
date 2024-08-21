@@ -83,6 +83,7 @@ export default function OrderSummaryUserPanel() {
       <OrderSummaryContentContext.Provider
         value={{
           contactInformationToRender: selectedOrder.orderContactInformation,
+          cartTotalPriceNotFromCartDetails: selectedOrder.totalValue,
         }}
       >
         <OrderSummary

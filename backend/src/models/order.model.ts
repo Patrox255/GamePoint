@@ -25,6 +25,7 @@ export interface IOrder {
   guestEmail?: string;
   accessCode?: string; // this combined with the order id and customer e-mail is going to allow guest users
   // to access their orders based on the links which would be sent via e-mail message
+  totalValue?: number;
 }
 
 const OrderSchema = new Schema<IOrder>({
@@ -44,6 +45,7 @@ const OrderSchema = new Schema<IOrder>({
   // so I need to store its whole snapshot
   guestEmail: { type: String },
   accessCode: { type: String },
+  totalValue: { type: Number },
 });
 
 const Order = model("Order", OrderSchema);

@@ -19,6 +19,7 @@ import {
 } from "../../../store/userPanel/UserOrdersManagerOrdersDetailsContext";
 import PagesElement from "../../UI/PagesElement";
 import { MAX_ORDERS_PER_PAGE } from "../../../lib/config";
+import OrderCustomization from "../../UI/OrderCustomization";
 
 export const OrdersDetailsError = () => (
   <Error
@@ -103,8 +104,13 @@ export default function OrdersList() {
     (state) => state.userAuthSlice.ordersAmount
   );
 
-  const { ordersDetails, ordersDetailsError, ordersDetailsIsLoading } =
-    useContext(UserOrdersManagerOrdersDetailsContext);
+  const {
+    ordersDetails,
+    ordersDetailsError,
+    ordersDetailsIsLoading,
+    ordersSortDispatch,
+    ordersSortPropertiesStable,
+  } = useContext(UserOrdersManagerOrdersDetailsContext);
 
   let content;
   if (ordersDetailsError) content = <OrdersDetailsError />;
@@ -119,76 +125,82 @@ export default function OrdersList() {
     );
   if (ordersDetails)
     content = (
-      <motion.ul
-        className="user-orders-list flex w-full flex-col justify-center items-center gap-4"
-        {...userOrdersComponentsMotionProperties}
-      >
-        {ordersDetails.map((ordersDetailsItem) => {
-          const orderTotalValue = ordersDetailsItem.items.reduce(
-            (acc, orderItem) => acc + orderItem.quantity * orderItem.finalPrice,
-            0
-          );
-          const orderDetailsItemCustomEntriesValuesObj: {
-            [key in orderDetailsCustomEntries]: unknown;
-          } = {
-            totalValue: orderTotalValue,
-          };
+      <>
+        <OrderCustomization
+          orderCustomizationObjStable={ordersSortPropertiesStable!}
+          appropriateDisplayNamesEntriesStable={{
+            date: "Time of placing an order",
+            totalValue: "Total value",
+          }}
+          orderCustomizationDispatch={ordersSortDispatch}
+        />
+        <motion.ul
+          className="user-orders-list flex w-full flex-col justify-center items-center gap-4"
+          {...userOrdersComponentsMotionProperties}
+        >
+          {ordersDetails.map((ordersDetailsItem) => {
+            const orderDetailsItemCustomEntriesValuesObj: {
+              [key in orderDetailsCustomEntries]: unknown;
+            } = {
+              totalValue: ordersDetailsItem.totalValue,
+            };
 
-          const orderDetailsEntriesArr = [
-            ...Object.entries({
-              ...orderDetailsEntries,
-              ...orderDetailsCustomEntries,
-            }),
-          ] as [
-            (
-              | keyof typeof orderDetailsEntries
-              | keyof typeof orderDetailsCustomEntries
-            ),
-            IOrderDetailsEntryKeyValueObj
-          ][];
+            const orderDetailsEntriesArr = [
+              ...Object.entries({
+                ...orderDetailsEntries,
+                ...orderDetailsCustomEntries,
+              }),
+            ] as [
+              (
+                | keyof typeof orderDetailsEntries
+                | keyof typeof orderDetailsCustomEntries
+              ),
+              IOrderDetailsEntryKeyValueObj
+            ][];
 
-          return (
-            <motion.li
-              className="w-full justify-center items-center flex flex-wrap bg-bodyBg px-4 py-8 rounded-xl gap-2 text-xs sm:text-base cursor-pointer"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.7 }}
-              whileHover={{ opacity: 1 }}
-              key={ordersDetailsItem._id}
-              onClick={() =>
-                navigate(
-                  createUrlWithCurrentSearchParams({
-                    searchParams,
-                    pathname: ordersDetailsItem._id,
-                  }),
-                  {
-                    replace: true,
-                  }
-                )
-              }
-            >
-              {orderDetailsEntriesArr.map((orderDetailsEntry) => {
-                const orderDetailsItemDesiredValueKey = orderDetailsEntry[0];
-                return (
-                  <p
-                    className={`order-${orderDetailsEntry[1].contentClassName} flex items-center justify-center text-wrap flex-wrap max-w-full`}
-                    key={`${ordersDetailsItem._id}-${orderDetailsEntry[1].contentClassName}`}
-                  >
-                    {orderDetailsEntry[1].contentFn(
-                      orderDetailsItemDesiredValueKey in ordersDetailsItem
-                        ? ordersDetailsItem[
-                            orderDetailsItemDesiredValueKey as keyof IOrder
-                          ]
-                        : orderDetailsItemCustomEntriesValuesObj[
-                            orderDetailsItemDesiredValueKey as orderDetailsCustomEntries
-                          ]
-                    )}
-                  </p>
-                );
-              })}
-            </motion.li>
-          );
-        })}
-      </motion.ul>
+            return (
+              <motion.li
+                className="w-full justify-center items-center flex flex-wrap bg-bodyBg px-4 py-8 rounded-xl gap-2 text-xs sm:text-base cursor-pointer"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.7 }}
+                whileHover={{ opacity: 1 }}
+                key={ordersDetailsItem._id}
+                onClick={() =>
+                  navigate(
+                    createUrlWithCurrentSearchParams({
+                      searchParams,
+                      pathname: ordersDetailsItem._id,
+                    }),
+                    {
+                      replace: true,
+                    }
+                  )
+                }
+              >
+                {orderDetailsEntriesArr.map((orderDetailsEntry) => {
+                  const orderDetailsItemDesiredValueKey = orderDetailsEntry[0];
+                  return (
+                    <p
+                      className={`order-${orderDetailsEntry[1].contentClassName} flex items-center justify-center text-wrap flex-wrap max-w-full`}
+                      key={`${ordersDetailsItem._id}-${orderDetailsEntry[1].contentClassName}`}
+                    >
+                      {orderDetailsEntry[1].contentFn(
+                        orderDetailsItemDesiredValueKey in ordersDetailsItem
+                          ? ordersDetailsItem[
+                              orderDetailsItemDesiredValueKey as keyof IOrder
+                            ]
+                          : orderDetailsItemCustomEntriesValuesObj[
+                              orderDetailsItemDesiredValueKey as orderDetailsCustomEntries
+                            ]
+                      )}
+                    </p>
+                  );
+                })}
+              </motion.li>
+            );
+          })}
+        </motion.ul>
+      </>
     );
 
   return (

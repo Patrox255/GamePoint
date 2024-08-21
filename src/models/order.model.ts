@@ -39,4 +39,5 @@ export interface IOrder extends IMongooseDocument {
   date: Date;
   status: orderPossibleStatus;
   orderContactInformation: IAdditionalContactInformation;
+  totalValue: number;
 }

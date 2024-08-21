@@ -8,6 +8,9 @@ import {
   OrderSummarySectionWrapper,
 } from "./OrderSummary";
 import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContentContext";
+import Header from "../UI/headers/Header";
+import { priceFormat } from "../game/PriceTag";
+import properties from "../../styles/properties";
 
 export default function OrderCartInformation() {
   const {
@@ -15,8 +18,12 @@ export default function OrderCartInformation() {
     cartDetailsError,
     cartDetailsIsLoading,
     stateCartStable,
+    cartTotalPrice: cartTotalPriceFromCartInformationCtx,
   } = useContext(OrderSummaryCartInformationContext);
-  const { serveAsPlacingOrderSummary } = useContext(OrderSummaryContentContext);
+  const { serveAsPlacingOrderSummary, cartTotalPriceNotFromCartDetails } =
+    useContext(OrderSummaryContentContext);
+  const cartTotalPrice =
+    cartTotalPriceFromCartInformationCtx ?? cartTotalPriceNotFromCartDetails;
 
   let content;
   if ((!stateCartStable || cartDetailsIsLoading) && !serveAsPlacingOrderSummary)
@@ -26,12 +33,24 @@ export default function OrderCartInformation() {
   if (cartDetailsError) content = <Error message={cartDetailsError.message} />;
   if (gamesWithQuantityStable)
     content = (
-      <GamesResults
-        games={gamesWithQuantityStable}
-        headerLinkInsteadOfWholeGameContainer
-        moveHighlight={false}
-        showQuantityAndFinalPrice
-      />
+      <>
+        <GamesResults
+          games={gamesWithQuantityStable}
+          headerLinkInsteadOfWholeGameContainer
+          moveHighlight={false}
+          showQuantityAndFinalPrice
+        />
+        <Header
+          usePaddingBottom={false}
+          additionalTailwindClasses="pt-8"
+          colorTailwindClass={properties.defaultFont}
+        >
+          Total price:{" "}
+          <span className="text-highlightRed">
+            {priceFormat.format(cartTotalPrice!)}
+          </span>
+        </Header>
+      </>
     );
   return (
     <OrderSummarySectionWrapper identificator="order-products-details">
