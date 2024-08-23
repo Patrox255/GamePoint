@@ -668,7 +668,8 @@ export default function DatePickerInputFieldElement({
     handleInputChange,
   } = useInput({
     searchParamName: "birthDate",
-    saveDebouncedStateInSearchParamsAndSessionStorage: false,
+    saveDebouncedStateInSearchParams: false,
+    saveDebouncedStateInSessionStorage: false,
     debouncingTime: 1000,
     stateValue: selectedDate,
     setStateValue: setSelectedDate,

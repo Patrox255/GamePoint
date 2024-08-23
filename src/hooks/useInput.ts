@@ -16,33 +16,47 @@ const sameTimeOccurrenceIdsAndArrays: {
   [key: string]: { [key: string]: number };
 } = {};
 
-export const useInput = function <T extends string | number | (string | Date)>({
+export const useInput = function <
+  stateType extends string | number | (string | Date)
+>({
   stateValue,
   setStateValue,
   setStateAction,
   searchParamName,
   debouncingTime = 500,
-  saveDebouncedStateInSearchParamsAndSessionStorage = true,
+  saveDebouncedStateInSearchParams = true,
+  saveDebouncedStateInSessionStorage = true,
   sameTimeOccurrenceChanceId,
+  defaultStateValueInCaseOfCreatingStateHere,
 }: {
-  stateValue?: T;
+  stateValue?: stateType;
   setStateValue?:
-    | Dispatch<SetStateAction<T>>
-    | ((newState: T) => void)
-    | Dispatch<SetStateAction<T>>;
+    | Dispatch<SetStateAction<stateType>>
+    | ((newState: stateType) => void)
+    | Dispatch<SetStateAction<stateType>>;
   setStateAction?: ActionCreatorWithPayload<string, string>;
   searchParamName: string;
   debouncingTime?: number;
-  saveDebouncedStateInSearchParamsAndSessionStorage?: boolean;
+  saveDebouncedStateInSearchParams?: boolean;
+  saveDebouncedStateInSessionStorage?: boolean;
   sameTimeOccurrenceChanceId?: string;
+  defaultStateValueInCaseOfCreatingStateHere?: stateType;
 }) {
   const dispatch = useAppDispatch();
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
-  const [queryDebouncingState, setQueryDebouncingState] = useState<T>(
+  const [queryDebouncingState, setQueryDebouncingState] = useState<stateType>(
     stateValue!
   );
+  const [queryState, setQueryState] = useState<stateType | undefined>(
+    defaultStateValueInCaseOfCreatingStateHere
+  );
+  const usingExternalStateValue = stateValue !== undefined;
+  const stateValueToSupervise = usingExternalStateValue
+    ? stateValue
+    : queryState!;
+  console.log(stateValueToSupervise);
 
   useEffect(() => {
     if (!sameTimeOccurrenceChanceId) return;
@@ -71,25 +85,32 @@ export const useInput = function <T extends string | number | (string | Date)>({
   }, [sameTimeOccurrenceChanceId, searchParamName]);
 
   const debouncingFn = useCallback(() => {
-    setQueryDebouncingState(stateValue!);
-    if (!saveDebouncedStateInSearchParamsAndSessionStorage) return;
-    searchParams.set(searchParamName, JSON.stringify(stateValue));
-    sessionStorage.setItem(searchParamName, JSON.stringify(stateValue));
-    navigate(createUrlWithCurrentSearchParams({ searchParams, pathname }), {
-      replace: true,
-    });
+    setQueryDebouncingState(stateValueToSupervise!);
+    if (saveDebouncedStateInSessionStorage)
+      sessionStorage.setItem(
+        searchParamName,
+        JSON.stringify(stateValueToSupervise)
+      );
+    if (saveDebouncedStateInSearchParams) {
+      searchParams.set(searchParamName, JSON.stringify(stateValueToSupervise));
+      navigate(createUrlWithCurrentSearchParams({ searchParams, pathname }), {
+        replace: true,
+      });
+    }
   }, [
-    searchParams,
-    stateValue,
+    stateValueToSupervise,
+    saveDebouncedStateInSessionStorage,
     searchParamName,
-    saveDebouncedStateInSearchParamsAndSessionStorage,
-    pathname,
+    saveDebouncedStateInSearchParams,
+    searchParams,
     navigate,
+    pathname,
   ]);
 
   useDebouncing(
     debouncingFn,
-    stateValue !== undefined && stateValue !== queryDebouncingState,
+    stateValueToSupervise !== undefined &&
+      stateValueToSupervise !== queryDebouncingState,
     debouncingTime +
       (sameTimeOccurrenceChanceId &&
       sameTimeOccurrenceIdsAndArrays[sameTimeOccurrenceChanceId] !==
@@ -103,16 +124,18 @@ export const useInput = function <T extends string | number | (string | Date)>({
         : 0)
   );
 
-  function handleInputChange(newValue: T) {
-    stateValue !== undefined &&
-      setStateValue &&
-      setStateValue(
-        typeof stateValue === "string" || typeof stateValue === "object"
-          ? (newValue as T)
-          : (parseFloat(newValue as string) as T)
-      );
-    stateValue !== undefined &&
-      typeof newValue === "string" &&
+  function handleInputChange(newValue: stateType) {
+    console.log(newValue, stateValueToSupervise);
+    if (stateValueToSupervise === undefined) return;
+    const setStateArg =
+      typeof stateValueToSupervise === "string" ||
+      typeof stateValueToSupervise === "object"
+        ? (newValue as stateType)
+        : (parseFloat(newValue as string) as stateType);
+    usingExternalStateValue
+      ? setStateValue && setStateValue(setStateArg)
+      : setQueryState(setStateArg);
+    typeof newValue === "string" &&
       setStateAction &&
       dispatch(setStateAction(newValue));
   }
@@ -124,5 +147,6 @@ export const useInput = function <T extends string | number | (string | Date)>({
     searchParams,
     queryDebouncingState,
     setQueryDebouncingState,
+    inputValueInCaseOfCreatingStateHere: queryState,
   };
 };

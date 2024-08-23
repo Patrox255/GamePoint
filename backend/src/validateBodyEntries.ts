@@ -165,10 +165,12 @@ export const registerBodyEntries: IRegisterBodyEntriesForValidation = (() => {
 // Had to do such things in order to correctly merge loginBodyEntries into registerBodyEntries without losing proper
 // type inference
 
-interface IVerifyEmailEntriesFromRequest extends IBodyFromRequestToValidate {
+export interface IVerifyEmailEntriesFromRequest
+  extends IBodyFromRequestToValidate {
   uId: string;
   providedRegistrationCode: string;
   registrationCode: string;
+  cartData: receivedCart;
 }
 
 export const verifyEmailEntries: IValidateBodyEntry<IVerifyEmailEntriesFromRequest>[] =
@@ -188,6 +190,11 @@ export const verifyEmailEntries: IValidateBodyEntry<IVerifyEmailEntriesFromReque
       requestBodyName: "registrationCode",
       type: "string",
     },
+    {
+      ...cartDataEntry,
+      name: "Your current cart details",
+      requestBodyName: "cartData",
+    } as IValidateBodyEntry<IVerifyEmailEntriesFromRequest>,
   ];
 
 export type receivedCart = { id: string; quantity: number }[];
@@ -332,5 +339,19 @@ export const checkOrderIdEntries: IValidateBodyEntry<ICheckOrderIdBodyFromReques
         isValidObjectId(val)
           ? true
           : { message: "Provided order identificator isn't valid!" },
+    },
+  ];
+
+export interface IRetrieveUsersBasedOnEmailOrLoginBodyFromRequest
+  extends IBodyFromRequestToValidate {
+  loginOrEmail: string;
+}
+
+export const retrieveUsersBasedOnEmailOrLoginEntries: IValidateBodyEntry<IRetrieveUsersBasedOnEmailOrLoginBodyFromRequest>[] =
+  [
+    {
+      name: "Provided orderer's login or e-mail address",
+      type: "string",
+      requestBodyName: "loginOrEmail",
     },
   ];

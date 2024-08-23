@@ -38,6 +38,13 @@ const ExtendedGamePreview = memo(
 
     const dispatch = useAppDispatch();
     const login = useAppSelector((state) => state.userAuthSlice.login);
+    const cart = useAppSelector((state) => state.cartSlice.cart);
+    const isInCartAndFreeToPlay =
+      game.finalPrice === 0 &&
+      cart &&
+      cart.some((cartEntry) => cartEntry.id === game._id)
+        ? true
+        : false;
     return (
       <>
         <motion.article
@@ -59,17 +66,24 @@ const ExtendedGamePreview = memo(
           >
             {(element) => (
               <Button
-                onClick={() => {
-                  dispatch(
-                    modifyCartQuantityAction({
-                      productId: element._id,
-                      operation: "increase",
-                      login,
-                    })
-                  );
-                }}
+                onClick={
+                  !isInCartAndFreeToPlay
+                    ? () => {
+                        dispatch(
+                          modifyCartQuantityAction({
+                            productId: element._id,
+                            operation: "increase",
+                            login,
+                          })
+                        );
+                      }
+                    : undefined
+                }
+                disabled={isInCartAndFreeToPlay}
               >
-                Add to cart
+                {!isInCartAndFreeToPlay
+                  ? "Add to cart"
+                  : "Already in your cart"}
               </Button>
             )}
           </SliderProductElementContent>

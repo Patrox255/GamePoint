@@ -15,6 +15,8 @@ import {
 } from "./FormWithErrorHandling";
 import Input, { inputOnChange, inputValue } from "./Input";
 import Error from "./Error";
+import DropDownMenuWrapper from "./DropDownMenu/DropDownMenuWrapper";
+import DropDownMenuDroppedElementsContainer from "./DropDownMenu/DropDownMenuDroppedElementsContainer";
 
 export interface IInputFieldValidationError {
   message: string;
@@ -145,7 +147,7 @@ const InputFieldElement = forwardRef<
     },
     inputRef
   ) => {
-    const { errorsRelatedToValidation, inputFields } = useContext(
+    const { errorsRelatedToValidation, inputFields, lightTheme } = useContext(
       FormWithErrorHandlingContext
     );
     const usesFormWithErrorHandlingCtx = errorsRelatedToValidation !== null;
@@ -221,7 +223,7 @@ const InputFieldElement = forwardRef<
       </>
     );
 
-    return (
+    const mainContent = (
       <motion.div
         className={`w-${
           inputFieldObj.type === "checkbox" ? "auto" : "full"
@@ -232,7 +234,11 @@ const InputFieldElement = forwardRef<
           initial: { opacity: 0 },
           default: { opacity: 0.7 },
           hover: {
-            x: inputFieldObj.type === "checkbox" ? undefined : 10,
+            x:
+              inputFieldObj.type === "checkbox" ||
+              inputFieldObj.omitMovingTheInputFieldUponSelecting
+                ? undefined
+                : 10,
             opacity: 1,
           },
         }}
@@ -258,6 +264,17 @@ const InputFieldElement = forwardRef<
           inputFieldObj.name
         )}
       </motion.div>
+    );
+
+    return inputFieldObj.allowForDropDownMenuImplementation ? (
+      <DropDownMenuWrapper widthTailwindClass="w-full">
+        {mainContent}
+        <DropDownMenuDroppedElementsContainer lightTheme={lightTheme}>
+          {inputFieldObj.dropDownMenuContent}
+        </DropDownMenuDroppedElementsContainer>
+      </DropDownMenuWrapper>
+    ) : (
+      mainContent
     );
   }
 );

@@ -49,7 +49,8 @@ export default function CustomizationComponentWithInputAndTags({
     stateValue: tagSearch,
     setStateValue: setTagSearch,
     searchParamName: paramName,
-    saveDebouncedStateInSearchParamsAndSessionStorage: false,
+    saveDebouncedStateInSearchParams: false,
+    saveDebouncedStateInSessionStorage: false,
   });
 
   const {

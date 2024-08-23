@@ -56,63 +56,70 @@ const AdditionalGameInformation = ({
       modifyCartQuantityAction({ ...modifyCartQuantityPayload, login }),
     [login]
   );
+  const freeToPlayGame = game.finalPrice === 0;
 
   return (
     <>
-      <div className="final-cart-price font-bold text-highlightRed text-xl">
-        {priceFormat.format(game.finalPrice * gameQuantityFromCart)}
-      </div>
+      {!freeToPlayGame && (
+        <div className="final-cart-price font-bold text-highlightRed text-xl">
+          {priceFormat.format(game.finalPrice * gameQuantityFromCart)}
+        </div>
+      )}
       <div className="game-cart-controls flex gap-2 justify-center items-center">
-        <Button
-          additionalTailwindCSS={cartControlButtonsAdditionalTailwindCSS}
-          onClick={() =>
-            dispatch(
-              generateModifyCartQuantityAction({
-                operation: "decrease",
-                productId: gameId,
-              })
-            )
-          }
-        >
-          -
-        </Button>
-        <Input
-          width="w-16"
-          value={
-            useQuantityFromInput ? inputQuantityValue : gameQuantityFromCart
-          }
-          type="number"
-          step={1}
-          customInputNumber
-          onChange={setInputQuantityValue}
-          min={0}
-          onFocus={() => setUseQuantityFromInput(true)}
-          onBlur={() => {
-            setUseQuantityFromInput(false);
-            gameQuantityFromCart !== inputQuantityValue &&
-              !isNaN(inputQuantityValue) &&
-              dispatch(
-                generateModifyCartQuantityAction({
-                  operation: "set",
-                  productId: gameId,
-                  newQuantity: inputQuantityValue,
-                })
-              );
-          }}
-        />
-        <Button
-          additionalTailwindCSS={cartControlButtonsAdditionalTailwindCSS}
-          onClick={() =>
-            dispatch(
-              generateModifyCartQuantityAction({
-                operation: "increase",
-                productId: gameId,
-              })
-            )
-          }
-        >
-          +
-        </Button>
+        {!freeToPlayGame && (
+          <>
+            <Button
+              additionalTailwindCSS={cartControlButtonsAdditionalTailwindCSS}
+              onClick={() =>
+                dispatch(
+                  generateModifyCartQuantityAction({
+                    operation: "decrease",
+                    productId: gameId,
+                  })
+                )
+              }
+            >
+              -
+            </Button>
+            <Input
+              width="w-16"
+              value={
+                useQuantityFromInput ? inputQuantityValue : gameQuantityFromCart
+              }
+              type="number"
+              step={1}
+              customInputNumber
+              onChange={setInputQuantityValue}
+              min={0}
+              onFocus={() => setUseQuantityFromInput(true)}
+              onBlur={() => {
+                setUseQuantityFromInput(false);
+                gameQuantityFromCart !== inputQuantityValue &&
+                  !isNaN(inputQuantityValue) &&
+                  dispatch(
+                    generateModifyCartQuantityAction({
+                      operation: "set",
+                      productId: gameId,
+                      newQuantity: inputQuantityValue,
+                    })
+                  );
+              }}
+            />
+            <Button
+              additionalTailwindCSS={cartControlButtonsAdditionalTailwindCSS}
+              onClick={() =>
+                dispatch(
+                  generateModifyCartQuantityAction({
+                    operation: "increase",
+                    productId: gameId,
+                  })
+                )
+              }
+            >
+              +
+            </Button>
+          </>
+        )}
         <HeaderLinkOrHeaderAnimation
           onlyAnimation={true}
           onClick={() =>
@@ -244,5 +251,11 @@ export default function CartPage() {
       </>
     );
   }
-  return <MainWrapper>{content}</MainWrapper>;
+  return (
+    <MainWrapper>
+      <article className="cart-content-wrapper text-center flex-col items-center w-full p-4">
+        {content}
+      </article>
+    </MainWrapper>
+  );
 }

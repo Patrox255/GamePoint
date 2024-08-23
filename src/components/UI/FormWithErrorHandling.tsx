@@ -29,6 +29,9 @@ export interface IFormInputField {
   selectOptions?: string[];
   defaultValue?: inputValue;
   propertyNameToDisplay?: string;
+  omitMovingTheInputFieldUponSelecting?: boolean;
+  allowForDropDownMenuImplementation?: boolean;
+  dropDownMenuContent?: ReactNode;
 }
 
 export type FormInputFields = IFormInputField[];

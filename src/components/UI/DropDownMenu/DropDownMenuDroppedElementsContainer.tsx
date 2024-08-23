@@ -6,12 +6,14 @@ import Error from "../Error";
 export default function DropDownMenuDroppedElementsContainer({
   children,
   customPaddingsTailwindClasses,
+  lightTheme,
 }: {
   children: ReactNode;
   customPaddingsTailwindClasses?: {
     px?: string;
     py?: string;
   };
+  lightTheme?: boolean;
 }) {
   const { showResults } = useContext(DropDownMenuContext);
 
@@ -22,7 +24,9 @@ export default function DropDownMenuDroppedElementsContainer({
 
   return (
     <motion.div
-      className={`dropdown-menu-elements-container bg-darkerBg ${
+      className={`dropdown-menu-elements-container ${
+        lightTheme ? "bg-bodyBg" : "bg-darkerBg"
+      } ${
         customPaddingsTailwindClasses?.py
           ? customPaddingsTailwindClasses.py
           : "py-5"

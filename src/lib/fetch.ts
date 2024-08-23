@@ -15,6 +15,7 @@ import { IAdditionalContactInformationFromGuestOrder } from "../components/order
 import { IOrder } from "../models/order.model";
 import { IOrderCustomizationProperty } from "../hooks/useHandleElementsOrderCustomizationState";
 import { IOrdersSortOnlyDebouncedProperties } from "../store/userPanel/UserOrdersManagerOrdersDetailsContext";
+import filterPropertiesFromObj from "../helpers/filterPropertiesFromObj";
 
 export const queryClient = new QueryClient();
 
@@ -285,11 +286,17 @@ export const verifyEmail = async (verifyEmailData: {
   uId: string;
   providedRegistrationCode: string;
   registrationCode: string;
+  cartDataToSetNewUserCartTo: cartStateArr;
 }) => {
   const data = await getJSON<IDataOrErrorObjBackendResponse>({
     url: `${API_URL}/verify-email`,
     method: "POST",
-    body: verifyEmailData,
+    body: {
+      ...filterPropertiesFromObj(verifyEmailData, [
+        "cartDataToSetNewUserCartTo",
+      ]),
+      cartData: verifyEmailData.cartDataToSetNewUserCartTo,
+    },
   });
 
   return data;
@@ -504,6 +511,24 @@ export const retrieveOrderData = async function (
   });
 
   if (data.data) parseDatesOfReceivedOrders([data.data]);
+
+  return data;
+};
+
+export type IRetrieveAvailableUsersPossibleReceivedData = {
+  login: string;
+  email: string;
+}[];
+export const retrieveAvailableUsersBasedOnLoginOrEmailAddress = async function (
+  loginOrEmail: string,
+  signal: AbortSignal
+) {
+  const data = await getJSON<IRetrieveAvailableUsersPossibleReceivedData>({
+    url: `${API_URL}/retrieve-users`,
+    method: "POST",
+    body: { loginOrEmail },
+    signal,
+  });
 
   return data;
 };

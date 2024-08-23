@@ -204,7 +204,8 @@ export const filterPropertiesFromObj = (obj: object, properties: string[]) => ({
 });
 
 export const createCartWithGamesBasedOnReceivedCart = async function (
-  cart: receivedCart
+  cart: receivedCart,
+  returnOnlyGameIdInRelatedGameProperties: boolean = false
 ) {
   return await Promise.all(
     cart.map(async (cartEntry) => {
@@ -212,7 +213,14 @@ export const createCartWithGamesBasedOnReceivedCart = async function (
       if (!isValidObjectId(id)) return { relatedGame: null };
       const gameId = new mongoose.Types.ObjectId(id);
       const foundGame = await Game.findById(gameId);
-      return { relatedGame: foundGame, quantity };
+      return {
+        relatedGame: returnOnlyGameIdInRelatedGameProperties
+          ? foundGame === null
+            ? null
+            : gameId
+          : foundGame,
+        quantity,
+      };
     })
   );
 };

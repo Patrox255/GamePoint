@@ -67,11 +67,14 @@ import {
   IOrderDataFromRequestOrderedGamesDetails,
   IRegisterBodyFromRequest,
   IRemoveReviewEntriesFromRequest,
+  IRetrieveUsersBasedOnEmailOrLoginBodyFromRequest,
+  IVerifyEmailEntriesFromRequest,
   loginBodyEntriesWithCart,
   modifyOrAddContactInformationValidationEntries,
   orderedGamesEntries,
   registerBodyEntries,
   removeReviewEntries,
+  retrieveUsersBasedOnEmailOrLoginEntries,
   verifyEmailEntries,
 } from "./validateBodyEntries";
 import { validateBodyEntries } from "./validateBodyFn";
@@ -1145,9 +1148,12 @@ const startServer = async () => {
             })
           )
             return;
-          const cartWithGames = await createCartWithGamesBasedOnReceivedCart(
-            cart
+          const cartWithGames = (
+            await createCartWithGamesBasedOnReceivedCart(cart)
+          ).filter(
+            (cartWithGamesEntry) => cartWithGamesEntry.relatedGame !== null
           );
+
           const cartTotalPrice = calcTotalGamesPrice(
             cartWithGames.map((cartWithGamesEntry) => {
               const {
@@ -1159,11 +1165,9 @@ const startServer = async () => {
               return { finalPrice: finalPrice!, quantity };
             })
           );
-          const cartToSend = cartWithGames
-            .filter((cartEntry) => cartEntry.relatedGame !== null)
-            .map((cartEntry) =>
-              filterPropertiesFromObj(cartEntry, ["quantity"])
-            );
+          const cartToSend = cartWithGames.map((cartEntry) =>
+            filterPropertiesFromObj(cartEntry, ["quantity"])
+          );
           return res.status(200).json({ cart: cartToSend, cartTotalPrice });
         } catch (e) {
           next(e);
@@ -1295,7 +1299,7 @@ const startServer = async () => {
           ]);
 
           const foundUser = await User.findById(uId);
-          if (!foundUser || foundUser.emailVerified) res.sendStatus(403);
+          if (!foundUser || foundUser.emailVerified) return res.sendStatus(403);
 
           res.sendStatus(200);
         } catch (e) {
@@ -1308,7 +1312,8 @@ const startServer = async () => {
       "/verify-email",
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          const { uId, providedRegistrationCode, registrationCode } = req.body;
+          const { uId, providedRegistrationCode, registrationCode, cartData } =
+            req.body as IVerifyEmailEntriesFromRequest;
           if (
             !validateBodyEntries({
               entries: verifyEmailEntries,
@@ -1335,7 +1340,21 @@ const startServer = async () => {
               .status(200)
               .json({ message: "Provided registration code is invalid" });
 
-          await foundUser.updateOne({ emailVerified: true });
+          const cartToSet = (
+            await createCartWithGamesBasedOnReceivedCart(cartData, true)
+          ).filter(
+            (generatedCartEntry) => generatedCartEntry.relatedGame !== null
+          );
+
+          await foundUser.updateOne({
+            emailVerified: true,
+            ...(Object.entries(cartToSet).length > 0 && {
+              cart: cartToSet.map((cartToSetEntry) => ({
+                id: cartToSetEntry.relatedGame,
+                quantity: cartToSetEntry.quantity,
+              })),
+            }),
+          });
           generateAndSaveJWT(res, uId, "refresh");
 
           res.sendStatus(200);
@@ -1882,6 +1901,45 @@ const startServer = async () => {
 
         if (!order) return res.sendStatus(403);
         return res.status(200).json(order);
+      } catch (e) {
+        next(e);
+      }
+    });
+
+    app.post("/retrieve-users", verifyJwt, async (req, res, next) => {
+      try {
+        const {
+          token: { isAdmin },
+        } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+        if (!isAdmin) return res.sendStatus(403);
+        if (
+          !validateBodyEntries({
+            entries: retrieveUsersBasedOnEmailOrLoginEntries,
+            res,
+            req,
+          })
+        )
+          return;
+        const { loginOrEmail } =
+          req.body as IRetrieveUsersBasedOnEmailOrLoginBodyFromRequest;
+
+        const retrievedUsers = await User.find({
+          $and: [
+            {
+              $or: [
+                { login: { $regex: loginOrEmail } },
+                { email: { $regex: loginOrEmail } },
+              ],
+            },
+            { emailVerified: true },
+          ],
+        }).limit(5);
+        res.status(200).json(
+          retrievedUsers.map((retrievedUsersEntry) => ({
+            login: retrievedUsersEntry.login,
+            email: retrievedUsersEntry.email,
+          }))
+        );
       } catch (e) {
         next(e);
       }

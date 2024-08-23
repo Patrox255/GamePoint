@@ -36,7 +36,10 @@ export default function ImageWithLoading({
           className={className}
           {...motionAnimationEdited}
           key={src}
-          onError={() => setIsError(true)}
+          onError={() => {
+            setIsError(true);
+            additionalActionOnLoadFn && additionalActionOnLoadFn();
+          }}
           onLoad={() => {
             setIsLoading(false);
             additionalActionOnLoadFn && additionalActionOnLoadFn();
