@@ -56,7 +56,6 @@ export const useInput = function <
   const stateValueToSupervise = usingExternalStateValue
     ? stateValue
     : queryState!;
-  console.log(stateValueToSupervise);
 
   useEffect(() => {
     if (!sameTimeOccurrenceChanceId) return;
@@ -125,7 +124,6 @@ export const useInput = function <
   );
 
   function handleInputChange(newValue: stateType) {
-    console.log(newValue, stateValueToSupervise);
     if (stateValueToSupervise === undefined) return;
     const setStateArg =
       typeof stateValueToSupervise === "string" ||

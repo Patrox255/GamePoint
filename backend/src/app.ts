@@ -40,6 +40,10 @@ import {
   IOrderCustomizationProperty,
   generateOrderObj,
   calcTotalGamesPrice,
+  sendAnErrorInCaseOfNormalUserAccessingAdminEndPoint,
+  acquireAndValidatePageNrAndSortPropertiesWhenRetrievingOrders,
+  sortRetrievedOrdersBasedOnSentSortProperties,
+  applyPageNrToRetrievedOrders,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -67,6 +71,7 @@ import {
   IOrderDataFromRequestOrderedGamesDetails,
   IRegisterBodyFromRequest,
   IRemoveReviewEntriesFromRequest,
+  IRetrieveOrdersInAdminPanelBodyFromRequest,
   IRetrieveUsersBasedOnEmailOrLoginBodyFromRequest,
   IVerifyEmailEntriesFromRequest,
   loginBodyEntriesWithCart,
@@ -74,6 +79,7 @@ import {
   orderedGamesEntries,
   registerBodyEntries,
   removeReviewEntries,
+  retrieveOrdersInAdminPanelEntries,
   retrieveUsersBasedOnEmailOrLoginEntries,
   verifyEmailEntries,
 } from "./validateBodyEntries";
@@ -1837,42 +1843,22 @@ const startServer = async () => {
         const {
           token: { userId },
         } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
-        const { pageNr, sortProperties } = await parseQueries(req);
-        await validateQueriesTypes([
-          ["number", pageNr],
-          ["object", sortProperties],
-        ]);
-        const MAX_ORDERS_PER_PAGE = accessEnvironmentVariable(
-          "MAX_ORDERS_PER_PAGE"
-        );
+        const { pageNr, sortProperties } =
+          await acquireAndValidatePageNrAndSortPropertiesWhenRetrievingOrders(
+            req
+          );
 
         const relatedUser =
           await retrieveUserDocumentWithPopulatedOrdersDetails(userId!);
         // no checking as after verifyJwt it has to be true
-        let orders: IOrder[];
-        orders = relatedUser!.orders as unknown as IOrder[];
-        const { debouncedDate, debouncedTotalValue } = sortProperties;
-        const sortPropertiesNotEmpty = generateOrderObj([
-          { name: "date", obj: debouncedDate },
-          { name: "totalValue", obj: debouncedTotalValue },
-        ]);
-        console.log(sortPropertiesNotEmpty);
-        Object.entries(sortPropertiesNotEmpty)
-          .reverse()
-          .forEach(([propertyName, propertyOrder]) =>
-            orders.sort((o1, o2) => {
-              const subtraction =
-                +o1[propertyName as keyof typeof o1]! -
-                +o2[propertyName as keyof typeof o2]!;
-              if (propertyOrder === 1) return subtraction;
-              return -subtraction;
-            })
-          );
-        if (pageNr !== undefined)
-          orders = orders.slice(
-            pageNr * +MAX_ORDERS_PER_PAGE,
-            (pageNr + 1) * +MAX_ORDERS_PER_PAGE
-          );
+        const orders = await applyPageNrToRetrievedOrders(
+          pageNr,
+          sortRetrievedOrdersBasedOnSentSortProperties(
+            sortProperties,
+            relatedUser!.orders as unknown as IOrder[]
+          )
+        );
+
         return res.status(200).json({ orders });
       } catch (e) {
         next(e);
@@ -1908,10 +1894,8 @@ const startServer = async () => {
 
     app.post("/retrieve-users", verifyJwt, async (req, res, next) => {
       try {
-        const {
-          token: { isAdmin },
-        } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
-        if (!isAdmin) return res.sendStatus(403);
+        if (!sendAnErrorInCaseOfNormalUserAccessingAdminEndPoint(req, res))
+          return;
         if (
           !validateBodyEntries({
             entries: retrieveUsersBasedOnEmailOrLoginEntries,
@@ -1932,6 +1916,7 @@ const startServer = async () => {
               ],
             },
             { emailVerified: true },
+            // { orders: { $not: { $size: 0 } } },
           ],
         }).limit(5);
         res.status(200).json(
@@ -1940,6 +1925,63 @@ const startServer = async () => {
             email: retrievedUsersEntry.email,
           }))
         );
+      } catch (e) {
+        next(e);
+      }
+    });
+
+    app.post("/retrieve-orders", verifyJwt, async (req, res, next) => {
+      try {
+        if (!sendAnErrorInCaseOfNormalUserAccessingAdminEndPoint(req, res))
+          return;
+        if (
+          !validateBodyEntries({
+            req,
+            res,
+            entries: retrieveOrdersInAdminPanelEntries,
+          })
+        )
+          return;
+        const { pageNr, sortProperties } =
+          await acquireAndValidatePageNrAndSortPropertiesWhenRetrievingOrders(
+            req
+          );
+
+        const { orderId, ordererLogin } =
+          req.body as IRetrieveOrdersInAdminPanelBodyFromRequest;
+
+        type IOrderModel = IOrder & { _id: mongoose.Types.ObjectId };
+        let ordersToSend: IOrderModel[];
+        if (ordererLogin) {
+          const relatedUser = await User.findOne(
+            {
+              login: ordererLogin,
+            },
+            { orders: true }
+          ).populate("orders");
+          if (!relatedUser || relatedUser.orders?.length === 0)
+            return res.status(200).json({
+              message: !relatedUser
+                ? "We couldn't find such an user!"
+                : "Selected user hasn't placed any order yet!",
+            });
+          ordersToSend = relatedUser.orders as unknown as IOrderModel[];
+        } else {
+          ordersToSend = await Order.find();
+        }
+        if (orderId)
+          ordersToSend = ordersToSend?.filter((order) =>
+            order._id.toString().includes(orderId.toLowerCase())
+          );
+        ordersToSend = await applyPageNrToRetrievedOrders(
+          pageNr,
+          sortRetrievedOrdersBasedOnSentSortProperties(
+            sortProperties,
+            ordersToSend
+          )
+        );
+
+        res.status(200).json(ordersToSend);
       } catch (e) {
         next(e);
       }

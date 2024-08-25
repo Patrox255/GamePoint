@@ -32,6 +32,7 @@ export interface IFormInputField {
   omitMovingTheInputFieldUponSelecting?: boolean;
   allowForDropDownMenuImplementation?: boolean;
   dropDownMenuContent?: ReactNode;
+  showDropDownElementsToAvoidUnnecessaryPadding?: boolean;
 }
 
 export type FormInputFields = IFormInputField[];

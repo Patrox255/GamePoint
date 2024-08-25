@@ -1,5 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, ReactNode, useContext, useMemo } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useMemo,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimationProps } from "framer-motion";
 
@@ -15,10 +21,10 @@ import useHandleElementsOrderCustomizationState, {
   IOrderCustomizationStateObj,
   IOrderCustomizationStateObjWithDebouncedFields,
 } from "../../hooks/useHandleElementsOrderCustomizationState";
-import {
-  createDebouncedKeys,
-  createOrderCustomizationObjWithOnlyOrWithoutDebouncedProperties,
-} from "../../components/UI/OrderCustomization";
+import { createDebouncedKeys } from "../../components/UI/OrderCustomization";
+import useCreateOrderCustomizationSortPropertiesToSend from "../../hooks/orderCustomizationRelated/useCreateOrderCustomizationSortPropertiesToSend";
+import { useLocation, useNavigate } from "react-router-dom";
+import createUrlWithCurrentSearchParams from "../../helpers/createUrlWithCurrentSearchParams";
 
 export type IOrdersSortProperties =
   IOrderCustomizationStateObjWithDebouncedFields<ordersSortPropertiesFieldsNames>;
@@ -45,18 +51,28 @@ export const UserOrdersManagerOrdersDetailsContext = createContext<{
   ordersDetailsIsLoading: boolean;
   ordersSortPropertiesStable: IOrdersSortProperties | undefined;
   ordersSortDispatch: React.Dispatch<IOrderCustomizationReducer>;
+  serveAsAdminPanelOrdersListCtx: boolean;
+  ordersSortPropertiesToSend: IOrdersSortOnlyDebouncedProperties | undefined;
+  orderEntryOnClick: (orderId: string) => void;
 }>({
   ordersDetails: false,
   ordersDetailsError: null,
   ordersDetailsIsLoading: false,
   ordersSortPropertiesStable: undefined,
   ordersSortDispatch: () => {},
+  serveAsAdminPanelOrdersListCtx: false,
+  ordersSortPropertiesToSend: undefined,
+  orderEntryOnClick: () => {},
 });
 
 export default function UserOrdersManagerOrdersDetailsContextProvider({
   children,
+  orderDetailsQueryEnabled = true,
+  sortCustomizationSearchParamsAndSessionStorageEntryName = "ordersSortingProperties",
 }: {
   children: ReactNode;
+  orderDetailsQueryEnabled?: boolean;
+  sortCustomizationSearchParamsAndSessionStorageEntryName?: string;
 }) {
   const ordersAmount = useAppSelector(
     (state) => state.userAuthSlice.ordersAmount
@@ -66,22 +82,22 @@ export default function UserOrdersManagerOrdersDetailsContextProvider({
     useHandleElementsOrderCustomizationState({
       orderCustomizationFieldsNamesStable: ordersSortPropertiesFieldsNames,
       orderCustomizationSearchParamAndSessionStorageEntryName:
-        "ordersSortingProperties",
+        sortCustomizationSearchParamsAndSessionStorageEntryName,
       orderCustomizationDefaultStateFieldsValuesStable: {
         date: { defaultValue: "-1" },
       },
       omitChangingSearchParams: true,
     });
-  const ordersSortPropertiesToSend = useMemo(
-    () =>
-      createOrderCustomizationObjWithOnlyOrWithoutDebouncedProperties(
-        orderCustomizationStateStable,
-        false
-      ),
-    [orderCustomizationStateStable]
-  );
+
+  const serveAsAdminPanelOrdersListCtx =
+    sortCustomizationSearchParamsAndSessionStorageEntryName ===
+    "sortAdminRetrievedOrdersProperties";
 
   const { pageNr } = useContext(PagesManagerContext);
+  const ordersSortPropertiesToSend =
+    useCreateOrderCustomizationSortPropertiesToSend(
+      orderCustomizationStateStable
+    ) as IOrdersSortOnlyDebouncedProperties;
 
   const {
     data: ordersDetailsData,
@@ -91,7 +107,7 @@ export default function UserOrdersManagerOrdersDetailsContextProvider({
     queryFn: ({ signal }) =>
       retrieveUserOrdersDetails(signal, pageNr, ordersSortPropertiesToSend),
     queryKey: ["orders", login, ordersSortPropertiesToSend, pageNr],
-    enabled: ordersAmount > 0,
+    enabled: ordersAmount > 0 && orderDetailsQueryEnabled,
   });
 
   const ordersDetails = useMemo(
@@ -99,6 +115,23 @@ export default function UserOrdersManagerOrdersDetailsContextProvider({
       typeof ordersDetailsData?.data === "object" &&
       (ordersDetailsData.data as IRetrieveOrdersDetailsBackendResponse).orders,
     [ordersDetailsData]
+  );
+
+  const navigate = useNavigate();
+  const { search } = useLocation();
+  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
+  const orderEntryOnClick = useCallback(
+    (orderId: string) =>
+      navigate(
+        createUrlWithCurrentSearchParams({
+          searchParams,
+          pathname: orderId,
+        }),
+        {
+          replace: true,
+        }
+      ),
+    [navigate, searchParams]
   );
 
   return (
@@ -109,6 +142,9 @@ export default function UserOrdersManagerOrdersDetailsContextProvider({
         ordersDetailsIsLoading,
         ordersSortDispatch: orderCustomizationDispatch,
         ordersSortPropertiesStable: orderCustomizationStateStable,
+        serveAsAdminPanelOrdersListCtx,
+        ordersSortPropertiesToSend,
+        orderEntryOnClick,
       }}
     >
       {children}

@@ -269,9 +269,11 @@ const InputFieldElement = forwardRef<
     return inputFieldObj.allowForDropDownMenuImplementation ? (
       <DropDownMenuWrapper widthTailwindClass="w-full">
         {mainContent}
-        <DropDownMenuDroppedElementsContainer lightTheme={lightTheme}>
-          {inputFieldObj.dropDownMenuContent}
-        </DropDownMenuDroppedElementsContainer>
+        {inputFieldObj.showDropDownElementsToAvoidUnnecessaryPadding && (
+          <DropDownMenuDroppedElementsContainer lightTheme={lightTheme}>
+            {inputFieldObj.dropDownMenuContent}
+          </DropDownMenuDroppedElementsContainer>
+        )}
       </DropDownMenuWrapper>
     ) : (
       mainContent

@@ -10,6 +10,7 @@ import { receivedCart } from "./validateBodyEntries";
 import AdditionalContactInformation, {
   IAdditionalContactInformation,
 } from "./models/additionalContactInformation.model";
+import { IOrder } from "./models/order.model";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -464,3 +465,77 @@ export const calcTotalGamesPrice = <
     (acc, game) => acc + calcShopPrice(game.finalPrice * game.quantity),
     0
   );
+
+export const sendAnErrorInCaseOfNormalUserAccessingAdminEndPoint = (
+  req: Request,
+  res: Response
+) => {
+  const {
+    token: { isAdmin },
+  } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+  if (isAdmin) return true;
+  res.sendStatus(403);
+  return false;
+};
+
+export const acquireAndValidatePageNrAndSortPropertiesWhenRetrievingOrders =
+  async function (req: Request) {
+    const { pageNr, sortProperties } = await parseQueries(req);
+    await validateQueriesTypes([
+      ["number", pageNr],
+      ["object", sortProperties],
+    ]);
+    return { pageNr, sortProperties };
+  };
+
+const transformDateNotToTakeTimeIntoAccount = (date: Date) => {
+  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0);
+};
+
+export const sortRetrievedOrdersBasedOnSentSortProperties = function <
+  T extends IOrder
+>(
+  sortProperties: Record<
+    "debouncedDate" | "debouncedTotalValue",
+    IOrderCustomizationProperty
+  >,
+  orders: T[]
+) {
+  const { debouncedDate, debouncedTotalValue } = sortProperties;
+  const sortPropertiesNotEmpty = generateOrderObj([
+    { name: "date", obj: debouncedDate },
+    { name: "totalValue", obj: debouncedTotalValue },
+  ]);
+  const ordersToSend = [...orders];
+  Object.entries(sortPropertiesNotEmpty)
+    .reverse()
+    .forEach(([propertyName, propertyOrder]) =>
+      ordersToSend.sort((o1, o2) => {
+        const getValueFromOrderObj = (order: T, key: keyof T) =>
+          typeof order[key] === "object"
+            ? transformDateNotToTakeTimeIntoAccount(order[key] as Date)
+            : +order[key];
+        const [v1, v2] = [
+          getValueFromOrderObj(o1, propertyName as keyof T),
+          getValueFromOrderObj(o2, propertyName as keyof T),
+        ];
+        const subtraction = v1 - v2;
+        if (propertyOrder === 1) return subtraction;
+        return -subtraction;
+      })
+    );
+  return ordersToSend;
+};
+
+export const applyPageNrToRetrievedOrders = async function <T extends IOrder>(
+  pageNr: number,
+  orders: T[]
+) {
+  const MAX_ORDERS_PER_PAGE = accessEnvironmentVariable("MAX_ORDERS_PER_PAGE");
+  if (pageNr !== undefined)
+    return orders.slice(
+      pageNr * +MAX_ORDERS_PER_PAGE,
+      (pageNr + 1) * +MAX_ORDERS_PER_PAGE
+    );
+  return orders.slice(0, 5);
+};

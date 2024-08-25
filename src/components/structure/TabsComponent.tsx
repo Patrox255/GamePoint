@@ -95,7 +95,7 @@ export default function TabsComponent<
         <motion.article
           {...tabsSectionElementTransitionProperties}
           key={`user-panel-content-${curActiveTabEntry.tagName}`}
-          className="py-8 w-full flex justify-center items-center text-center flex-col"
+          className="py-8 w-full flex justify-center items-center text-center flex-col gap-4"
         >
           <CurTabComponent />
         </motion.article>

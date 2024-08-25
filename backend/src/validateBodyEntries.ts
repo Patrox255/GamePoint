@@ -353,5 +353,30 @@ export const retrieveUsersBasedOnEmailOrLoginEntries: IValidateBodyEntry<IRetrie
       name: "Provided orderer's login or e-mail address",
       type: "string",
       requestBodyName: "loginOrEmail",
+      inputNameOtherThanVisibleNameToSetAppropriateValidationErrorInputName:
+        "orderFindingUser",
+    },
+  ];
+
+export interface IRetrieveOrdersInAdminPanelBodyFromRequest
+  extends IBodyFromRequestToValidate {
+  orderId?: string;
+  ordererLogin?: string;
+}
+
+export const retrieveOrdersInAdminPanelEntries: IValidateBodyEntry<IRetrieveOrdersInAdminPanelBodyFromRequest>[] =
+  [
+    {
+      ...retrieveUsersBasedOnEmailOrLoginEntries[0],
+      requestBodyName: "ordererLogin",
+      optional: true,
+    } as IValidateBodyEntry<IRetrieveOrdersInAdminPanelBodyFromRequest>,
+    {
+      name: "Provided order identificator",
+      requestBodyName: "orderId",
+      type: "string",
+      optional: true,
+      inputNameOtherThanVisibleNameToSetAppropriateValidationErrorInputName:
+        "orderFindingOrderId",
     },
   ];

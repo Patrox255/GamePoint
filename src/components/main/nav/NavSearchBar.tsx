@@ -51,7 +51,9 @@ export default function NavSearchBar({ placeholder }: { placeholder: string }) {
       {(data || isLoading || isError) && (
         <DropDownMenuDroppedElementsContainer>
           {data && data.data.length !== 0 && searchTerm !== "" && (
-            <GamesResults games={data.data} />
+            <div className="nav-games-search-bar-results-list-wrapper h-full w-full">
+              <GamesResults games={data.data} />
+            </div>
           )}
           {data && data.data.length === 0 && (
             <p className="text-center">

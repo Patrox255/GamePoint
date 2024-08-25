@@ -7,6 +7,7 @@ import {
   IOrderCustomizationProperty,
   IOrderCustomizationReducer,
   IOrderCustomizationStateObj,
+  IOrderCustomizationStateObjWithDebouncedFields,
 } from "../../hooks/useHandleElementsOrderCustomizationState";
 
 type IOrderCustomizationObjToRenderEntryProperty =
@@ -31,21 +32,21 @@ export type createDebouncedKeys<fieldsNames extends string> =
 export function createOrderCustomizationObjWithOnlyOrWithoutDebouncedProperties<
   fieldsNames extends string
 >(
-  orderCustomizationObj: IOrderCustomizationStateObj<fieldsNames>,
+  orderCustomizationObj: IOrderCustomizationStateObjWithDebouncedFields<fieldsNames>,
   without: true
 ): IOrderCustomizationStateObj<excludeDebouncedKeys<fieldsNames>>;
 
 export function createOrderCustomizationObjWithOnlyOrWithoutDebouncedProperties<
   fieldsNames extends string
 >(
-  orderCustomizationObj: IOrderCustomizationStateObj<fieldsNames>,
+  orderCustomizationObj: IOrderCustomizationStateObjWithDebouncedFields<fieldsNames>,
   without: false
 ): IOrderCustomizationStateObj<onlyDebouncedKeys<fieldsNames>>;
 
 export function createOrderCustomizationObjWithOnlyOrWithoutDebouncedProperties<
   fieldsNames extends string
 >(
-  orderCustomizationObj: IOrderCustomizationStateObj<fieldsNames>,
+  orderCustomizationObj: IOrderCustomizationStateObjWithDebouncedFields<fieldsNames>,
   without: boolean
 ) {
   const res = Object.fromEntries(
@@ -65,7 +66,7 @@ export function createOrderCustomizationObjWithOnlyOrWithoutDebouncedProperties<
 }
 
 const addNameToDisplayToOrderCustomizationObj = <fieldsNames extends string>(
-  orderCustomizationObj: IOrderCustomizationStateObj<fieldsNames>,
+  orderCustomizationObj: IOrderCustomizationStateObjWithDebouncedFields<fieldsNames>,
   appropriateDisplayNamesEntries: Record<
     excludeDebouncedKeys<fieldsNames>,
     string
@@ -95,7 +96,9 @@ export default function OrderCustomization<fieldsNames extends string>({
   appropriateDisplayNamesEntriesStable,
   orderCustomizationDispatch,
 }: {
-  orderCustomizationObjStable: IOrderCustomizationStateObj<fieldsNames>;
+  orderCustomizationObjStable: IOrderCustomizationStateObjWithDebouncedFields<
+    excludeDebouncedKeys<fieldsNames>
+  >;
   appropriateDisplayNamesEntriesStable: Record<
     excludeDebouncedKeys<fieldsNames>,
     string
@@ -120,10 +123,6 @@ export default function OrderCustomization<fieldsNames extends string>({
       {orderCustomizationEntries.map(
         ([entryIdentificator, entryProperties]) => {
           const currentCustomizationStateKey = entryIdentificator;
-          // entryProperties.nameToDisplay.toLowerCase() as
-          //   | "popularity"
-          //   | "title"
-          //   | "price";
           return (
             <section
               className="w-full flex justify-center items-center"

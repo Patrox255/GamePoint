@@ -49,7 +49,9 @@ export const getJSON = async function <dataInterface>({
     throw {
       message: `${
         (data && (data as { message?: string }).message) ||
-        "Failed to fetch data."
+        (res.status === 403
+          ? "You are not allowed to access this functionality!"
+          : "Failed to fetch data.")
       }`,
       status: res.status,
     };
@@ -532,3 +534,26 @@ export const retrieveAvailableUsersBasedOnLoginOrEmailAddress = async function (
 
   return data;
 };
+
+export const retrieveAvailableOrdersBasedOnSelectedUserAndIdentificator =
+  async function (
+    ordererLogin: string = "",
+    orderId: string = "",
+    sortProperties: IOrdersSortOnlyDebouncedProperties,
+    pageNr: number,
+    signal: AbortSignal
+  ) {
+    const data = await getJSON<IOrder[]>({
+      url: generateUrlEndpointWithSearchParams(`${API_URL}/retrieve-orders`, {
+        pageNr,
+        sortProperties,
+      }),
+      body: { ordererLogin, orderId },
+      method: "POST",
+      signal,
+    });
+    const orders = data?.data;
+    if (orders) parseDatesOfReceivedOrders(orders);
+
+    return data;
+  };

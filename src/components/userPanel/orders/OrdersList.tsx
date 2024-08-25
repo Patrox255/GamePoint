@@ -1,5 +1,4 @@
-import { ReactNode, useContext } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { ReactNode, useCallback, useContext, useMemo } from "react";
 import { motion } from "framer-motion";
 
 import { dateTimeFormat } from "../../../helpers/dateTimeFormat";
@@ -12,7 +11,6 @@ import { useAppSelector } from "../../../hooks/reduxStore";
 import Error from "../../UI/Error";
 import LoadingFallback from "../../UI/LoadingFallback";
 import Header from "../../UI/headers/Header";
-import createUrlWithCurrentSearchParams from "../../../helpers/createUrlWithCurrentSearchParams";
 import {
   userOrdersComponentsMotionProperties,
   UserOrdersManagerOrdersDetailsContext,
@@ -20,13 +18,13 @@ import {
 import PagesElement from "../../UI/PagesElement";
 import { MAX_ORDERS_PER_PAGE } from "../../../lib/config";
 import OrderCustomization from "../../UI/OrderCustomization";
+import { ManageOrdersFindingOrderContext } from "../../../store/userPanel/admin/orders/ManageOrdersFindingOrderContext";
 
-export const OrdersDetailsError = () => (
-  <Error
-    smallVersion
-    message="Failed to retrieve your orders! Please try again later."
-  />
-);
+export const OrdersDetailsError = ({
+  message = "Failed to retrieve your orders! Please try again later.",
+}: {
+  message?: string;
+}) => <Error smallVersion message={message} />;
 
 const HighlightedOrderDetailsEntry = ({
   children,
@@ -96,27 +94,76 @@ const orderDetailsCustomEntries: {
 };
 
 export default function OrdersList() {
-  const navigate = useNavigate();
-  const { search } = useLocation();
-  const searchParams = new URLSearchParams(search);
-
-  const ordersAmount = useAppSelector(
-    (state) => state.userAuthSlice.ordersAmount
-  );
-
   const {
-    ordersDetails,
-    ordersDetailsError,
-    ordersDetailsIsLoading,
+    ordersDetails: ordersDetailsFromUserOrdersCtx,
+    ordersDetailsError: ordersDetailsErrorFromUserOrdersCtx,
+    ordersDetailsIsLoading: ordersDetailsIsLoadingFromUserOrdersCtx,
     ordersSortDispatch,
     ordersSortPropertiesStable,
+    serveAsAdminPanelOrdersListCtx,
+    orderEntryOnClick: orderEntryOnClickFromUserOrdersCtx,
   } = useContext(UserOrdersManagerOrdersDetailsContext);
+
+  const {
+    retrieveOrdersQueryData: {
+      data: ordersDetailsFromAdminOrderManagerCtx,
+      differentError: ordersDetailsErrorFromAdminOrderManagerCtx,
+      isLoading: ordersDetailsIsLoadingFromAdminOrderManagerCtx,
+      orderEntryOnClick: orderEntryOnClickFromAdminOrderManagerCtx,
+    },
+  } = useContext(ManageOrdersFindingOrderContext);
+
+  const ordersAmountOfLoggedUser = useAppSelector(
+    (state) => state.userAuthSlice.ordersAmount
+  );
+  const ordersAmount = serveAsAdminPanelOrdersListCtx
+    ? ordersDetailsFromAdminOrderManagerCtx
+      ? ordersDetailsFromAdminOrderManagerCtx.length
+      : 0
+    : ordersAmountOfLoggedUser;
+
+  const orderEntryOnClick = useCallback(
+    (orderId: string) =>
+      (serveAsAdminPanelOrdersListCtx
+        ? orderEntryOnClickFromAdminOrderManagerCtx
+        : orderEntryOnClickFromUserOrdersCtx
+      ).bind(null, orderId),
+    [
+      orderEntryOnClickFromAdminOrderManagerCtx,
+      orderEntryOnClickFromUserOrdersCtx,
+      serveAsAdminPanelOrdersListCtx,
+    ]
+  );
+
+  const [ordersDetails, ordersDetailsIsLoading, ordersDetailsError] = useMemo(
+    () =>
+      serveAsAdminPanelOrdersListCtx
+        ? [
+            ordersDetailsFromAdminOrderManagerCtx,
+            ordersDetailsIsLoadingFromAdminOrderManagerCtx,
+            ordersDetailsErrorFromAdminOrderManagerCtx,
+          ]
+        : [
+            ordersDetailsFromUserOrdersCtx,
+            ordersDetailsIsLoadingFromUserOrdersCtx,
+            ordersDetailsErrorFromUserOrdersCtx,
+          ],
+    [
+      ordersDetailsErrorFromAdminOrderManagerCtx,
+      ordersDetailsErrorFromUserOrdersCtx,
+      ordersDetailsFromAdminOrderManagerCtx,
+      ordersDetailsFromUserOrdersCtx,
+      ordersDetailsIsLoadingFromAdminOrderManagerCtx,
+      ordersDetailsIsLoadingFromUserOrdersCtx,
+      serveAsAdminPanelOrdersListCtx,
+    ]
+  );
 
   let content;
   if (ordersDetailsError) content = <OrdersDetailsError />;
   if (ordersDetailsIsLoading)
     content = <LoadingFallback customText="Loading your orders..." />;
-  if (ordersAmount === 0)
+  if (ordersAmount === 0 && !serveAsAdminPanelOrdersListCtx)
     content = (
       <Header>
         You haven't made any order in our shop yet! Feel free to buy your
@@ -165,17 +212,7 @@ export default function OrdersList() {
                 animate={{ opacity: 0.7 }}
                 whileHover={{ opacity: 1 }}
                 key={ordersDetailsItem._id}
-                onClick={() =>
-                  navigate(
-                    createUrlWithCurrentSearchParams({
-                      searchParams,
-                      pathname: ordersDetailsItem._id,
-                    }),
-                    {
-                      replace: true,
-                    }
-                  )
-                }
+                onClick={() => orderEntryOnClick(ordersDetailsItem._id)}
               >
                 {orderDetailsEntriesArr.map((orderDetailsEntry) => {
                   const orderDetailsItemDesiredValueKey = orderDetailsEntry[0];

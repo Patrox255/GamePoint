@@ -1,14 +1,59 @@
-import { AnimatePresence, motion } from "framer-motion";
+/* eslint-disable react-refresh/only-export-components */
+import {
+  AnimatePresence,
+  LayoutProps,
+  motion,
+  VariantLabels,
+  Variants,
+} from "framer-motion";
 import slugify from "slugify";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useMemo,
+} from "react";
+
 import PriceTag from "../../game/PriceTag";
 import { IGame } from "../../../models/game.model";
-import { createContext, ReactNode, useCallback, useContext } from "react";
 import LinkToDifferentPageWithCurrentPageInformation from "../../UI/LinkToDifferentPageWithCurrentPageInformation";
 import HeaderLinkOrHeaderAnimation from "../../UI/headers/HeaderLinkOrHeaderAnimation";
 import Header from "../../UI/headers/Header";
 
 const gameContainerClasses =
   "w-full grid grid-cols-gameSearchBarResult items-center gap-2 px-6";
+
+export const dropdownListElementsMotionConfigurationGenerator: (
+  moveHighlight?: boolean,
+  largeFormat?: boolean
+) => {
+  variants: Variants;
+} & Record<"initial" | "animate" | "exit" | "whileHover", VariantLabels> & {
+    layout: LayoutProps["layout"];
+  } = (moveHighlight, largeFormat) => ({
+  variants: {
+    highlighted: {
+      opacity: 1,
+      x: moveHighlight ? 10 : 0,
+    },
+    normal: {
+      opacity: largeFormat ? 0.5 : 0.8,
+      x: 0,
+      scale: 1,
+    },
+    disappear: {
+      opacity: 0,
+      x: 0,
+      scale: 1.5,
+    },
+  },
+  initial: "disappear",
+  animate: "normal",
+  exit: "disappear",
+  whileHover: "highlighted",
+  layout: "size",
+});
 
 export const GameResultContext = createContext<{
   game: IGame | undefined;
@@ -68,6 +113,15 @@ export default function GamesResults<T extends IGame>({
     [headerLinkInsteadOfWholeGameContainer]
   );
 
+  const gameResultEntryElementMotionConfiguration = useMemo(
+    () =>
+      dropdownListElementsMotionConfigurationGenerator(
+        moveHighlight,
+        largeFormat
+      ),
+    [largeFormat, moveHighlight]
+  );
+
   return (
     <motion.ul
       className="w-full grid gap-2 text-center"
@@ -90,27 +144,7 @@ export default function GamesResults<T extends IGame>({
         {games.map((game) => (
           <motion.li
             key={game.title}
-            variants={{
-              highlighted: {
-                opacity: 1,
-                x: moveHighlight ? 10 : 0,
-              },
-              normal: {
-                opacity: largeFormat ? 0.5 : 0.8,
-                x: 0,
-                scale: 1,
-              },
-              disappear: {
-                opacity: 0,
-                x: 0,
-                scale: 1.5,
-              },
-            }}
-            initial="disappear"
-            animate="normal"
-            exit="disappear"
-            whileHover="highlighted"
-            layout="size"
+            {...gameResultEntryElementMotionConfiguration}
           >
             <GameResultContext.Provider
               value={{ game, showQuantityAndFinalPrice }}

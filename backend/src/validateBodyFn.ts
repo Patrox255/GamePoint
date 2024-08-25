@@ -23,6 +23,7 @@ export interface IValidateBodyEntry<T extends IBodyFromRequestToValidate> {
   validateFn?: bodyEntryValidateFn<T>;
   optional?: boolean;
   requestBodyName: keyof T;
+  inputNameOtherThanVisibleNameToSetAppropriateValidationErrorInputName?: string;
 }
 
 type IValidationErrorsArr = { message: string; errInputName: string }[];
@@ -76,11 +77,15 @@ export function validateBodyEntries<T extends IBodyFromRequestToValidate>({
       optional = false,
       requestBodyName,
       value,
+      inputNameOtherThanVisibleNameToSetAppropriateValidationErrorInputName,
     } = entry as typeof entry & { name: string; requestBodyName: string };
 
     const createBodyEntryErrSuppliedWithInputName = createBodyEntryErr.bind(
       null,
-      requestBodyName
+      inputNameOtherThanVisibleNameToSetAppropriateValidationErrorInputName !==
+        undefined
+        ? inputNameOtherThanVisibleNameToSetAppropriateValidationErrorInputName
+        : requestBodyName
     );
     const typeToCheckFor = type === "array" ? "object" : type;
 
@@ -107,13 +112,21 @@ export function validateBodyEntries<T extends IBodyFromRequestToValidate>({
       errors.push(
         createBodyEntryErrSuppliedWithInputName(`${name} can't be empty!`)
       );
-    if (validateFn && validateFn(value, name, entriesWithValues) !== true)
+    if (validateFn && validateFn(value, name, entriesWithValues) !== true) {
       errors.push(
         createBodyEntryErrSuppliedWithInputName(
-          (validateFn(value, name, entriesWithValues) as { message: string })
-            .message
+          (
+            validateFn(
+              value,
+              inputNameOtherThanVisibleNameToSetAppropriateValidationErrorInputName
+                ? inputNameOtherThanVisibleNameToSetAppropriateValidationErrorInputName
+                : name,
+              entriesWithValues
+            ) as { message: string }
+          ).message
         )
       );
+    }
   });
   if (errors.length === 0) return errors;
   if (sendAResponseWithErrors) res!.status(422).json({ errors });
