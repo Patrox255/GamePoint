@@ -1,9 +1,19 @@
+/* eslint-disable react-refresh/only-export-components */
 import { motion } from "framer-motion";
-import properties from "../../styles/properties";
 import { memo, useContext } from "react";
+
+import properties from "../../styles/properties";
 import { SliderProductElementArtworkContext } from "../main/slider/SliderProductElement";
 import { PagesManagerContext } from "../../store/products/PagesManagerContext";
 import Error from "./Error";
+
+export const calcMaxPossiblePageNr = (
+  amountOfElements: number,
+  elementsPerPage: number
+) =>
+  Math.ceil(amountOfElements / elementsPerPage) === 0
+    ? 0
+    : Math.ceil(amountOfElements / elementsPerPage) - 1;
 
 const PagesElement = memo(
   ({
@@ -76,13 +86,10 @@ const PagesElement = memo(
     const maxPageNr =
       totalAmountOfElementsToDisplayOnPages === null
         ? null
-        : Math.ceil(
-            totalAmountOfElementsToDisplayOnPages / amountOfElementsPerPage
-          ) === 0
-        ? 0
-        : Math.ceil(
-            totalAmountOfElementsToDisplayOnPages / amountOfElementsPerPage
-          ) - 1;
+        : calcMaxPossiblePageNr(
+            totalAmountOfElementsToDisplayOnPages,
+            amountOfElementsPerPage
+          );
 
     let content;
     if (pageNr === undefined || !setPageNr)

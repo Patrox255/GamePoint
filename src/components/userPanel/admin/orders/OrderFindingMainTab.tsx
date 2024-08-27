@@ -13,8 +13,13 @@ import {
 import LoadingFallback from "../../../UI/LoadingFallback";
 import Error from "../../../UI/Error";
 import { dropdownListElementsMotionConfigurationGenerator } from "../../../main/nav/GamesResults";
-import OrdersList from "../../orders/OrdersList";
+import OrdersList, {
+  GroupedOrderDetailsEntry,
+  HighlightedOrderDetailsEntry,
+} from "../../orders/OrdersList";
 import Header from "../../../UI/headers/Header";
+import OrdersListAdditionalOrderDetailsEntriesContextProvider from "../../../../store/userPanel/admin/orders/OrdersListAdditionalOrderDetailsEntriesContext";
+import { IUser } from "../../../../models/user.model";
 
 export default function OrderFindingMainTab() {
   const {
@@ -49,7 +54,40 @@ export default function OrderFindingMainTab() {
       <LoadingFallback customText="Loading orders to choose from..." />
     );
   if (retrieveOrdersArr && retrieveOrdersArr.length > 0)
-    availableOrdersContent = <OrdersList />;
+    availableOrdersContent = (
+      <OrdersListAdditionalOrderDetailsEntriesContextProvider
+        entriesWithAccessToOrderEntry={{
+          loginAndEmail: {
+            contentClassName: "orderer-information",
+            contentFn: (orderWithUserInfo) => {
+              const userOrderInformation = orderWithUserInfo.userId as
+                | IUser
+                | undefined;
+              return userOrderInformation ? (
+                <GroupedOrderDetailsEntry>
+                  <GroupedOrderDetailsEntry.GroupElement>
+                    Login:&nbsp;
+                    <HighlightedOrderDetailsEntry>
+                      {userOrderInformation.login}
+                    </HighlightedOrderDetailsEntry>
+                  </GroupedOrderDetailsEntry.GroupElement>
+                  <GroupedOrderDetailsEntry.GroupElement>
+                    E-mail:&nbsp;
+                    <HighlightedOrderDetailsEntry>
+                      {userOrderInformation.email}
+                    </HighlightedOrderDetailsEntry>
+                  </GroupedOrderDetailsEntry.GroupElement>
+                </GroupedOrderDetailsEntry>
+              ) : (
+                "Placed without an account"
+              );
+            },
+          },
+        }}
+      >
+        <OrdersList />
+      </OrdersListAdditionalOrderDetailsEntriesContextProvider>
+    );
   if (retrieveOrdersArr && retrieveOrdersArr.length === 0)
     availableOrdersContent = (
       <Header>
@@ -97,75 +135,77 @@ export default function OrderFindingMainTab() {
                 }}
                 key={name}
               >
-                <InputFieldElement
-                  inputFieldObjFromProps={{
-                    name,
-                    placeholder:
-                      manageOrdersFindingInputsPlaceholdersFromEntriesNames[
-                        name
-                      ],
-                    omitMovingTheInputFieldUponSelecting: true,
-                    ...(name === "orderFindingUser" && {
-                      allowForDropDownMenuImplementation: true,
-                      dropDownMenuContent: (
-                        <>
-                          {retrieveUsersIsLoading && (
-                            <LoadingFallback customText="Loading appropriate users to choose from..." />
-                          )}
-                          {retrieveUsersData &&
-                            (retrieveUsersData.length > 0 ? (
-                              <ul className="w-full flex flex-col items-center text-wrap gap-4 h-full">
-                                {retrieveUsersData.map(
-                                  (retrieveUsersDataUserEntry) => (
-                                    <motion.li
-                                      key={retrieveUsersDataUserEntry.login}
-                                      className="flex gap-4 text-wrap flex-wrap bg-darkerBg rounded-xl p-4 w-full cursor-pointer justify-center"
-                                      {...foundUserEntryElementMotionConfiguration}
-                                      onClick={() => {
-                                        const login =
-                                          retrieveUsersDataUserEntry.login;
-                                        setSelectedUserFromList(login);
-                                        setQueryDebouncingState(login);
-                                        handleInputChange(login);
-                                      }}
-                                    >
-                                      <p className="text-wrap break-all">
-                                        {retrieveUsersDataUserEntry.login}
-                                      </p>
-                                      <p className="text-wrap break-all">
-                                        {retrieveUsersDataUserEntry.email}
-                                      </p>
-                                    </motion.li>
-                                  )
-                                )}
-                              </ul>
-                            ) : (
-                              <p>
-                                Haven't found any users according to provided
-                                data!
-                              </p>
-                            ))}
-                        </>
-                      ),
-                      showDropDownElementsToAvoidUnnecessaryPadding:
-                        (retrieveUsersIsLoading || retrieveUsersData) &&
-                        selectedUserFromList === ""
-                          ? true
-                          : false,
-                    }),
-                  }}
-                  onChange={
-                    ordersFindingCredentialsEntry.name !== "orderFindingUser"
-                      ? ordersFindingCredentialsEntry.handleInputChange
-                      : (newValue: string) => {
-                          ordersFindingCredentialsEntry.handleInputChange(
-                            newValue
-                          );
-                          selectedUserFromList && setSelectedUserFromList("");
-                        }
-                  }
-                  value={inputValue}
-                />
+                <section className="flex self-stretch items-end">
+                  <InputFieldElement
+                    inputFieldObjFromProps={{
+                      name,
+                      placeholder:
+                        manageOrdersFindingInputsPlaceholdersFromEntriesNames[
+                          name
+                        ],
+                      omitMovingTheInputFieldUponSelecting: true,
+                      ...(name === "orderFindingUser" && {
+                        allowForDropDownMenuImplementation: true,
+                        dropDownMenuContent: (
+                          <>
+                            {retrieveUsersIsLoading && (
+                              <LoadingFallback customText="Loading appropriate users to choose from..." />
+                            )}
+                            {retrieveUsersData &&
+                              (retrieveUsersData.length > 0 ? (
+                                <ul className="w-full flex flex-col items-center text-wrap gap-4 h-full">
+                                  {retrieveUsersData.map(
+                                    (retrieveUsersDataUserEntry) => (
+                                      <motion.li
+                                        key={retrieveUsersDataUserEntry.login}
+                                        className="flex gap-4 text-wrap flex-wrap bg-darkerBg rounded-xl p-4 w-full cursor-pointer justify-center"
+                                        {...foundUserEntryElementMotionConfiguration}
+                                        onClick={() => {
+                                          const login =
+                                            retrieveUsersDataUserEntry.login;
+                                          setSelectedUserFromList(login);
+                                          setQueryDebouncingState(login);
+                                          handleInputChange(login);
+                                        }}
+                                      >
+                                        <p className="text-wrap break-all">
+                                          {retrieveUsersDataUserEntry.login}
+                                        </p>
+                                        <p className="text-wrap break-all">
+                                          {retrieveUsersDataUserEntry.email}
+                                        </p>
+                                      </motion.li>
+                                    )
+                                  )}
+                                </ul>
+                              ) : (
+                                <p>
+                                  Haven't found any users according to provided
+                                  data!
+                                </p>
+                              ))}
+                          </>
+                        ),
+                        showDropDownElementsToAvoidUnnecessaryPadding:
+                          (retrieveUsersIsLoading || retrieveUsersData) &&
+                          selectedUserFromList === ""
+                            ? true
+                            : false,
+                      }),
+                    }}
+                    onChange={
+                      ordersFindingCredentialsEntry.name !== "orderFindingUser"
+                        ? ordersFindingCredentialsEntry.handleInputChange
+                        : (newValue: string) => {
+                            ordersFindingCredentialsEntry.handleInputChange(
+                              newValue
+                            );
+                            selectedUserFromList && setSelectedUserFromList("");
+                          }
+                    }
+                    value={inputValue}
+                  />
+                </section>
               </FormWithErrorHandlingContext.Provider>
             );
           })}

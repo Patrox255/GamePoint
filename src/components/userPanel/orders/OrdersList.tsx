@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useContext, useMemo } from "react";
+import { ReactNode, useContext, useMemo } from "react";
 import { motion } from "framer-motion";
 
 import { dateTimeFormat } from "../../../helpers/dateTimeFormat";
@@ -18,7 +18,12 @@ import {
 import PagesElement from "../../UI/PagesElement";
 import { MAX_ORDERS_PER_PAGE } from "../../../lib/config";
 import OrderCustomization from "../../UI/OrderCustomization";
-import { ManageOrdersFindingOrderContext } from "../../../store/userPanel/admin/orders/ManageOrdersFindingOrderContext";
+import {
+  IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin,
+  ManageOrdersFindingOrderContext,
+} from "../../../store/userPanel/admin/orders/ManageOrdersFindingOrderContext";
+import { IUser } from "../../../models/user.model";
+import { OrdersListAdditionalOrderDetailsEntriesContext } from "../../../store/userPanel/admin/orders/OrdersListAdditionalOrderDetailsEntriesContext";
 
 export const OrdersDetailsError = ({
   message = "Failed to retrieve your orders! Please try again later.",
@@ -26,7 +31,7 @@ export const OrdersDetailsError = ({
   message?: string;
 }) => <Error smallVersion message={message} />;
 
-const HighlightedOrderDetailsEntry = ({
+export const HighlightedOrderDetailsEntry = ({
   children,
 }: {
   children: ReactNode;
@@ -36,14 +41,39 @@ const HighlightedOrderDetailsEntry = ({
   </span>
 );
 
+export const GroupedOrderDetailsEntry = ({
+  children,
+}: {
+  children: ReactNode;
+}) => <p className="flex flex-wrap gap-2 justify-center">{children}</p>;
+
+GroupedOrderDetailsEntry.GroupElement = ({
+  children,
+}: {
+  children: ReactNode;
+}) => <span className="flex justify-center items-center">{children}</span>;
+
 type orderDetailsCustomEntries = "totalValue";
+type orderDetailsEntriesWithAccessToOrderEntry = "";
+type orderDetailsEntryContentFn<T> = (value: T) => ReactNode;
 type IOrderDetailsEntryKeyValueObj<T = unknown> = {
   contentClassName: string;
-  contentFn: (value: T) => ReactNode;
+  contentFn: orderDetailsEntryContentFn<T>;
+  passTheWholeOrderEntryToTheContentFn?: boolean;
 };
-const orderDetailsEntries: {
+
+export type IOrderDetailsNormalEntries = {
   [orderKey in keyof IOrder]?: IOrderDetailsEntryKeyValueObj<IOrder[orderKey]>;
-} = {
+};
+export type IOrderDetailsCustomEntries<T extends string> = {
+  [key in T]?: IOrderDetailsEntryKeyValueObj;
+};
+type IOrderDetailsEntriesWithAccessToOrderEntryValue =
+  IOrderDetailsEntryKeyValueObj<IOrder | (IOrder & { userId: IUser })>;
+export type IOrderDetailsEntriesWithAccessToOrderEntry<T extends string> = {
+  [key in T]?: IOrderDetailsEntriesWithAccessToOrderEntryValue;
+};
+const orderDetailsEntries: IOrderDetailsNormalEntries = {
   date: {
     contentClassName: "date",
     contentFn: (date) => (
@@ -77,20 +107,67 @@ const orderDetailsEntries: {
   },
 };
 
-const orderDetailsCustomEntries: {
-  [key in orderDetailsCustomEntries]: IOrderDetailsEntryKeyValueObj;
-} = {
-  totalValue: {
-    contentFn: (totalValue) => (
-      <>
-        Total value:&nbsp;
-        <HighlightedOrderDetailsEntry>
-          {totalValue ? priceFormat.format(totalValue as number) : "Free"}
-        </HighlightedOrderDetailsEntry>
-      </>
-    ),
-    contentClassName: "total-value",
-  },
+const orderDetailsCustomEntries: IOrderDetailsCustomEntries<orderDetailsCustomEntries> =
+  {
+    totalValue: {
+      contentFn: (totalValue) => (
+        <>
+          Total value:&nbsp;
+          <HighlightedOrderDetailsEntry>
+            {totalValue ? priceFormat.format(totalValue as number) : "Free"}
+          </HighlightedOrderDetailsEntry>
+        </>
+      ),
+      contentClassName: "total-value",
+    },
+  };
+
+const orderDetailsEntriesWithAccessToOrderEntry: IOrderDetailsEntriesWithAccessToOrderEntry<orderDetailsEntriesWithAccessToOrderEntry> =
+  {};
+
+const modifyOrderDetailsEntriesWithAccessToOrderEntryToIndicateProperly = <
+  T extends string
+>(
+  entries: IOrderDetailsEntriesWithAccessToOrderEntry<T>
+) =>
+  Object.fromEntries(
+    Object.entries(entries).map((entry) => [
+      entry[0],
+      {
+        ...(entry[1] as IOrderDetailsEntriesWithAccessToOrderEntryValue),
+        passTheWholeOrderEntryToTheContentFn: true,
+      },
+    ])
+  );
+
+const createOrderDetailsEntriesObjBasedOnCtxEntries = <
+  T extends string,
+  Y extends string
+>(
+  customEntries?: IOrderDetailsCustomEntries<T>,
+  entriesBasedOnOrderDocumentKeys?: IOrderDetailsNormalEntries,
+  entriesWithAccessToOrderEntry?: IOrderDetailsEntriesWithAccessToOrderEntry<Y>
+) => {
+  let resultEntries: IOrderDetailsNormalEntries &
+    IOrderDetailsCustomEntries<T> &
+    IOrderDetailsEntriesWithAccessToOrderEntry<Y> = {};
+  [
+    customEntries,
+    entriesBasedOnOrderDocumentKeys,
+    entriesWithAccessToOrderEntry,
+  ].forEach((entriesObj) => {
+    if (!entriesObj) return;
+    const entriesArr = [...Object.entries(entriesObj)];
+    if (entriesArr.length < 1) return;
+    const entriesObjToMerge =
+      entriesObj === entriesWithAccessToOrderEntry
+        ? modifyOrderDetailsEntriesWithAccessToOrderEntryToIndicateProperly(
+            entriesWithAccessToOrderEntry
+          )
+        : entriesObj;
+    resultEntries = { ...resultEntries, ...entriesObjToMerge };
+  });
+  return resultEntries;
 };
 
 export default function OrdersList() {
@@ -110,6 +187,7 @@ export default function OrdersList() {
       differentError: ordersDetailsErrorFromAdminOrderManagerCtx,
       isLoading: ordersDetailsIsLoadingFromAdminOrderManagerCtx,
       orderEntryOnClick: orderEntryOnClickFromAdminOrderManagerCtx,
+      retrieveOrdersAmount: retrieveOrdersAmountFromAdminOrderManagerCtx,
     },
   } = useContext(ManageOrdersFindingOrderContext);
 
@@ -117,23 +195,8 @@ export default function OrdersList() {
     (state) => state.userAuthSlice.ordersAmount
   );
   const ordersAmount = serveAsAdminPanelOrdersListCtx
-    ? ordersDetailsFromAdminOrderManagerCtx
-      ? ordersDetailsFromAdminOrderManagerCtx.length
-      : 0
+    ? retrieveOrdersAmountFromAdminOrderManagerCtx ?? 0
     : ordersAmountOfLoggedUser;
-
-  const orderEntryOnClick = useCallback(
-    (orderId: string) =>
-      (serveAsAdminPanelOrdersListCtx
-        ? orderEntryOnClickFromAdminOrderManagerCtx
-        : orderEntryOnClickFromUserOrdersCtx
-      ).bind(null, orderId),
-    [
-      orderEntryOnClickFromAdminOrderManagerCtx,
-      orderEntryOnClickFromUserOrdersCtx,
-      serveAsAdminPanelOrdersListCtx,
-    ]
-  );
 
   const [ordersDetails, ordersDetailsIsLoading, ordersDetailsError] = useMemo(
     () =>
@@ -156,6 +219,35 @@ export default function OrdersList() {
       ordersDetailsIsLoadingFromAdminOrderManagerCtx,
       ordersDetailsIsLoadingFromUserOrdersCtx,
       serveAsAdminPanelOrdersListCtx,
+    ]
+  );
+
+  const {
+    customEntries,
+    entriesBasedOnOrderDocumentKeys,
+    entriesWithAccessToOrderEntry,
+  } = useContext(OrdersListAdditionalOrderDetailsEntriesContext);
+
+  const orderDetailsEntriesArr = useMemo(
+    () =>
+      [
+        ...Object.entries({
+          ...orderDetailsEntries,
+          ...orderDetailsCustomEntries,
+          ...modifyOrderDetailsEntriesWithAccessToOrderEntryToIndicateProperly(
+            orderDetailsEntriesWithAccessToOrderEntry
+          ),
+          ...createOrderDetailsEntriesObjBasedOnCtxEntries(
+            customEntries,
+            entriesBasedOnOrderDocumentKeys,
+            entriesWithAccessToOrderEntry
+          ),
+        }),
+      ] as [string, IOrderDetailsEntryKeyValueObj][],
+    [
+      customEntries,
+      entriesBasedOnOrderDocumentKeys,
+      entriesWithAccessToOrderEntry,
     ]
   );
 
@@ -192,19 +284,6 @@ export default function OrdersList() {
               totalValue: ordersDetailsItem.totalValue,
             };
 
-            const orderDetailsEntriesArr = [
-              ...Object.entries({
-                ...orderDetailsEntries,
-                ...orderDetailsCustomEntries,
-              }),
-            ] as [
-              (
-                | keyof typeof orderDetailsEntries
-                | keyof typeof orderDetailsCustomEntries
-              ),
-              IOrderDetailsEntryKeyValueObj
-            ][];
-
             return (
               <motion.li
                 className="w-full justify-center items-center flex flex-wrap bg-bodyBg px-4 py-8 rounded-xl gap-2 text-xs sm:text-base cursor-pointer"
@@ -212,25 +291,34 @@ export default function OrdersList() {
                 animate={{ opacity: 0.7 }}
                 whileHover={{ opacity: 1 }}
                 key={ordersDetailsItem._id}
-                onClick={() => orderEntryOnClick(ordersDetailsItem._id)}
+                onClick={() =>
+                  !serveAsAdminPanelOrdersListCtx
+                    ? orderEntryOnClickFromUserOrdersCtx(ordersDetailsItem._id)
+                    : orderEntryOnClickFromAdminOrderManagerCtx(
+                        ordersDetailsItem as IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin
+                      )
+                }
               >
                 {orderDetailsEntriesArr.map((orderDetailsEntry) => {
                   const orderDetailsItemDesiredValueKey = orderDetailsEntry[0];
                   return (
-                    <p
+                    <section
                       className={`order-${orderDetailsEntry[1].contentClassName} flex items-center justify-center text-wrap flex-wrap max-w-full`}
                       key={`${ordersDetailsItem._id}-${orderDetailsEntry[1].contentClassName}`}
                     >
                       {orderDetailsEntry[1].contentFn(
-                        orderDetailsItemDesiredValueKey in ordersDetailsItem
-                          ? ordersDetailsItem[
-                              orderDetailsItemDesiredValueKey as keyof IOrder
-                            ]
-                          : orderDetailsItemCustomEntriesValuesObj[
-                              orderDetailsItemDesiredValueKey as orderDetailsCustomEntries
-                            ]
+                        !orderDetailsEntry[1]
+                          .passTheWholeOrderEntryToTheContentFn
+                          ? orderDetailsItemDesiredValueKey in ordersDetailsItem
+                            ? ordersDetailsItem[
+                                orderDetailsItemDesiredValueKey as keyof IOrder
+                              ]
+                            : orderDetailsItemCustomEntriesValuesObj[
+                                orderDetailsItemDesiredValueKey as orderDetailsCustomEntries
+                              ]
+                          : ordersDetailsItem
                       )}
-                    </p>
+                    </section>
                   );
                 })}
               </motion.li>

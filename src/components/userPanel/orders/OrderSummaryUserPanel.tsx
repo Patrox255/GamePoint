@@ -5,7 +5,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useContext, useMemo } from "react";
 import { motion } from "framer-motion";
 
 import { IUserOrdersManagerParams } from "./UserOrdersManager";
@@ -21,12 +21,21 @@ import transformOrderItemsToGamesWithQuantity from "../../../helpers/transformOr
 import filterPropertiesFromObj from "../../../helpers/filterPropertiesFromObj";
 import { retrieveOrderData } from "../../../lib/fetch";
 import { IOrder } from "../../../models/order.model";
+import { ManageOrdersFindingOrderContext } from "../../../store/userPanel/admin/orders/ManageOrdersFindingOrderContext";
 
 export default function OrderSummaryUserPanel() {
   const { userId } = useLoaderData() as IUserPanelLoaderData;
-  const { orderId } = useParams() as IUserOrdersManagerParams;
+  const { orderId: orderIdFromParam } = useParams() as IUserOrdersManagerParams;
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
+  const {
+    stateInformation: { selectedOrderFromList: orderIdFromAdminOrderFinding },
+    orderSummaryRelatedStateInformation: {
+      handleGoBackFromOrderSummary: handleGoBackFromAdminOrderSummary,
+    },
+  } = useContext(ManageOrdersFindingOrderContext);
+
+  const orderId = orderIdFromAdminOrderFinding || orderIdFromParam;
 
   const {
     error: requestedOrderError,
@@ -48,6 +57,10 @@ export default function OrderSummaryUserPanel() {
     navigate(parentPath, { replace: true });
   }, [navigate, pathname, search]);
 
+  const handleGoBack = handleGoBackFromAdminOrderSummary
+    ? handleGoBackFromAdminOrderSummary
+    : handleRedirectBack;
+
   const selectedOrder = useMemo(
     () => (requestedOrderData?.data ? requestedOrderData.data : undefined),
     [requestedOrderData]
@@ -64,7 +77,7 @@ export default function OrderSummaryUserPanel() {
           smallVersion
         ></Error>
         <TimedOutActionWithProgressBar
-          action={handleRedirectBack}
+          action={handleGoBack}
           timeBeforeFiringAnAction={5000}
           negativeResult
           darkerBg
@@ -84,10 +97,11 @@ export default function OrderSummaryUserPanel() {
         value={{
           contactInformationToRender: selectedOrder.orderContactInformation,
           cartTotalPriceNotFromCartDetails: selectedOrder.totalValue,
+          orderStatus: selectedOrder.status,
         }}
       >
         <OrderSummary
-          handleGoBack={handleRedirectBack}
+          handleGoBack={handleGoBack}
           gamesWithQuantityStableFromProps={transformOrderItemsToGamesWithQuantity(
             selectedOrder.items
           )}

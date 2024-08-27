@@ -19,6 +19,10 @@ import filterPropertiesFromObj from "../helpers/filterPropertiesFromObj";
 
 export const queryClient = new QueryClient();
 
+export type IResponseFromFetchFn<T> = {
+  data: T;
+};
+
 export const getJSON = async function <dataInterface>({
   url,
   signal,
@@ -447,7 +451,7 @@ export type IOrderResponseGuest = {
 export type IOrderResponse = IDataOrErrorObjBackendResponse<
   IOrderResponseLoggedUser | IOrderResponseGuest
 >;
-export type IOrderResponseFromFetchFn = { data: IOrderResponse };
+export type IOrderResponseFromFetchFn = IResponseFromFetchFn<IOrderResponse>;
 export const placeAnOrder: (
   params: IPlaceAnOrderDataObject
 ) => Promise<IOrderResponseFromFetchFn> = async function ({
@@ -535,25 +539,33 @@ export const retrieveAvailableUsersBasedOnLoginOrEmailAddress = async function (
   return data;
 };
 
-export const retrieveAvailableOrdersBasedOnSelectedUserAndIdentificator =
-  async function (
-    ordererLogin: string = "",
-    orderId: string = "",
-    sortProperties: IOrdersSortOnlyDebouncedProperties,
-    pageNr: number,
-    signal: AbortSignal
-  ) {
-    const data = await getJSON<IOrder[]>({
-      url: generateUrlEndpointWithSearchParams(`${API_URL}/retrieve-orders`, {
-        pageNr,
-        sortProperties,
-      }),
-      body: { ordererLogin, orderId },
-      method: "POST",
-      signal,
-    });
-    const orders = data?.data;
-    if (orders) parseDatesOfReceivedOrders(orders);
+type IRetrieveAvailableOrdersResponse<T extends 1 | undefined> = T extends 1
+  ? IResponseFromFetchFn<number>
+  : IResponseFromFetchFn<IOrder[]>;
 
-    return data;
-  };
+export async function retrieveAvailableOrdersBasedOnSelectedUserAndIdentificator<
+  T extends 1 | undefined
+>(
+  ordererLogin: string = "",
+  orderId: string = "",
+  sortProperties: IOrdersSortOnlyDebouncedProperties,
+  pageNr: number,
+  signal: AbortSignal,
+  amount?: T
+): Promise<IRetrieveAvailableOrdersResponse<T>> {
+  const data = await getJSON<IOrder[] | number>({
+    url: generateUrlEndpointWithSearchParams(`${API_URL}/retrieve-orders`, {
+      pageNr,
+      sortProperties,
+      amount,
+    }),
+    body: { ordererLogin, orderId },
+    method: "POST",
+    signal,
+  });
+  const orders = data?.data;
+  if (orders && Array.isArray(orders) && orders.length > 0)
+    parseDatesOfReceivedOrders(orders);
+
+  return data as IRetrieveAvailableOrdersResponse<T>;
+}

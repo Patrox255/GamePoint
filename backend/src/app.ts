@@ -44,6 +44,8 @@ import {
   acquireAndValidatePageNrAndSortPropertiesWhenRetrievingOrders,
   sortRetrievedOrdersBasedOnSentSortProperties,
   applyPageNrToRetrievedOrders,
+  orderPopulateOptions,
+  convertOrderStatusToUserFriendlyOne,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -1681,7 +1683,10 @@ const startServer = async () => {
           Request;
         const userId = token?.userId;
 
-        if (contactInformationForLoggedUsers && !userId)
+        if (
+          contactInformationForLoggedUsers &&
+          (!userId || !isValidObjectId(userId))
+        )
           return res.status(403).json({
             message:
               "You are not allowed to access such contact details entry!",
@@ -1795,6 +1800,7 @@ const startServer = async () => {
           },
           accessCode,
           totalValue,
+          userId: new Types.ObjectId(userId),
         };
         const session = await startSession();
         session.startTransaction();
@@ -1868,7 +1874,7 @@ const startServer = async () => {
     app.post("/order/data", verifyJwt, async (req, res, next) => {
       try {
         const {
-          token: { userId },
+          token: { userId, isAdmin },
         } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
         if (
           !validateBodyEntries({
@@ -1878,14 +1884,25 @@ const startServer = async () => {
           })
         )
           return;
-        const relatedUser =
-          await retrieveUserDocumentWithPopulatedOrdersDetails(userId!);
         const { orderId } = req.body as ICheckOrderIdBodyFromRequest;
-        const order = relatedUser?.orders?.find(
-          (order) => order._id.toString() === orderId
-        );
+        let order: IOrder | undefined;
+
+        if (isAdmin) {
+          order = (
+            await Order.findById(orderId).populate(orderPopulateOptions)
+          )?.toObject() as typeof order;
+        }
+
+        if (!isAdmin) {
+          const relatedUser =
+            await retrieveUserDocumentWithPopulatedOrdersDetails(userId!);
+          order = relatedUser?.orders?.find(
+            (order) => order._id.toString() === orderId
+          ) as IOrder | undefined;
+        }
 
         if (!order) return res.sendStatus(403);
+        order = convertOrderStatusToUserFriendlyOne(order);
         return res.status(200).json(order);
       } catch (e) {
         next(e);
@@ -1942,7 +1959,7 @@ const startServer = async () => {
           })
         )
           return;
-        const { pageNr, sortProperties } =
+        const { pageNr, sortProperties, amount } =
           await acquireAndValidatePageNrAndSortPropertiesWhenRetrievingOrders(
             req
           );
@@ -1952,27 +1969,38 @@ const startServer = async () => {
 
         type IOrderModel = IOrder & { _id: mongoose.Types.ObjectId };
         let ordersToSend: IOrderModel[];
+        const orderPopulateUserDocumentOptions: mongoose.PopulateOptions = {
+          path: "userId",
+          model: "User",
+        };
         if (ordererLogin) {
           const relatedUser = await User.findOne(
             {
               login: ordererLogin,
             },
             { orders: true }
-          ).populate("orders");
-          if (!relatedUser || relatedUser.orders?.length === 0)
+          ).populate({
+            path: "orders",
+            populate: orderPopulateUserDocumentOptions,
+          });
+          if (!relatedUser || relatedUser.orders?.length === 0) {
             return res.status(200).json({
               message: !relatedUser
                 ? "We couldn't find such an user!"
                 : "Selected user hasn't placed any order yet!",
             });
+          }
           ordersToSend = relatedUser.orders as unknown as IOrderModel[];
         } else {
-          ordersToSend = await Order.find();
+          ordersToSend = await Order.find().populate(
+            orderPopulateUserDocumentOptions
+          );
         }
         if (orderId)
           ordersToSend = ordersToSend?.filter((order) =>
             order._id.toString().includes(orderId.toLowerCase())
           );
+        if (amount) return res.status(200).json(ordersToSend.length);
         ordersToSend = await applyPageNrToRetrievedOrders(
           pageNr,
           sortRetrievedOrdersBasedOnSentSortProperties(

@@ -1,6 +1,7 @@
 import { IAdditionalContactInformation } from "./additionalContactInformation.model";
 import { IMongooseDocument } from "./mongooseDocument.model";
 import { IOrderItem } from "./orderItem.model";
+import { IUser } from "./user.model";
 
 const orderPossibleStatuses = [
   "waitingForPayment",
@@ -40,4 +41,5 @@ export interface IOrder extends IMongooseDocument {
   status: orderPossibleStatus;
   orderContactInformation: IAdditionalContactInformation;
   totalValue: number;
+  userId?: string | IUser;
 }

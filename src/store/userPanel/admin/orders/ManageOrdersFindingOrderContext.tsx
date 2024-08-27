@@ -13,21 +13,19 @@ import { useInput } from "../../../../hooks/useInput";
 import { useQuery } from "@tanstack/react-query";
 import {
   IRetrieveAvailableUsersPossibleReceivedData,
-  retrieveAvailableOrdersBasedOnSelectedUserAndIdentificator,
   retrieveAvailableUsersBasedOnLoginOrEmailAddress,
 } from "../../../../lib/fetch";
 import {
   FormActionBackendErrorResponse,
-  FormActionBackendResponse,
   ValidationErrorsArr,
 } from "../../../../components/UI/FormWithErrorHandling";
 import { IOrder } from "../../../../models/order.model";
-import useExtractStableDataOrErrorsFromMyBackendUseQueryResponse from "../../../../hooks/queryRelated/useExtractStableDataOrErrorsFromMyBackendUseQueryResponse";
 import { PagesManagerContext } from "../../../products/PagesManagerContext";
-import {
-  IOrdersSortOnlyDebouncedProperties,
-  UserOrdersManagerOrdersDetailsContext,
-} from "../../UserOrdersManagerOrdersDetailsContext";
+import { UserOrdersManagerOrdersDetailsContext } from "../../UserOrdersManagerOrdersDetailsContext";
+import useRetrieveOrdersData from "../../../../hooks/adminPanelRelated/useRetrieveOrdersData";
+import { calcMaxPossiblePageNr } from "../../../../components/UI/PagesElement";
+import { MAX_ORDERS_PER_PAGE } from "../../../../lib/config";
+import { IUser } from "../../../../models/user.model";
 
 const manageOrdersFindingInputsEntriesNames = [
   "orderFindingUser",
@@ -80,6 +78,22 @@ const defaultOrdersFindingCtxQueryDataObj = {
   differentError: null,
 };
 
+const retrieveFilledValidationErrorsArr = (
+  validationErrorsArrs: (ValidationErrorsArr | false)[]
+) => {
+  const foundArr = validationErrorsArrs.find(
+    (validationErrorsArr) =>
+      validationErrorsArr && validationErrorsArr.length > 0
+  );
+  return foundArr ? foundArr : false;
+};
+
+export type IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin = IOrder & {
+  userId?: IUser;
+};
+type IReceivedOrdersDocumentsWhenRetrievingThemAsAnAdmin =
+  IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin[];
+
 export const ManageOrdersFindingOrderContext = createContext<
   {
     ordersFindingCredentials: IManyInputsEntries<manageOrdersFindingInputsEntriesNames>;
@@ -93,8 +107,15 @@ export const ManageOrdersFindingOrderContext = createContext<
       setSelectedOrderFromList: React.Dispatch<React.SetStateAction<string>>;
     };
   } & {
-    retrieveOrdersQueryData: IOrdersFindingCtxQueryDataObj<IOrder[]> & {
-      orderEntryOnClick: (orderId: string) => void;
+    retrieveOrdersQueryData: IOrdersFindingCtxQueryDataObj<IReceivedOrdersDocumentsWhenRetrievingThemAsAnAdmin> & {
+      orderEntryOnClick: (
+        order: IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin
+      ) => void;
+      retrieveOrdersAmount: number | undefined;
+    };
+  } & {
+    orderSummaryRelatedStateInformation: {
+      handleGoBackFromOrderSummary: (() => void) | undefined;
     };
   }
 >({
@@ -105,12 +126,16 @@ export const ManageOrdersFindingOrderContext = createContext<
   retrieveOrdersQueryData: {
     ...defaultOrdersFindingCtxQueryDataObj,
     orderEntryOnClick: () => {},
+    retrieveOrdersAmount: undefined,
   },
   stateInformation: {
     selectedUserFromList: "",
     setSelectedUserFromList: () => {},
     selectedOrderFromList: "",
     setSelectedOrderFromList: () => {},
+  },
+  orderSummaryRelatedStateInformation: {
+    handleGoBackFromOrderSummary: undefined,
   },
 });
 
@@ -177,52 +202,64 @@ export default function ManageOrdersFindingOrderContextProvider({
     UserOrdersManagerOrdersDetailsContext
   );
 
+  const retrieveOrdersDataArgObj = {
+    ordersSortPropertiesToSend,
+    pageNr,
+    providedOrderId: orderFindingOrderId.queryDebouncingState,
+    selectedUserFromList,
+  };
+
   const {
-    data: retrieveOrdersData,
-    isLoading: retrieveOrdersIsLoading,
-    error: retrieveOrdersError,
-  } = useQuery<
-    FormActionBackendResponse<IOrder[]>,
-    FormActionBackendErrorResponse
-  >({
-    queryKey: [
-      "retrieve-orders",
-      selectedUserFromList,
-      orderFindingOrderId.queryDebouncingState,
-      ordersSortPropertiesToSend,
-      pageNr,
-    ],
-    queryFn: ({ signal, queryKey }) =>
-      retrieveAvailableOrdersBasedOnSelectedUserAndIdentificator(
-        queryKey[1] as string,
-        queryKey[2] as string,
-        queryKey[3] as IOrdersSortOnlyDebouncedProperties,
-        queryKey[4] as number,
-        signal
-      ),
-  });
+    retrieveOrdersArr: retrieveOrdersAmount,
+    retrieveOrdersIsLoading: retrieveOrdersAmountIsLoading,
+    retrieveOrdersOtherErrors: retrieveOrdersAmountOtherErrors,
+    retrieveOrdersValidationErrors: retrieveOrdersAmountValidationErrors,
+  } = useRetrieveOrdersData({ ...retrieveOrdersDataArgObj, onlyAmount: 1 });
+
   const {
-    stableData: retrieveOrdersArr,
-    stableOtherErrors: retrieveOrdersOtherErrors,
-    stableValidationErrors: retrieveOrdersValidationErrors,
-  } = useExtractStableDataOrErrorsFromMyBackendUseQueryResponse(
-    retrieveOrdersData,
-    retrieveOrdersError
-  );
+    retrieveOrdersArr,
+    retrieveOrdersIsLoading,
+    retrieveOrdersOtherErrors,
+    retrieveOrdersValidationErrors,
+  } = useRetrieveOrdersData(retrieveOrdersDataArgObj);
+  const retrieveOrdersArrTyped = retrieveOrdersArr as
+    | IReceivedOrdersDocumentsWhenRetrievingThemAsAnAdmin
+    | undefined; // had to type it like this as its type
+  // wasn't inferenced correctly
 
   useEffect(() => {
-    if (!retrieveOrdersArr || retrieveOrdersArr.length > 0 || pageNr !== 0)
+    if (
+      !retrieveOrdersArrTyped ||
+      retrieveOrdersArrTyped.length > 0 ||
+      !retrieveOrdersAmount ||
+      pageNr <= calcMaxPossiblePageNr(retrieveOrdersAmount, MAX_ORDERS_PER_PAGE)
+    )
       return;
     setPageNr(0);
-  }, [pageNr, retrieveOrdersArr, setPageNr]);
+  }, [pageNr, retrieveOrdersArrTyped, setPageNr, retrieveOrdersAmount]);
 
   const [selectedOrderFromList, setSelectedOrderFromList] = useState("");
   const orderEntryOnClick = useCallback(
-    (orderId: string) => setSelectedOrderFromList(orderId),
+    (order: IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin) => {
+      const login = order.userId?.login;
+      if (login) setSelectedUserFromList(login);
+      setSelectedOrderFromList(order._id);
+    },
     []
   );
 
-  console.log(selectedOrderFromList);
+  const ordersRelatedQueryValidationErrorsArrStable = useMemo(
+    () =>
+      retrieveFilledValidationErrorsArr([
+        retrieveOrdersValidationErrors,
+        retrieveOrdersAmountValidationErrors,
+      ]),
+    [retrieveOrdersAmountValidationErrors, retrieveOrdersValidationErrors]
+  );
+
+  const handleGoBackFromOrderSummary = useCallback(() => {
+    setSelectedOrderFromList("");
+  }, []);
 
   return (
     <ManageOrdersFindingOrderContext.Provider
@@ -241,11 +278,13 @@ export default function ManageOrdersFindingOrderContextProvider({
           validationErrors: retrieveUsersValidationErrors,
         },
         retrieveOrdersQueryData: {
-          data: retrieveOrdersArr,
-          differentError: retrieveOrdersOtherErrors,
-          validationErrors: retrieveOrdersValidationErrors,
-          isLoading: retrieveOrdersIsLoading,
+          data: retrieveOrdersArrTyped,
+          differentError:
+            retrieveOrdersOtherErrors || retrieveOrdersAmountOtherErrors,
+          validationErrors: ordersRelatedQueryValidationErrorsArrStable,
+          isLoading: retrieveOrdersIsLoading || retrieveOrdersAmountIsLoading,
           orderEntryOnClick,
+          retrieveOrdersAmount,
         },
         stateInformation: {
           selectedUserFromList,
@@ -253,6 +292,7 @@ export default function ManageOrdersFindingOrderContextProvider({
           selectedOrderFromList,
           setSelectedOrderFromList,
         },
+        orderSummaryRelatedStateInformation: { handleGoBackFromOrderSummary },
       }}
     >
       {children}

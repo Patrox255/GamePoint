@@ -1,5 +1,5 @@
-import Header from "../../../UI/headers/Header";
+import OrderSummaryUserPanel from "../../orders/OrderSummaryUserPanel";
 
 export default function OrderFindingSummary() {
-  return <Header>Order summary</Header>;
+  return <OrderSummaryUserPanel />;
 }

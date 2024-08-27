@@ -10,7 +10,10 @@ import { receivedCart } from "./validateBodyEntries";
 import AdditionalContactInformation, {
   IAdditionalContactInformation,
 } from "./models/additionalContactInformation.model";
-import { IOrder } from "./models/order.model";
+import {
+  IOrder,
+  orderPossibleStatusesUserFriendlyMap,
+} from "./models/order.model";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -419,12 +422,16 @@ export const verifyCreateAndInsertAdditionalContactInformationDocumentBasedOnReq
     return { newObjs, documents };
   };
 
+export const orderPopulateOptions: mongoose.PopulateOptions = {
+  path: "items.gameId",
+  model: "Game",
+};
 export const retrieveUserDocumentWithPopulatedOrdersDetails = async function (
   userId: string | mongoose.Types.ObjectId
 ) {
   const user = await User.findById(userId).populate({
     path: "orders",
-    populate: { path: "items.gameId", model: "Game" },
+    populate: orderPopulateOptions,
   });
   return user;
 };
@@ -480,12 +487,13 @@ export const sendAnErrorInCaseOfNormalUserAccessingAdminEndPoint = (
 
 export const acquireAndValidatePageNrAndSortPropertiesWhenRetrievingOrders =
   async function (req: Request) {
-    const { pageNr, sortProperties } = await parseQueries(req);
+    const { pageNr, sortProperties, amount } = await parseQueries(req);
     await validateQueriesTypes([
       ["number", pageNr],
       ["object", sortProperties],
+      ["number", amount],
     ]);
-    return { pageNr, sortProperties };
+    return { pageNr, sortProperties, amount };
   };
 
 const transformDateNotToTakeTimeIntoAccount = (date: Date) => {
@@ -539,3 +547,10 @@ export const applyPageNrToRetrievedOrders = async function <T extends IOrder>(
     );
   return orders.slice(0, 5);
 };
+
+export const convertOrderStatusToUserFriendlyOne = <T extends IOrder>(
+  order: T
+): T => ({
+  ...order,
+  status: orderPossibleStatusesUserFriendlyMap[order.status!],
+});

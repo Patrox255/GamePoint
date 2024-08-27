@@ -21,6 +21,7 @@ import { NewOrderSummaryContext } from "../../store/orderPage/NewOrderSummaryCon
 import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
 import { useAppSelector } from "../../hooks/reduxStore";
 import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContentContext";
+import OrderGeneralInformation from "./OrderGeneralInformation";
 
 export const OrderSummarySectionWrapper = ({
   children,
@@ -123,6 +124,7 @@ export default function OrderSummary({
         >
           <OrderCartInformation />
         </OrderSummaryCartInformationContext.Provider>
+        {!serveAsPlacingOrderSummary && <OrderGeneralInformation />}
       </section>
       <section className="flex justify-center items-center px-4 py-8 gap-4">
         <Button

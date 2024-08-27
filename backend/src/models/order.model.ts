@@ -1,12 +1,11 @@
-import { model, Schema } from "mongoose";
+import mongoose, { model, Schema } from "mongoose";
 import OrderItemSchema, { IOrderItem } from "./orderItem.model";
 import {
   AdditionalContactInformationSchema,
   IAdditionalContactInformation,
 } from "./additionalContactInformation.model";
 
-const orderPossibleStatuses = [
-  "waitingForPayment",
+const orderPossibleStatusesWithSimpleMapToUserFriendly = [
   "paid",
   "processing",
   "packed",
@@ -17,6 +16,36 @@ const orderPossibleStatuses = [
   "refunded",
 ] as const;
 
+const otherOrderPossibleStatuses = ["waitingForPayment"] as const;
+export type orderPossibleStatus =
+  | (typeof orderPossibleStatusesWithSimpleMapToUserFriendly)[number]
+  | (typeof otherOrderPossibleStatuses)[number];
+const orderPossibleStatuses = [
+  ...otherOrderPossibleStatuses,
+  ...orderPossibleStatusesWithSimpleMapToUserFriendly,
+];
+
+export const orderPossibleStatusesUserFriendlyMap: Record<
+  orderPossibleStatus,
+  string
+> = {
+  ...(Object.fromEntries(
+    orderPossibleStatusesWithSimpleMapToUserFriendly.map(
+      (orderPossibleStatus) => [
+        orderPossibleStatus,
+        orderPossibleStatus.replace(
+          orderPossibleStatus[0],
+          orderPossibleStatus[0].toUpperCase()
+        ),
+      ]
+    )
+  ) as Record<
+    (typeof orderPossibleStatusesWithSimpleMapToUserFriendly)[number],
+    string
+  >),
+  waitingForPayment: "Waiting for payment",
+};
+
 export interface IOrder {
   items: IOrderItem[];
   date?: Date;
@@ -26,6 +55,7 @@ export interface IOrder {
   accessCode?: string; // this combined with the order id and customer e-mail is going to allow guest users
   // to access their orders based on the links which would be sent via e-mail message
   totalValue?: number;
+  userId?: mongoose.Types.ObjectId;
 }
 
 const OrderSchema = new Schema<IOrder>({
@@ -46,6 +76,7 @@ const OrderSchema = new Schema<IOrder>({
   guestEmail: { type: String },
   accessCode: { type: String },
   totalValue: { type: Number },
+  userId: { type: Schema.Types.ObjectId },
 });
 
 const Order = model("Order", OrderSchema);

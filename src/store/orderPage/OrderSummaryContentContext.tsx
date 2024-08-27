@@ -11,8 +11,10 @@ export const OrderSummaryContentContext = createContext<{
     | undefined;
   serveAsPlacingOrderSummary?: boolean;
   cartTotalPriceNotFromCartDetails?: number;
+  orderStatus?: string;
 }>({
   contactInformationToRender: undefined,
   serveAsPlacingOrderSummary: false,
   cartTotalPriceNotFromCartDetails: undefined,
+  orderStatus: "",
 });
