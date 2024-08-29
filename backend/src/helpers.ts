@@ -5,7 +5,7 @@ import { accessEnvironmentVariable } from "./app";
 import { CorsOptions } from "cors";
 import bcrypt from "bcrypt";
 import Game from "./models/game.model";
-import User from "./models/user.model";
+import User, { IUser } from "./models/user.model";
 import { receivedCart } from "./validateBodyEntries";
 import AdditionalContactInformation, {
   IAdditionalContactInformation,
@@ -331,6 +331,20 @@ export const verifyJwt = async (
     .json({ message: accessJwtResult.message });
 };
 
+export const verifyJwtWithAdminGuard = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const accessJwtResult = await accessJwt(req, res);
+  if (typeof accessJwtResult === "object")
+    return res
+      .status(accessJwtResult.status)
+      .json({ message: accessJwtResult.message });
+  if (!sendAnErrorInCaseOfNormalUserAccessingAdminEndPoint(req, res)) return;
+  return next();
+};
+
 export const onlyAccessJwt = async (
   req: Request,
   res: Response,
@@ -340,14 +354,24 @@ export const onlyAccessJwt = async (
   next();
 };
 
-export const getUserContactInformationByLogin = async (login: string) => {
-  const relatedUser = await User.findOne(
-    { login },
-    {
-      additionalContactInformation: true,
-      activeAdditionalContactInformation: true,
-    }
-  ).populate("additionalContactInformation");
+export const getUserContactInformationByLoginOrId = async ({
+  login,
+  userId,
+}: {
+  login?: string;
+  userId?: string;
+}) => {
+  const userContactInformationProjection: mongoose.ProjectionType<IUser> = {
+    additionalContactInformation: true,
+    activeAdditionalContactInformation: true,
+  };
+
+  const relatedUserDBReq = login
+    ? User.findOne({ login }, userContactInformationProjection)
+    : User.findById(userId, userContactInformationProjection);
+  relatedUserDBReq.populate("additionalContactInformation");
+
+  const relatedUser = await relatedUserDBReq;
   if (!relatedUser) return undefined;
   const { additionalContactInformation, activeAdditionalContactInformation } =
     relatedUser!;
@@ -554,3 +578,23 @@ export const convertOrderStatusToUserFriendlyOne = <T extends IOrder>(
   ...order,
   status: orderPossibleStatusesUserFriendlyMap[order.status!],
 });
+
+export const tryToTransformOrderUserFriendlyStatusToItsDatabaseVersion = (
+  status: string
+) =>
+  Object.entries(orderPossibleStatusesUserFriendlyMap).find(
+    (orderPossibleStatusEntry) => orderPossibleStatusEntry[1] === status
+  )?.[0] || { message: "You are not allowed to set such an order status!" };
+
+export const bodyEntryValidMongooseObjectIdValidateFn = (
+  value: unknown,
+  entryVisibleName: string
+) =>
+  isValidObjectId(value)
+    ? true
+    : {
+        message: `Provided ${entryVisibleName.replace(
+          entryVisibleName[0],
+          entryVisibleName[0].toLowerCase()
+        )} isn't valid!`,
+      };

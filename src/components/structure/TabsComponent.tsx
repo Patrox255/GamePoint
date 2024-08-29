@@ -1,10 +1,11 @@
+/* eslint-disable react-refresh/only-export-components */
 import { ReactNode, useCallback, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { useStateWithSearchParams } from "../../hooks/useStateWithSearchParams";
 import Button from "../UI/Button";
 
-const tabsSectionElementTransitionProperties = {
+export const tabsSectionElementTransitionProperties = {
   initial: { opacity: 0 },
   animate: { opacity: 1 },
   exit: { opacity: 0 },

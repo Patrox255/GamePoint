@@ -88,11 +88,8 @@ export default function OrderPageContent() {
     data: contactInformationData,
     error: contactInformationError,
     isLoading: contactInformationIsLoading,
+    contactInformationArr,
   } = useRetrieveContactInformation();
-  const contactInformationArr = useMemo(
-    () => contactInformationData?.data.additionalContactInformation,
-    [contactInformationData]
-  );
   const curUserActiveContactInformationId =
     contactInformationData?.data.activeAdditionalContactInformation || "";
   const selectedUserContactInformation = useMemo(

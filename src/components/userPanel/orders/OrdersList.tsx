@@ -24,6 +24,7 @@ import {
 } from "../../../store/userPanel/admin/orders/ManageOrdersFindingOrderContext";
 import { IUser } from "../../../models/user.model";
 import { OrdersListAdditionalOrderDetailsEntriesContext } from "../../../store/userPanel/admin/orders/OrdersListAdditionalOrderDetailsEntriesContext";
+import { UpdateOrderDetailsContext } from "../../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
 
 export const OrdersDetailsError = ({
   message = "Failed to retrieve your orders! Please try again later.",
@@ -186,10 +187,12 @@ export default function OrdersList() {
       data: ordersDetailsFromAdminOrderManagerCtx,
       differentError: ordersDetailsErrorFromAdminOrderManagerCtx,
       isLoading: ordersDetailsIsLoadingFromAdminOrderManagerCtx,
-      orderEntryOnClick: orderEntryOnClickFromAdminOrderManagerCtx,
       retrieveOrdersAmount: retrieveOrdersAmountFromAdminOrderManagerCtx,
     },
   } = useContext(ManageOrdersFindingOrderContext);
+
+  const { orderEntryOnClick: orderEntryOnClickFromAdminOrderManagerCtx } =
+    useContext(UpdateOrderDetailsContext);
 
   const ordersAmountOfLoggedUser = useAppSelector(
     (state) => state.userAuthSlice.ordersAmount

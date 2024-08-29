@@ -2,7 +2,6 @@
 import {
   createContext,
   ReactNode,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -103,19 +102,10 @@ export const ManageOrdersFindingOrderContext = createContext<
     stateInformation: {
       selectedUserFromList: string;
       setSelectedUserFromList: React.Dispatch<React.SetStateAction<string>>;
-      selectedOrderFromList: string;
-      setSelectedOrderFromList: React.Dispatch<React.SetStateAction<string>>;
     };
   } & {
     retrieveOrdersQueryData: IOrdersFindingCtxQueryDataObj<IReceivedOrdersDocumentsWhenRetrievingThemAsAnAdmin> & {
-      orderEntryOnClick: (
-        order: IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin
-      ) => void;
       retrieveOrdersAmount: number | undefined;
-    };
-  } & {
-    orderSummaryRelatedStateInformation: {
-      handleGoBackFromOrderSummary: (() => void) | undefined;
     };
   }
 >({
@@ -125,17 +115,11 @@ export const ManageOrdersFindingOrderContext = createContext<
   retrieveUsersQueryData: defaultOrdersFindingCtxQueryDataObj,
   retrieveOrdersQueryData: {
     ...defaultOrdersFindingCtxQueryDataObj,
-    orderEntryOnClick: () => {},
     retrieveOrdersAmount: undefined,
   },
   stateInformation: {
     selectedUserFromList: "",
     setSelectedUserFromList: () => {},
-    selectedOrderFromList: "",
-    setSelectedOrderFromList: () => {},
-  },
-  orderSummaryRelatedStateInformation: {
-    handleGoBackFromOrderSummary: undefined,
   },
 });
 
@@ -238,16 +222,6 @@ export default function ManageOrdersFindingOrderContextProvider({
     setPageNr(0);
   }, [pageNr, retrieveOrdersArrTyped, setPageNr, retrieveOrdersAmount]);
 
-  const [selectedOrderFromList, setSelectedOrderFromList] = useState("");
-  const orderEntryOnClick = useCallback(
-    (order: IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin) => {
-      const login = order.userId?.login;
-      if (login) setSelectedUserFromList(login);
-      setSelectedOrderFromList(order._id);
-    },
-    []
-  );
-
   const ordersRelatedQueryValidationErrorsArrStable = useMemo(
     () =>
       retrieveFilledValidationErrorsArr([
@@ -256,10 +230,6 @@ export default function ManageOrdersFindingOrderContextProvider({
       ]),
     [retrieveOrdersAmountValidationErrors, retrieveOrdersValidationErrors]
   );
-
-  const handleGoBackFromOrderSummary = useCallback(() => {
-    setSelectedOrderFromList("");
-  }, []);
 
   return (
     <ManageOrdersFindingOrderContext.Provider
@@ -283,16 +253,12 @@ export default function ManageOrdersFindingOrderContextProvider({
             retrieveOrdersOtherErrors || retrieveOrdersAmountOtherErrors,
           validationErrors: ordersRelatedQueryValidationErrorsArrStable,
           isLoading: retrieveOrdersIsLoading || retrieveOrdersAmountIsLoading,
-          orderEntryOnClick,
           retrieveOrdersAmount,
         },
         stateInformation: {
           selectedUserFromList,
           setSelectedUserFromList,
-          selectedOrderFromList,
-          setSelectedOrderFromList,
         },
-        orderSummaryRelatedStateInformation: { handleGoBackFromOrderSummary },
       }}
     >
       {children}

@@ -373,7 +373,7 @@ export const manageContactInformation = async function (
   formDataWithPotentialEntryToUpdateId: IActionMutateArgsContactUserPanel
 ) {
   const data = await getJSON<string>({
-    url: `${API_URL}/contact-information`,
+    url: `${API_URL}/contact-information/add`,
     body: formDataWithPotentialEntryToUpdateId,
     method: "POST",
   });
@@ -386,10 +386,15 @@ export interface IRetrievedContactInformation {
   activeAdditionalContactInformation: string | null;
 }
 
-export const retrieveContactInformation = async function (signal: AbortSignal) {
+export const retrieveContactInformation = async function (
+  signal: AbortSignal,
+  customUserId?: string
+) {
   const data = await getJSON<IRetrievedContactInformation>({
     url: `${API_URL}/contact-information`,
     signal,
+    method: "POST",
+    body: { customUserId },
   });
 
   data.data.additionalContactInformation.forEach(
@@ -568,4 +573,39 @@ export async function retrieveAvailableOrdersBasedOnSelectedUserAndIdentificator
     parseDatesOfReceivedOrders(orders);
 
   return data as IRetrieveAvailableOrdersResponse<T>;
+}
+
+export async function retrievePossibleOrderStatuses(signal: AbortSignal) {
+  const data = await getJSON<string[]>({
+    url: `${API_URL}/retrieve-order-statuses`,
+    signal,
+  });
+
+  return data;
+}
+
+export type IUpdateOrderByAdmin = {
+  orderId: string;
+  newStatus?: string;
+  newUserContactInformationEntryId?: string;
+  ordererLoginToDeterminePossibleContactInformationEntries?: string;
+};
+export async function updateOrderStatus({
+  newStatus,
+  orderId,
+  newUserContactInformationEntryId,
+  ordererLoginToDeterminePossibleContactInformationEntries,
+}: IUpdateOrderByAdmin) {
+  const data = await getJSON<string>({
+    url: `${API_URL}/order/modify`,
+    method: "POST",
+    body: {
+      newStatus,
+      orderId,
+      newUserContactInformationEntryId,
+      ordererLoginToDeterminePossibleContactInformationEntries,
+    },
+  });
+
+  return data;
 }

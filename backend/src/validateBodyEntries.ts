@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from "mongoose";
+import mongoose from "mongoose";
 import { IAdditionalContactInformationWithoutDateOfBirth } from "./models/additionalContactInformation.model";
 import { IGame } from "./models/game.model";
 import {
@@ -11,6 +11,10 @@ import {
   validatePasswordFn,
   zipCodeRegex,
 } from "./validateBodyFn";
+import {
+  bodyEntryValidMongooseObjectIdValidateFn,
+  tryToTransformOrderUserFriendlyStatusToItsDatabaseVersion,
+} from "./helpers";
 
 export interface ILoginBodyFromRequest extends IBodyFromRequestToValidate {
   login: string;
@@ -335,10 +339,7 @@ export const checkOrderIdEntries: IValidateBodyEntry<ICheckOrderIdBodyFromReques
       requestBodyName: "orderId",
       name: "Order identificator",
       type: "string",
-      validateFn: (val) =>
-        isValidObjectId(val)
-          ? true
-          : { message: "Provided order identificator isn't valid!" },
+      validateFn: bodyEntryValidMongooseObjectIdValidateFn,
     },
   ];
 
@@ -378,5 +379,63 @@ export const retrieveOrdersInAdminPanelEntries: IValidateBodyEntry<IRetrieveOrde
       optional: true,
       inputNameOtherThanVisibleNameToSetAppropriateValidationErrorInputName:
         "orderFindingOrderId",
+    },
+  ];
+
+export interface IModifyOrderBodyFromRequest
+  extends IBodyFromRequestToValidate {
+  orderId: string;
+  newStatus?: string;
+  newUserContactInformationEntryId?: string;
+  ordererLoginToDeterminePossibleContactInformationEntries?: string;
+}
+
+export const modifyOrderEntries: IValidateBodyEntry<IModifyOrderBodyFromRequest>[] =
+  [
+    {
+      name: "New status",
+      requestBodyName: "newStatus",
+      type: "string",
+      validateFn: (value) => {
+        const mappingResult =
+          tryToTransformOrderUserFriendlyStatusToItsDatabaseVersion(
+            value as string
+          );
+        if (typeof mappingResult === "object") return mappingResult;
+        return true;
+      },
+      inputNameOtherThanVisibleNameToSetAppropriateValidationErrorInputName:
+        "orderStatusChange",
+      optional: true,
+    },
+    {
+      name: "New contact details entry",
+      requestBodyName: "newUserContactInformationEntryId",
+      type: "string",
+      validateFn: bodyEntryValidMongooseObjectIdValidateFn,
+      optional: true,
+    },
+    {
+      name: "Orderer's login",
+      requestBodyName:
+        "ordererLoginToDeterminePossibleContactInformationEntries",
+      type: "string",
+      optional: true,
+    },
+  ];
+
+export interface IRetrieveUserContactInformationPossibleBodyFromRequest
+  extends IBodyFromRequestToValidate {
+  customUserId?: string;
+}
+
+export const retrieveUserContactInformationEntries: IValidateBodyEntry<IRetrieveUserContactInformationPossibleBodyFromRequest>[] =
+  [
+    {
+      requestBodyName: "customUserId",
+      type: "string",
+      name: "Your selected user's identificator",
+      optional: true,
+      validateFn: bodyEntryValidMongooseObjectIdValidateFn,
     },
   ];

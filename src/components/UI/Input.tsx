@@ -199,6 +199,10 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
               ? defaultValue
               : undefined
           }
+          {...(onChange && {
+            onChange: (e) =>
+              (onChange as inputOnChangeTypeText)(e.currentTarget.value),
+          })}
         >
           {options?.map((option) => (
             <option key={option} value={option}>

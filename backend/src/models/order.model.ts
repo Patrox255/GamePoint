@@ -20,7 +20,7 @@ const otherOrderPossibleStatuses = ["waitingForPayment"] as const;
 export type orderPossibleStatus =
   | (typeof orderPossibleStatusesWithSimpleMapToUserFriendly)[number]
   | (typeof otherOrderPossibleStatuses)[number];
-const orderPossibleStatuses = [
+export const orderPossibleStatuses = [
   ...otherOrderPossibleStatuses,
   ...orderPossibleStatusesWithSimpleMapToUserFriendly,
 ];
@@ -49,7 +49,7 @@ export const orderPossibleStatusesUserFriendlyMap: Record<
 export interface IOrder {
   items: IOrderItem[];
   date?: Date;
-  status?: (typeof orderPossibleStatuses)[number];
+  status?: orderPossibleStatus;
   orderContactInformation: IAdditionalContactInformation;
   guestEmail?: string;
   accessCode?: string; // this combined with the order id and customer e-mail is going to allow guest users

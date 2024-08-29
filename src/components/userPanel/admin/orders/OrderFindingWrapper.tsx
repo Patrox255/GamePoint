@@ -1,13 +1,11 @@
 import { useContext } from "react";
 
-import { ManageOrdersFindingOrderContext } from "../../../../store/userPanel/admin/orders/ManageOrdersFindingOrderContext";
 import OrderFindingSummary from "./OrderFindingSummary";
 import OrderFindingMainTab from "./OrderFindingMainTab";
+import { UpdateOrderDetailsContext } from "../../../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
 
 export default function OrderFindingWrapper() {
-  const {
-    stateInformation: { selectedOrderFromList },
-  } = useContext(ManageOrdersFindingOrderContext);
+  const { selectedOrderFromList } = useContext(UpdateOrderDetailsContext);
 
   return selectedOrderFromList ? (
     <OrderFindingSummary />

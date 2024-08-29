@@ -22,6 +22,8 @@ import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo
 import { useAppSelector } from "../../hooks/reduxStore";
 import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContentContext";
 import OrderGeneralInformation from "./OrderGeneralInformation";
+import { UpdateOrderDetailsContext } from "../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
+import OrderFindingSummaryDetailedContactInformation from "../userPanel/admin/orders/OrderFindingSummaryDetailedContactInformation";
 
 export const OrderSummarySectionWrapper = ({
   children,
@@ -76,6 +78,8 @@ export default function OrderSummary({
     cartDetailsError,
   } = useContext(NewOrderSummaryContext);
   const { serveAsPlacingOrderSummary } = useContext(OrderSummaryContentContext);
+  const { selectedOrderFromList } = useContext(UpdateOrderDetailsContext);
+  const serveAsUpdateOrderInformationSummary = selectedOrderFromList !== "";
   const stateCartStable = useCompareComplexForUseMemo(
     useAppSelector((state) => state.cartSlice.cart)
   );
@@ -108,11 +112,17 @@ export default function OrderSummary({
   const placeAnOrderBtnDisabled =
     cartDetailsIsLoading || stateCartStable === undefined;
 
+  let contactInformationToRender = <DetailedContactInformation />;
+  if (serveAsUpdateOrderInformationSummary)
+    contactInformationToRender = (
+      <OrderFindingSummaryDetailedContactInformation />
+    );
+
   return (
     <>
       <OrderPageHeader>Order summary</OrderPageHeader>
       <section className="order-details-entries-wrapper flex flex-col gap-8">
-        <DetailedContactInformation />
+        {contactInformationToRender}
         <OrderSummaryCartInformationContext.Provider
           value={{
             gamesWithQuantityStable,

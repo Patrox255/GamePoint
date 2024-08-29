@@ -106,16 +106,8 @@ export default function UserContactInformation() {
     data: contactInformationData,
     error: contactInformationError,
     isLoading: contactInformationLoading,
+    contactInformationArr,
   } = useRetrieveContactInformation();
-  const contactInformationArr = useMemo(
-    () =>
-      !contactInformationLoading &&
-      contactInformationData?.data?.additionalContactInformation,
-    [
-      contactInformationData?.data?.additionalContactInformation,
-      contactInformationLoading,
-    ]
-  );
   const activeContactInformationOverviewIdFromReq =
     contactInformationData?.data?.activeAdditionalContactInformation || "";
   const hasContactInformationSaved =

@@ -1,14 +1,14 @@
 import { useContext } from "react";
-// import { ManageOrdersFindingOrderContext } from "../../store/userPanel/admin/orders/ManageOrdersFindingOrderContext";
+
 import { OrderSummarySectionWrapper } from "./OrderSummary";
 import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContentContext";
 import { HighlightedOrderDetailsEntry } from "../userPanel/orders/OrdersList";
+import OrderChangeStatus from "../userPanel/admin/orders/OrderChangeStatus";
+import { UpdateOrderDetailsContext } from "../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
 
 export default function OrderGeneralInformation() {
-  //   const {
-  //     stateInformation: { selectedOrderFromList },
-  //   } = useContext(ManageOrdersFindingOrderContext);
-  //   const serveAsAdminOrderSummary = selectedOrderFromList !== "";
+  const { selectedOrderFromList } = useContext(UpdateOrderDetailsContext);
+  const serveAsAdminOrderSummary = selectedOrderFromList !== "";
 
   const { orderStatus } = useContext(OrderSummaryContentContext);
 
@@ -20,6 +20,7 @@ export default function OrderGeneralInformation() {
           {orderStatus}
         </HighlightedOrderDetailsEntry>
       </section>
+      {serveAsAdminOrderSummary && <OrderChangeStatus />}
     </OrderSummarySectionWrapper>
   );
 }

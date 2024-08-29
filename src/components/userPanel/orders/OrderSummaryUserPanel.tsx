@@ -21,7 +21,9 @@ import transformOrderItemsToGamesWithQuantity from "../../../helpers/transformOr
 import filterPropertiesFromObj from "../../../helpers/filterPropertiesFromObj";
 import { retrieveOrderData } from "../../../lib/fetch";
 import { IOrder } from "../../../models/order.model";
-import { ManageOrdersFindingOrderContext } from "../../../store/userPanel/admin/orders/ManageOrdersFindingOrderContext";
+import { UpdateOrderDetailsContext } from "../../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
+
+export type IRetrieveOrderDataResponse = { data: IOrder };
 
 export default function OrderSummaryUserPanel() {
   const { userId } = useLoaderData() as IUserPanelLoaderData;
@@ -29,11 +31,9 @@ export default function OrderSummaryUserPanel() {
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const {
-    stateInformation: { selectedOrderFromList: orderIdFromAdminOrderFinding },
-    orderSummaryRelatedStateInformation: {
-      handleGoBackFromOrderSummary: handleGoBackFromAdminOrderSummary,
-    },
-  } = useContext(ManageOrdersFindingOrderContext);
+    selectedOrderFromList: orderIdFromAdminOrderFinding,
+    handleGoBackFromOrderSummary: handleGoBackFromAdminOrderSummary,
+  } = useContext(UpdateOrderDetailsContext);
 
   const orderId = orderIdFromAdminOrderFinding || orderIdFromParam;
 
@@ -41,8 +41,8 @@ export default function OrderSummaryUserPanel() {
     error: requestedOrderError,
     isLoading: requestedOrderIsLoading,
     data: requestedOrderData,
-  } = useQuery<{ data: IOrder }, FormActionBackendErrorResponse>({
-    queryKey: ["orderIdValidate", userId, orderId],
+  } = useQuery<IRetrieveOrderDataResponse, FormActionBackendErrorResponse>({
+    queryKey: ["orderData", userId, orderId],
     queryFn: ({ signal }) => retrieveOrderData(orderId!, signal),
   });
   const error = requestedOrderError

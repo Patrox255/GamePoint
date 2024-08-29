@@ -88,8 +88,9 @@ export function validateBodyEntries<T extends IBodyFromRequestToValidate>({
         : requestBodyName
     );
     const typeToCheckFor = type === "array" ? "object" : type;
+    const optionalValueFilled = value !== undefined || !optional;
 
-    if (typeof value !== typeToCheckFor)
+    if (typeof value !== typeToCheckFor && optionalValueFilled)
       errors.push(
         createBodyEntryErrSuppliedWithInputName(
           `Please write a correct ${name}`
@@ -112,7 +113,11 @@ export function validateBodyEntries<T extends IBodyFromRequestToValidate>({
       errors.push(
         createBodyEntryErrSuppliedWithInputName(`${name} can't be empty!`)
       );
-    if (validateFn && validateFn(value, name, entriesWithValues) !== true) {
+    if (
+      validateFn &&
+      optionalValueFilled &&
+      validateFn(value, name, entriesWithValues) !== true
+    ) {
       errors.push(
         createBodyEntryErrSuppliedWithInputName(
           (

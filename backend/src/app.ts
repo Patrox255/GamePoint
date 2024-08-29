@@ -32,7 +32,6 @@ import {
   IRequestAdditionAfterVerifyJwtfMiddleware,
   verifyJwt,
   IRequestAdditionAfterAccessJwtfMiddleware,
-  getUserContactInformationByLogin,
   createAndVerifyDateOfBirthFromInput,
   verifyCreateAndInsertAdditionalContactInformationDocumentBasedOnRequestData,
   filterPropertiesFromObj,
@@ -46,6 +45,9 @@ import {
   applyPageNrToRetrievedOrders,
   orderPopulateOptions,
   convertOrderStatusToUserFriendlyOne,
+  verifyJwtWithAdminGuard,
+  tryToTransformOrderUserFriendlyStatusToItsDatabaseVersion,
+  getUserContactInformationByLoginOrId,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -68,26 +70,34 @@ import {
   IContactInformationEntriesFromRequest,
   ILoginBodyFromRequest,
   IModifyOrAddContactInformationEntriesFromRequest,
+  IModifyOrderBodyFromRequest,
   IOrderDataFromRequest,
   IOrderDataFromRequestContactInformationForGuests,
   IOrderDataFromRequestOrderedGamesDetails,
   IRegisterBodyFromRequest,
   IRemoveReviewEntriesFromRequest,
   IRetrieveOrdersInAdminPanelBodyFromRequest,
+  IRetrieveUserContactInformationPossibleBodyFromRequest,
   IRetrieveUsersBasedOnEmailOrLoginBodyFromRequest,
   IVerifyEmailEntriesFromRequest,
   loginBodyEntriesWithCart,
   modifyOrAddContactInformationValidationEntries,
+  modifyOrderEntries,
   orderedGamesEntries,
   registerBodyEntries,
   removeReviewEntries,
   retrieveOrdersInAdminPanelEntries,
+  retrieveUserContactInformationEntries,
   retrieveUsersBasedOnEmailOrLoginEntries,
   verifyEmailEntries,
 } from "./validateBodyEntries";
 import { validateBodyEntries } from "./validateBodyFn";
 import { IOrderItem } from "./models/orderItem.model";
-import Order, { IOrder } from "./models/order.model";
+import Order, {
+  IOrder,
+  orderPossibleStatus,
+  orderPossibleStatusesUserFriendlyMap,
+} from "./models/order.model";
 
 const app = express();
 const port = 3000;
@@ -1494,20 +1504,33 @@ const startServer = async () => {
       }
     );
 
-    app.get("/contact-information", verifyJwt, async (req, res, next) => {
+    app.post("/contact-information", verifyJwt, async (req, res, next) => {
       try {
+        if (
+          !validateBodyEntries({
+            entries: retrieveUserContactInformationEntries,
+            req,
+            res,
+          })
+        )
+          return;
         const {
           token: { login },
         } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+        const { customUserId } =
+          req.body as IRetrieveUserContactInformationPossibleBodyFromRequest;
 
-        const userContactInformation = await getUserContactInformationByLogin(
-          login!
-        );
+        const userContactInformation =
+          await getUserContactInformationByLoginOrId({
+            ...(login && { login }),
+            ...(customUserId && { userId: customUserId }),
+          });
+        if (!userContactInformation) return res.sendStatus(404); // only in case of sending a request with bad login as an admin
+        // because otherwise existence of a logged user has been checked in verifyJwt middleware
         const {
           activeAdditionalContactInformation,
           additionalContactInformation,
         } = userContactInformation!;
-        // Surely this account contains this information as its existence has been already verified in verifyJwt middleware
 
         res.status(200).json({
           additionalContactInformation,
@@ -1518,7 +1541,7 @@ const startServer = async () => {
       }
     });
 
-    app.post("/contact-information", verifyJwt, async (req, res, next) => {
+    app.post("/contact-information/add", verifyJwt, async (req, res, next) => {
       try {
         const { newContactInformation, updateContactInformationId } =
           req.body as IModifyOrAddContactInformationEntriesFromRequest;
@@ -1616,9 +1639,10 @@ const startServer = async () => {
           const { newActiveAdditionalInformationEntryId } =
             req.body as IChangeActiveContactInformationEntriesFromRequest;
 
-          const userContactInformation = await getUserContactInformationByLogin(
-            login!
-          );
+          const userContactInformation =
+            await getUserContactInformationByLoginOrId({
+              login,
+            });
           const { additionalContactInformation, relatedUser } =
             userContactInformation!;
           if (newActiveAdditionalInformationEntryId === "") {
@@ -2014,6 +2038,105 @@ const startServer = async () => {
         next(e);
       }
     });
+
+    app.get(
+      "/retrieve-order-statuses",
+      verifyJwtWithAdminGuard,
+      (req, res, next) => {
+        try {
+          return res
+            .status(200)
+            .json(Object.values(orderPossibleStatusesUserFriendlyMap));
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
+
+    app.post(
+      "/order/modify",
+      verifyJwtWithAdminGuard,
+      async (req, res, next) => {
+        try {
+          if (
+            !validateBodyEntries({
+              entries: modifyOrderEntries,
+              req,
+              res,
+            })
+          )
+            return;
+          const {
+            newStatus,
+            orderId,
+            newUserContactInformationEntryId,
+            ordererLoginToDeterminePossibleContactInformationEntries,
+          } = req.body as IModifyOrderBodyFromRequest;
+
+          const badOrderIdRes = () =>
+            res
+              .status(200)
+              .json({ message: "We couldn't find the selected order!" });
+          if (!isValidObjectId(orderId)) return badOrderIdRes();
+          const relatedOrder = await Order.findById(orderId);
+          if (!relatedOrder) return badOrderIdRes();
+
+          if (newStatus) {
+            const newStatusToSet =
+              tryToTransformOrderUserFriendlyStatusToItsDatabaseVersion(
+                newStatus
+              ) as orderPossibleStatus; // it is surely mappable to the database version as it has been checked during validation
+            if (newStatusToSet === relatedOrder.status)
+              return res.status(200).json({
+                message:
+                  "Selected order has been already marked with the desired status!",
+              });
+
+            relatedOrder.status = newStatusToSet;
+          }
+
+          if (newUserContactInformationEntryId) {
+            if (!ordererLoginToDeterminePossibleContactInformationEntries)
+              return res.status(422).json({
+                errors: [
+                  {
+                    message:
+                      "Orderer's login seems not to be included which is obligatory in order for changing contact details to happen!",
+                    errInputName:
+                      "ordererLoginToDeterminePossibleContactInformationEntries",
+                  },
+                ],
+              });
+
+            const relatedOrderer = await getUserContactInformationByLoginOrId({
+              login: ordererLoginToDeterminePossibleContactInformationEntries,
+            });
+            if (!relatedOrderer)
+              return res.status(200).json({
+                message: "Failed to find the orderer in the database!",
+              });
+            const relatedContactInformationEntry =
+              relatedOrderer.additionalContactInformation?.find(
+                (additionalContactInformationEntry) =>
+                  additionalContactInformationEntry._id.toString() ===
+                  newUserContactInformationEntryId
+              );
+            if (!relatedContactInformationEntry)
+              return res.status(200).json({
+                message:
+                  "The contact details entry you indicated doesn't seem to belong to the orderer!",
+              });
+
+            relatedOrder.orderContactInformation =
+              relatedContactInformationEntry;
+          }
+          await relatedOrder.save();
+          return res.sendStatus(200);
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
 
     const server = app.listen(port);
 

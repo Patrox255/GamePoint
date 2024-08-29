@@ -86,6 +86,7 @@ export default function FormWithErrorHandling<T, Y>({
     error && (error as ValidationErrorsArr).length > 0
       ? (error as ValidationErrorsArr)
       : undefined;
+  const differentError = error && !Array.isArray(error) && error;
   useEffect(() => {
     if (hasErrorRelatedToWrongUserData) return;
     if (errorsRelatedToValidation) return;
@@ -143,6 +144,7 @@ export default function FormWithErrorHandling<T, Y>({
               smallVersion
             />
           )}
+          {differentError && <Error message={differentError.message} />}
         </div>
       </form>
     </FormWithErrorHandlingContext.Provider>
