@@ -3,12 +3,23 @@ import {
   ReactNode,
   useCallback,
   useContext,
+  useMemo,
   useState,
 } from "react";
 import {
   IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin,
   ManageOrdersFindingOrderContext,
 } from "./ManageOrdersFindingOrderContext";
+import {
+  FetchedGamesQuantityModificationAdditionalInformationContextProvider,
+  onModifyGameQuantityFnStable,
+} from "../../../../components/products/FetchedGamesQuantityModificationAdditionalInformation";
+import useCompareComplexForUseMemo from "../../../../hooks/useCompareComplexForUseMemo";
+
+export type OrderItemsQuantityModificationEntries = {
+  id: string;
+  newQuantity: number;
+}[];
 
 export const UpdateOrderDetailsContext = createContext<{
   selectedOrderFromList: string;
@@ -21,6 +32,12 @@ export const UpdateOrderDetailsContext = createContext<{
   setSelectedContactInformationEntryIdToChangeTheOrderOneTo: React.Dispatch<
     React.SetStateAction<string | undefined>
   >;
+  orderItemsQuantityModificationEntriesStable:
+    | OrderItemsQuantityModificationEntries
+    | undefined;
+  setOrderItemsQuantityModificationEntries: React.Dispatch<
+    React.SetStateAction<OrderItemsQuantityModificationEntries>
+  >;
 }>({
   selectedOrderFromList: "",
   setSelectedOrderFromList: () => {},
@@ -28,6 +45,8 @@ export const UpdateOrderDetailsContext = createContext<{
   orderEntryOnClick: () => {},
   selectedContactInformationEntryIdToChangeTheOrderOneTo: undefined,
   setSelectedContactInformationEntryIdToChangeTheOrderOneTo: () => {},
+  orderItemsQuantityModificationEntriesStable: undefined,
+  setOrderItemsQuantityModificationEntries: () => {},
 });
 
 export default function UpdateOrderDetailsContextProvider({
@@ -38,7 +57,19 @@ export default function UpdateOrderDetailsContextProvider({
   const [selectedOrderFromList, setSelectedOrderFromList] = useState("");
   const {
     stateInformation: { setSelectedUserFromList },
+    ordersFindingCredentials,
   } = useContext(ManageOrdersFindingOrderContext);
+  const ordersFindingCredentialsStable = useCompareComplexForUseMemo(
+    ordersFindingCredentials
+  );
+  const userFindingInputCredentialsStable = useMemo(
+    () =>
+      ordersFindingCredentialsStable.find(
+        (ordersFindingCredentialsEntry) =>
+          ordersFindingCredentialsEntry.name === "orderFindingUser"
+      )!,
+    [ordersFindingCredentialsStable]
+  );
 
   const handleGoBackFromOrderSummary = useCallback(() => {
     setSelectedOrderFromList("");
@@ -47,16 +78,63 @@ export default function UpdateOrderDetailsContextProvider({
   const orderEntryOnClick = useCallback(
     (order: IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin) => {
       const login = order.userId?.login;
-      if (login) setSelectedUserFromList(login);
       setSelectedOrderFromList(order._id);
+      if (!login) return;
+      setSelectedUserFromList(login);
+      userFindingInputCredentialsStable.handleInputChange(login);
+      userFindingInputCredentialsStable.setQueryDebouncingState(login);
     },
-    [setSelectedUserFromList]
+    [setSelectedUserFromList, userFindingInputCredentialsStable]
   );
 
   const [
     selectedContactInformationEntryIdToChangeTheOrderOneTo,
     setSelectedContactInformationEntryIdToChangeTheOrderOneTo,
   ] = useState<undefined | string>(undefined);
+
+  const [
+    orderItemsQuantityModificationEntries,
+    setOrderItemsQuantityModificationEntries,
+  ] = useState<OrderItemsQuantityModificationEntries>([]);
+  const orderItemsQuantityModificationEntriesStable =
+    useCompareComplexForUseMemo(orderItemsQuantityModificationEntries);
+
+  const onModifyGameQuantityOrderItemsFnStable =
+    useCallback<onModifyGameQuantityFnStable>(
+      (newGameQuantity, gameInfo) => {
+        const { _id } = gameInfo;
+        const orderItemsQuantityModificationRelatedEntryIndex =
+          orderItemsQuantityModificationEntriesStable.findIndex(
+            (orderItemsQuantityModificationEntry) =>
+              orderItemsQuantityModificationEntry.id === _id
+          );
+        if (orderItemsQuantityModificationRelatedEntryIndex === -1)
+          return setOrderItemsQuantityModificationEntries(
+            (oldOrderItemsQuantityModificationEntries) => [
+              ...oldOrderItemsQuantityModificationEntries,
+              { id: _id, newQuantity: newGameQuantity },
+            ]
+          );
+        setOrderItemsQuantityModificationEntries(
+          (oldOrderItemsQuantityModificationEntries) => {
+            const newOrderItemsQuantityModificationEntries = [
+              ...oldOrderItemsQuantityModificationEntries,
+            ];
+            const relatedEntryToChangeCurOneTo = {
+              ...newOrderItemsQuantityModificationEntries[
+                orderItemsQuantityModificationRelatedEntryIndex
+              ],
+              newQuantity: newGameQuantity,
+            };
+            newOrderItemsQuantityModificationEntries[
+              orderItemsQuantityModificationRelatedEntryIndex
+            ] = relatedEntryToChangeCurOneTo;
+            return newOrderItemsQuantityModificationEntries;
+          }
+        );
+      },
+      [orderItemsQuantityModificationEntriesStable]
+    );
 
   return (
     <UpdateOrderDetailsContext.Provider
@@ -67,9 +145,15 @@ export default function UpdateOrderDetailsContextProvider({
         orderEntryOnClick,
         selectedContactInformationEntryIdToChangeTheOrderOneTo,
         setSelectedContactInformationEntryIdToChangeTheOrderOneTo,
+        orderItemsQuantityModificationEntriesStable,
+        setOrderItemsQuantityModificationEntries,
       }}
     >
-      {children}
+      <FetchedGamesQuantityModificationAdditionalInformationContextProvider
+        onModifyGameQuantityFnStable={onModifyGameQuantityOrderItemsFnStable}
+      >
+        {children}
+      </FetchedGamesQuantityModificationAdditionalInformationContextProvider>
     </UpdateOrderDetailsContext.Provider>
   );
 }

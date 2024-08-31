@@ -24,17 +24,34 @@ import { IUserPanelLoaderData } from "../../../../pages/UserPanelPage";
 import { IRetrieveOrderDataResponse } from "../../orders/OrderSummaryUserPanel";
 import { UpdateOrderDetailsContext } from "../../../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
 import { ManageOrdersFindingOrderContext } from "../../../../store/userPanel/admin/orders/ManageOrdersFindingOrderContext";
+import useCreateGamesWithQuantityBasedOnQuantityModificationEntries from "../../../../hooks/adminPanelRelated/useCreateGamesWithQuantityBasedOnQuantityModificationEntries";
+import filterOrOnlyIncludeCertainPropertiesFromObj from "../../../../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
+
+const hasSelectedOrderBeenDeleted = (res: FormActionBackendResponse) =>
+  res.data === "Deleted";
 
 export default function OrderChangeStatus() {
-  const { orderStatus } = useContext(OrderSummaryContentContext);
+  const { orderStatus, gamesWithQuantityOutOfOrderItemsStable } = useContext(
+    OrderSummaryContentContext
+  );
   const { userId } = useLoaderData() as IUserPanelLoaderData;
   const {
     selectedOrderFromList,
+    setSelectedOrderFromList,
     selectedContactInformationEntryIdToChangeTheOrderOneTo,
+    orderItemsQuantityModificationEntriesStable,
   } = useContext(UpdateOrderDetailsContext);
   const {
-    stateInformation: { selectedUserFromList },
+    stateInformation: { selectedUserFromList, setSelectedUserFromList },
   } = useContext(ManageOrdersFindingOrderContext);
+
+  const {
+    gamesWithQuantityBasedOnQuantityModificationEntries,
+    hasAnyGameEntryBeenModified,
+  } = useCreateGamesWithQuantityBasedOnQuantityModificationEntries(
+    gamesWithQuantityOutOfOrderItemsStable,
+    orderItemsQuantityModificationEntriesStable
+  );
 
   const { data, error, isLoading } = useQuery<IResponseFromFetchFn<string[]>>({
     queryKey: ["order-statuses"],
@@ -60,21 +77,45 @@ export default function OrderChangeStatus() {
   >({
     mutationFn: updateOrderStatus,
     onMutate: (mutateData) => {
+      const { newStatus, modifiedCartItems } = mutateData;
+      if (!modifiedCartItems && !newStatus) return;
       const orderData =
         queryClient.getQueryData<IRetrieveOrderDataResponse>(
           orderDataQueryKey
         )!.data;
       queryClient.setQueryData(orderDataQueryKey, {
-        data: { ...orderData, status: mutateData.newStatus },
+        data: {
+          ...orderData,
+          ...(newStatus && { status: newStatus }),
+          ...(modifiedCartItems && {
+            items: modifiedCartItems.map((modifiedCartItemsEntry) => ({
+              gameId: modifiedCartItemsEntry,
+              ...filterOrOnlyIncludeCertainPropertiesFromObj(
+                modifiedCartItemsEntry,
+                ["quantity", "finalPrice", "price", "discount"],
+                true
+              ),
+            })),
+          }),
+        },
       });
       return orderData;
     },
-    onError: (_, __, orderDataBeforeOptimisticUpdate) =>
-      queryClient.setQueryData(orderDataQueryKey, {
-        data: orderDataBeforeOptimisticUpdate,
-      }),
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: orderDataQueryKey }),
+    onError: (_, mutateData, orderDataBeforeOptimisticUpdate) => {
+      if (mutateData.newStatus || mutateData.modifiedCartItems)
+        queryClient.setQueryData(orderDataQueryKey, {
+          data: orderDataBeforeOptimisticUpdate,
+        });
+    },
+    onSuccess: (res) => {
+      if (!hasSelectedOrderBeenDeleted(res)) return;
+      setSelectedOrderFromList("");
+      setSelectedUserFromList("");
+    },
+    onSettled: (res) => {
+      if (res && hasSelectedOrderBeenDeleted(res)) return;
+      queryClient.invalidateQueries({ queryKey: orderDataQueryKey });
+    },
   });
   const successfullyUpdatedOrder =
     updateOrderData?.data && typeof updateOrderData.data === "string";
@@ -88,6 +129,7 @@ export default function OrderChangeStatus() {
         selectOptions: possibleStatuses,
         renderPlaceholderInTheLabel: true,
         placeholder: "Choose a new status for the order:",
+        omitMovingTheInputFieldUponSelecting: true,
       },
     ],
     [orderStatus, possibleStatuses]
@@ -99,6 +141,10 @@ export default function OrderChangeStatus() {
   const changedOrderContactDetails =
     selectedContactInformationEntryIdToChangeTheOrderOneTo !== "" &&
     startedChangingOrderContactDetails;
+  const doneAnyChanges =
+    changedOrderStatus ||
+    changedOrderContactDetails ||
+    hasAnyGameEntryBeenModified;
 
   const handleFormSubmit = useCallback(
     ({ orderStatusChange }: { orderStatusChange: string }) =>
@@ -109,12 +155,18 @@ export default function OrderChangeStatus() {
           newUserContactInformationEntryId:
             selectedContactInformationEntryIdToChangeTheOrderOneTo,
         }),
+        ...(hasAnyGameEntryBeenModified && {
+          modifiedCartItems:
+            gamesWithQuantityBasedOnQuantityModificationEntries,
+        }),
         ordererLoginToDeterminePossibleContactInformationEntries:
           selectedUserFromList,
       }),
     [
       changedOrderContactDetails,
       changedOrderStatus,
+      gamesWithQuantityBasedOnQuantityModificationEntries,
+      hasAnyGameEntryBeenModified,
       mutate,
       selectedContactInformationEntryIdToChangeTheOrderOneTo,
       selectedOrderFromList,
@@ -129,12 +181,11 @@ export default function OrderChangeStatus() {
     [selectedOrderFromList, userId]
   );
 
-  const submitBtnContent =
-    !changedOrderStatus && !changedOrderContactDetails
-      ? "Start by specifying changes You would like to make"
-      : selectedContactInformationEntryIdToChangeTheOrderOneTo === ""
-      ? "Pick a new contact details entry for the order"
-      : "Apply changes";
+  const submitBtnContent = !doneAnyChanges
+    ? "Start by specifying changes You would like to make"
+    : selectedContactInformationEntryIdToChangeTheOrderOneTo === ""
+    ? "Pick a new contact details entry for the order"
+    : "Apply changes";
 
   const updateOrderValidationErrorsBesidesNewStatusRelated =
     updateOrderError &&
@@ -165,9 +216,7 @@ export default function OrderChangeStatus() {
           inputFieldObjFromProps={updateOrderStatusInputFields[0]}
           onChange={(newStatus: string) => setSelectedStatus(newStatus)}
         />
-        <Button disabled={!changedOrderStatus && !changedOrderContactDetails}>
-          {submitBtnContent}
-        </Button>
+        <Button disabled={!doneAnyChanges}>{submitBtnContent}</Button>
         {successfullyUpdatedOrder && (
           <Header>Successfully applied the requested changes!</Header>
         )}

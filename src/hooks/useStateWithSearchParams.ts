@@ -25,9 +25,10 @@ export const useStateWithSearchParams = function <T>(
   );
 
   const debouncingFn = useCallback(() => {
+    setDebouncingState(state);
+    if (!searchParamName) return;
     searchParams.set(searchParamName, JSON.stringify(state));
     sessionStorage.setItem(searchParamName, JSON.stringify(state));
-    setDebouncingState(state);
     navigate(
       createUrlWithCurrentSearchParams({
         searchParams,

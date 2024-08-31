@@ -15,7 +15,7 @@ import { IAdditionalContactInformationFromGuestOrder } from "../components/order
 import { IOrder } from "../models/order.model";
 import { IOrderCustomizationProperty } from "../hooks/useHandleElementsOrderCustomizationState";
 import { IOrdersSortOnlyDebouncedProperties } from "../store/userPanel/UserOrdersManagerOrdersDetailsContext";
-import filterPropertiesFromObj from "../helpers/filterPropertiesFromObj";
+import filterOrOnlyIncludeCertainPropertiesFromObj from "../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
 
 export const queryClient = new QueryClient();
 
@@ -298,7 +298,7 @@ export const verifyEmail = async (verifyEmailData: {
     url: `${API_URL}/verify-email`,
     method: "POST",
     body: {
-      ...filterPropertiesFromObj(verifyEmailData, [
+      ...filterOrOnlyIncludeCertainPropertiesFromObj(verifyEmailData, [
         "cartDataToSetNewUserCartTo",
       ]),
       cartData: verifyEmailData.cartDataToSetNewUserCartTo,
@@ -589,12 +589,14 @@ export type IUpdateOrderByAdmin = {
   newStatus?: string;
   newUserContactInformationEntryId?: string;
   ordererLoginToDeterminePossibleContactInformationEntries?: string;
+  modifiedCartItems?: IGameWithQuantityBasedOnCartDetailsEntry[];
 };
 export async function updateOrderStatus({
   newStatus,
   orderId,
   newUserContactInformationEntryId,
   ordererLoginToDeterminePossibleContactInformationEntries,
+  modifiedCartItems,
 }: IUpdateOrderByAdmin) {
   const data = await getJSON<string>({
     url: `${API_URL}/order/modify`,
@@ -604,6 +606,8 @@ export async function updateOrderStatus({
       orderId,
       newUserContactInformationEntryId,
       ordererLoginToDeterminePossibleContactInformationEntries,
+      // modifiedCartItems: modifiedCartItems?.map(modifiedCartItem=>({...modifiedCartItem, _id: modifiedCartItem.})),
+      modifiedCartItems,
     },
   });
 

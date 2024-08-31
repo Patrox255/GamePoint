@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { ReactNode, useCallback, useMemo, useState } from "react";
+import { ReactNode, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { useStateWithSearchParams } from "../../hooks/useStateWithSearchParams";
@@ -37,20 +37,13 @@ export default function TabsComponent<
   sessionStorageAndSearchParamEntryNameIfYouWantToUseThem?: string;
 }) {
   const {
-    state: tabsStateSessionSearch,
-    setStateWithSearchParams: setTabsStateSessionSearch,
+    state: tabsState,
     debouncingState: debouncingTabsState,
+    setStateWithSearchParams: setTabsState,
   } = useStateWithSearchParams(
     defaultTabsStateValue,
     sessionStorageAndSearchParamEntryNameIfYouWantToUseThem || ""
   );
-
-  const [tabsStateLocal, setTabsStateLocal] = useState(defaultTabsStateValue);
-
-  const [tabsState, setTabsState] =
-    sessionStorageAndSearchParamEntryNameIfYouWantToUseThem
-      ? [tabsStateSessionSearch, setTabsStateSessionSearch]
-      : [tabsStateLocal, setTabsStateLocal];
 
   const availableTabs = useMemo(
     () =>
@@ -73,11 +66,7 @@ export default function TabsComponent<
         {availableTabs.map((availableTab) => {
           const active = availableTab.tagName === tabsState;
           const disabled =
-            active ||
-            (sessionStorageAndSearchParamEntryNameIfYouWantToUseThem &&
-              tabsState !== debouncingTabsState)
-              ? true
-              : false;
+            active || tabsState !== debouncingTabsState ? true : false;
           return (
             <Button
               onClick={

@@ -60,10 +60,8 @@ export const OrderSummaryCartInformationContext = createContext<{
 
 export default function OrderSummary({
   handleGoBack,
-  gamesWithQuantityStableFromProps,
 }: {
   handleGoBack: () => void;
-  gamesWithQuantityStableFromProps?: IGameWithQuantityBasedOnCartDetailsEntry[];
 }) {
   const {
     cartDetailsData,
@@ -77,7 +75,8 @@ export default function OrderSummary({
     placeAnOrderValidationErrors,
     cartDetailsError,
   } = useContext(NewOrderSummaryContext);
-  const { serveAsPlacingOrderSummary } = useContext(OrderSummaryContentContext);
+  const { serveAsPlacingOrderSummary, gamesWithQuantityOutOfOrderItemsStable } =
+    useContext(OrderSummaryContentContext);
   const { selectedOrderFromList } = useContext(UpdateOrderDetailsContext);
   const serveAsUpdateOrderInformationSummary = selectedOrderFromList !== "";
   const stateCartStable = useCompareComplexForUseMemo(
@@ -92,14 +91,14 @@ export default function OrderSummary({
   const gamesWithQuantityStable = useMemo(
     () =>
       !cartDetailsStable
-        ? gamesWithQuantityStableFromProps
-          ? gamesWithQuantityStableFromProps
+        ? gamesWithQuantityOutOfOrderItemsStable
+          ? gamesWithQuantityOutOfOrderItemsStable
           : undefined
         : generateGamesWithQuantityOutOfCartDetailsEntries(
             cartDetailsStable,
             stateCartStable!
           ),
-    [cartDetailsStable, gamesWithQuantityStableFromProps, stateCartStable]
+    [cartDetailsStable, gamesWithQuantityOutOfOrderItemsStable, stateCartStable]
   );
 
   const placeAnOrderClickCallback = useCallback(

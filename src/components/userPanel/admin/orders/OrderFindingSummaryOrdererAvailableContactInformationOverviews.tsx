@@ -22,8 +22,6 @@ export default function OrderFindingSummaryOrdererAvailableContactInformationOve
   const { contactInformationArr, error, isLoading } =
     useRetrieveContactInformation(selectedUserFromList);
 
-  console.log(contactInformationArr, error, isLoading);
-
   let content;
   if (isLoading)
     content = (

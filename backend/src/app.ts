@@ -48,6 +48,7 @@ import {
   verifyJwtWithAdminGuard,
   tryToTransformOrderUserFriendlyStatusToItsDatabaseVersion,
   getUserContactInformationByLoginOrId,
+  verifyProvidedOrderGamesEntriesAndTurnThemIntoOrderItemsArr,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -1760,41 +1761,10 @@ const startServer = async () => {
 
         let orderItems: IOrderItem[] = [];
         try {
-          orderItems = await Promise.all(
-            orderedGamesDetails.map(async (orderedGamesDetailsEntry) => {
-              if (!isValidObjectId(orderedGamesDetailsEntry._id))
-                throw new Error(
-                  "One of your order games has an incorrect identificator provided!"
-                );
-              const relatedGame = await Game.findById(
-                orderedGamesDetailsEntry._id
-              );
-              if (!relatedGame)
-                throw new Error(
-                  "One of your order games might have just been deleted!"
-                );
-              (["price", "discount", "finalPrice"] as (keyof IGame)[]).forEach(
-                (gamePriceRelatedProperty) => {
-                  if (
-                    relatedGame[gamePriceRelatedProperty] !==
-                    orderedGamesDetailsEntry[gamePriceRelatedProperty]
-                  )
-                    throw new Error(
-                      "Price for one of the games that You wanted to order might have just been changed!"
-                    );
-                }
-              );
-              const { price, discount, finalPrice, quantity } =
-                orderedGamesDetailsEntry;
-              return {
-                price,
-                discount,
-                finalPrice: finalPrice!,
-                quantity,
-                gameId: relatedGame._id,
-              };
-            })
-          );
+          orderItems =
+            await verifyProvidedOrderGamesEntriesAndTurnThemIntoOrderItemsArr(
+              orderedGamesDetails
+            );
         } catch (e) {
           return res.status(200).json({
             message: `${
@@ -2070,6 +2040,7 @@ const startServer = async () => {
             newStatus,
             orderId,
             newUserContactInformationEntryId,
+            modifiedCartItems,
             ordererLoginToDeterminePossibleContactInformationEntries,
           } = req.body as IModifyOrderBodyFromRequest;
 
@@ -2080,6 +2051,14 @@ const startServer = async () => {
           if (!isValidObjectId(orderId)) return badOrderIdRes();
           const relatedOrder = await Order.findById(orderId);
           if (!relatedOrder) return badOrderIdRes();
+
+          const relatedOrderer = await getUserContactInformationByLoginOrId({
+            login: ordererLoginToDeterminePossibleContactInformationEntries,
+          });
+          if (!relatedOrderer)
+            return res.status(200).json({
+              message: "Failed to find the orderer in the database!",
+            });
 
           if (newStatus) {
             const newStatusToSet =
@@ -2095,6 +2074,50 @@ const startServer = async () => {
             relatedOrder.status = newStatusToSet;
           }
 
+          if (modifiedCartItems) {
+            let orderItems: IOrderItem[] = [];
+            try {
+              orderItems =
+                await verifyProvidedOrderGamesEntriesAndTurnThemIntoOrderItemsArr(
+                  modifiedCartItems
+                );
+              relatedOrder.items = orderItems;
+            } catch (e) {
+              return res.status(200).json({
+                message:
+                  (e as Error).message ||
+                  "Your order games modifications do not seem to be correct!",
+              });
+            }
+            if (orderItems.length === 0) {
+              const session = await startSession();
+              try {
+                session.startTransaction();
+
+                const relatedOrdererWithOrders = (await User.findOne(
+                  {
+                    login:
+                      ordererLoginToDeterminePossibleContactInformationEntries,
+                  },
+                  { orders: true },
+                  { session }
+                ))!;
+
+                relatedOrdererWithOrders.orders =
+                  relatedOrdererWithOrders.orders?.filter(
+                    (userOrderId) => userOrderId.toString() !== orderId
+                  );
+                await relatedOrdererWithOrders.save({ session });
+                await relatedOrder.deleteOne({ session });
+                await session.commitTransaction();
+                return res.status(200).send("Deleted");
+              } catch (e) {
+                await session.abortTransaction();
+                throw e;
+              }
+            }
+          }
+
           if (newUserContactInformationEntryId) {
             if (!ordererLoginToDeterminePossibleContactInformationEntries)
               return res.status(422).json({
@@ -2108,13 +2131,6 @@ const startServer = async () => {
                 ],
               });
 
-            const relatedOrderer = await getUserContactInformationByLoginOrId({
-              login: ordererLoginToDeterminePossibleContactInformationEntries,
-            });
-            if (!relatedOrderer)
-              return res.status(200).json({
-                message: "Failed to find the orderer in the database!",
-              });
             const relatedContactInformationEntry =
               relatedOrderer.additionalContactInformation?.find(
                 (additionalContactInformationEntry) =>

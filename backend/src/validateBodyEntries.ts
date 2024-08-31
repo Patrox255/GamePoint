@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import { isValidObjectId } from "mongoose";
 import { IAdditionalContactInformationWithoutDateOfBirth } from "./models/additionalContactInformation.model";
 import { IGame } from "./models/game.model";
 import {
@@ -284,10 +284,7 @@ export const modifyOrAddContactInformationValidationEntries: IValidateBodyEntry<
 
 export interface IOrderDataFromRequestOrderedGamesDetails
   extends IBodyFromRequestToValidate {
-  orderedGamesDetails: (IGame & {
-    quantity: number;
-    _id: mongoose.Types.ObjectId;
-  })[];
+  orderedGamesDetails: receivedGameDetailsEntries;
 }
 
 export const orderedGamesEntries: IValidateBodyEntry<IOrderDataFromRequestOrderedGamesDetails>[] =
@@ -382,12 +379,18 @@ export const retrieveOrdersInAdminPanelEntries: IValidateBodyEntry<IRetrieveOrde
     },
   ];
 
+export type IReceivedGameDetailsEntry = IGame & {
+  quantity: number;
+  _id: string;
+};
+export type receivedGameDetailsEntries = IReceivedGameDetailsEntry[];
 export interface IModifyOrderBodyFromRequest
   extends IBodyFromRequestToValidate {
   orderId: string;
   newStatus?: string;
   newUserContactInformationEntryId?: string;
   ordererLoginToDeterminePossibleContactInformationEntries?: string;
+  modifiedCartItems?: receivedGameDetailsEntries;
 }
 
 export const modifyOrderEntries: IValidateBodyEntry<IModifyOrderBodyFromRequest>[] =
@@ -420,6 +423,16 @@ export const modifyOrderEntries: IValidateBodyEntry<IModifyOrderBodyFromRequest>
       requestBodyName:
         "ordererLoginToDeterminePossibleContactInformationEntries",
       type: "string",
+      optional: true,
+    },
+    {
+      name: "Modified cart items",
+      requestBodyName: "modifiedCartItems",
+      type: "object",
+      validateFn: (val, name) =>
+        (val as receivedGameDetailsEntries).every((gameWithQuantity) =>
+          isValidObjectId(gameWithQuantity._id)
+        ) || { message: `${name} are not valid!` },
       optional: true,
     },
   ];

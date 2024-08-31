@@ -17,8 +17,8 @@ import { isEqual } from "lodash";
 import useCompareComplexForUseMemo from "../hooks/useCompareComplexForUseMemo";
 import { cartSliceActions } from "../store/cartSlice";
 import generateInitialStateFromSearchParamsOrSessionStorage from "../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
-import filterPropertiesFromObj from "../helpers/filterPropertiesFromObj";
 import useGetAuthData from "../hooks/accountRelated/useGetAuthData";
+import filterOrOnlyIncludeCertainPropertiesFromObj from "../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
 
 let initialRender = true;
 export const generateCartStateFromLocalStorage = () =>
@@ -45,7 +45,9 @@ const RootLayout = ({ children }: { children?: ReactNode }) => {
   );
   const userAuthStateStableToCompareWithAuthRespones =
     useCompareComplexForUseMemo(
-      filterPropertiesFromObj(userAuthStateStable, ["isLoading"])
+      filterOrOnlyIncludeCertainPropertiesFromObj(userAuthStateStable, [
+        "isLoading",
+      ])
     );
 
   const cartSlice = useAppSelector((state) => state.cartSlice);

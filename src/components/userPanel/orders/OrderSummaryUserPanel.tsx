@@ -18,10 +18,10 @@ import { userOrdersComponentsMotionProperties } from "../../../store/userPanel/U
 import { OrderSummaryContentContext } from "../../../store/orderPage/OrderSummaryContentContext";
 import OrderSummary from "../../orderPage/OrderSummary";
 import transformOrderItemsToGamesWithQuantity from "../../../helpers/transformOrderItemsToGamesWithQuantity";
-import filterPropertiesFromObj from "../../../helpers/filterPropertiesFromObj";
 import { retrieveOrderData } from "../../../lib/fetch";
 import { IOrder } from "../../../models/order.model";
 import { UpdateOrderDetailsContext } from "../../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
+import filterOrOnlyIncludeCertainPropertiesFromObj from "../../../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
 
 export type IRetrieveOrderDataResponse = { data: IOrder };
 
@@ -65,6 +65,13 @@ export default function OrderSummaryUserPanel() {
     () => (requestedOrderData?.data ? requestedOrderData.data : undefined),
     [requestedOrderData]
   );
+  const gamesWithQuantityOutOfOrderItemsStable = useMemo(
+    () =>
+      requestedOrderData?.data?.items
+        ? transformOrderItemsToGamesWithQuantity(requestedOrderData.data.items)
+        : undefined,
+    [requestedOrderData]
+  );
 
   let content;
   if (requestedOrderIsLoading)
@@ -98,22 +105,19 @@ export default function OrderSummaryUserPanel() {
           contactInformationToRender: selectedOrder.orderContactInformation,
           cartTotalPriceNotFromCartDetails: selectedOrder.totalValue,
           orderStatus: selectedOrder.status,
+          gamesWithQuantityOutOfOrderItemsStable,
         }}
       >
-        <OrderSummary
-          handleGoBack={handleGoBack}
-          gamesWithQuantityStableFromProps={transformOrderItemsToGamesWithQuantity(
-            selectedOrder.items
-          )}
-        />
+        <OrderSummary handleGoBack={handleGoBack} />
       </OrderSummaryContentContext.Provider>
     );
 
   return (
     <motion.article
-      {...filterPropertiesFromObj(userOrdersComponentsMotionProperties, [
-        "exit",
-      ])}
+      {...filterOrOnlyIncludeCertainPropertiesFromObj(
+        userOrdersComponentsMotionProperties,
+        ["exit"]
+      )}
     >
       {content}
     </motion.article>

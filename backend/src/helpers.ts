@@ -4,9 +4,9 @@ import jwt, { JsonWebTokenError } from "jsonwebtoken";
 import { accessEnvironmentVariable } from "./app";
 import { CorsOptions } from "cors";
 import bcrypt from "bcrypt";
-import Game from "./models/game.model";
+import Game, { IGame } from "./models/game.model";
 import User, { IUser } from "./models/user.model";
-import { receivedCart } from "./validateBodyEntries";
+import { IReceivedGameDetailsEntry, receivedCart } from "./validateBodyEntries";
 import AdditionalContactInformation, {
   IAdditionalContactInformation,
 } from "./models/additionalContactInformation.model";
@@ -598,3 +598,40 @@ export const bodyEntryValidMongooseObjectIdValidateFn = (
           entryVisibleName[0].toLowerCase()
         )} isn't valid!`,
       };
+
+export const verifyProvidedOrderGamesEntriesAndTurnThemIntoOrderItemsArr =
+  async <T extends IReceivedGameDetailsEntry>(orderedGamesDetails: T[]) =>
+    await Promise.all(
+      orderedGamesDetails.map(async (orderedGamesDetailsEntry) => {
+        if (!isValidObjectId(orderedGamesDetailsEntry._id))
+          throw new Error(
+            "One of your order games has an incorrect identificator provided!"
+          );
+        const relatedGame = await Game.findById(orderedGamesDetailsEntry._id);
+        console.log(relatedGame, orderedGamesDetailsEntry._id);
+        if (!relatedGame)
+          throw new Error(
+            "One of your order games might have just been deleted!"
+          );
+        (["price", "discount", "finalPrice"] as (keyof IGame)[]).forEach(
+          (gamePriceRelatedProperty) => {
+            if (
+              relatedGame[gamePriceRelatedProperty] !==
+              orderedGamesDetailsEntry[gamePriceRelatedProperty]
+            )
+              throw new Error(
+                "Price for one of the games that You wanted to order might have just been changed!"
+              );
+          }
+        );
+        const { price, discount, finalPrice, quantity } =
+          orderedGamesDetailsEntry;
+        return {
+          price,
+          discount,
+          finalPrice: finalPrice!,
+          quantity,
+          gameId: relatedGame._id,
+        };
+      })
+    );

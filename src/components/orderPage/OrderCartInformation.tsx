@@ -11,6 +11,9 @@ import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryCo
 import Header from "../UI/headers/Header";
 import { priceFormat } from "../game/PriceTag";
 import properties from "../../styles/properties";
+import { UpdateOrderDetailsContext } from "../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
+import FetchedGamesQuantityModificationAdditionalInformation from "../products/FetchedGamesQuantityModificationAdditionalInformation";
+import useCreateGamesWithQuantityBasedOnQuantityModificationEntries from "../../hooks/adminPanelRelated/useCreateGamesWithQuantityBasedOnQuantityModificationEntries";
 
 export default function OrderCartInformation() {
   const {
@@ -22,8 +25,19 @@ export default function OrderCartInformation() {
   } = useContext(OrderSummaryCartInformationContext);
   const { serveAsPlacingOrderSummary, cartTotalPriceNotFromCartDetails } =
     useContext(OrderSummaryContentContext);
+  const { selectedOrderFromList, orderItemsQuantityModificationEntriesStable } =
+    useContext(UpdateOrderDetailsContext);
+  const serveAsUpdateOrderCartInformation = selectedOrderFromList !== "";
   const cartTotalPrice =
     cartTotalPriceFromCartInformationCtx ?? cartTotalPriceNotFromCartDetails;
+
+  const {
+    gamesWithQuantityBasedOnQuantityModificationEntries:
+      gamesWithQuantityToDisplayWhenUpdatingAnOrder,
+  } = useCreateGamesWithQuantityBasedOnQuantityModificationEntries(
+    gamesWithQuantityStable,
+    orderItemsQuantityModificationEntriesStable
+  );
 
   let content;
   if ((!stateCartStable || cartDetailsIsLoading) && !serveAsPlacingOrderSummary)
@@ -35,10 +49,18 @@ export default function OrderCartInformation() {
     content = (
       <>
         <GamesResults
-          games={gamesWithQuantityStable}
+          games={
+            orderItemsQuantityModificationEntriesStable
+              ? gamesWithQuantityToDisplayWhenUpdatingAnOrder!
+              : gamesWithQuantityStable
+          }
           headerLinkInsteadOfWholeGameContainer
           moveHighlight={false}
           showQuantityAndFinalPrice
+          {...(serveAsUpdateOrderCartInformation && {
+            AdditionalGameInformation:
+              FetchedGamesQuantityModificationAdditionalInformation,
+          })}
         />
         <Header
           usePaddingBottom={false}

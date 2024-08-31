@@ -15,10 +15,10 @@ import AnimatedAppearance from "../components/UI/AnimatedAppearance";
 import UserOrdersManager from "../components/userPanel/orders/UserOrdersManager";
 import UserContactInformation from "../components/userPanel/UserContactInformation";
 import UserAdminPanel from "../components/userPanel/UserAdminPanel";
-import filterPropertiesFromObj from "../helpers/filterPropertiesFromObj";
 import TabsComponent, {
   ITagsObjDefault,
 } from "../components/structure/TabsComponent";
+import filterOrOnlyIncludeCertainPropertiesFromObj from "../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
 
 const panelSectionsComponents: { [key: string]: ReactNode } = {
   orders: <UserOrdersManager />,
@@ -28,7 +28,7 @@ const panelSectionsComponents: { [key: string]: ReactNode } = {
 
 type panelSectionsTagsObjs = ITagsObjDefault<possibleUserPanelParams>[];
 const possiblePanelSections = userPanelEntries.slice(0, -1).map((userEntry) =>
-  filterPropertiesFromObj(
+  filterOrOnlyIncludeCertainPropertiesFromObj(
     {
       ...userEntry,
       tagName: userEntry.userPanelParam,

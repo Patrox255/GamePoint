@@ -1,5 +1,5 @@
 import { AppDispatch, RootState } from ".";
-import filterPropertiesFromObj from "../helpers/filterPropertiesFromObj";
+import filterOrOnlyIncludeCertainPropertiesFromObj from "../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
 import { queryClient, sendCart } from "../lib/fetch";
 import { cartSliceActions, IModifyProductQuantityPayload } from "./cartSlice";
 
@@ -12,7 +12,7 @@ export const modifyCartQuantityAction =
       if (login) dispatch(cartSliceActions.MODIFY_OPTIMISTIC_UPDATING(true));
       dispatch(
         cartSliceActions.MODIFY_PRODUCT_QUANTITY(
-          filterPropertiesFromObj(data, [
+          filterOrOnlyIncludeCertainPropertiesFromObj(data, [
             "login",
           ]) as IModifyProductQuantityPayload
         )
