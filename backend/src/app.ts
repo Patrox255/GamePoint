@@ -42,13 +42,14 @@ import {
   sendAnErrorInCaseOfNormalUserAccessingAdminEndPoint,
   acquireAndValidatePageNrAndSortPropertiesWhenRetrievingOrders,
   sortRetrievedOrdersBasedOnSentSortProperties,
-  applyPageNrToRetrievedOrders,
+  applyPageNrToArrOfDocuments,
   orderPopulateOptions,
   convertOrderStatusToUserFriendlyOne,
   verifyJwtWithAdminGuard,
   tryToTransformOrderUserFriendlyStatusToItsDatabaseVersion,
   getUserContactInformationByLoginOrId,
   verifyProvidedOrderGamesEntriesAndTurnThemIntoOrderItemsArr,
+  applyPageNrToRetrievedOrders,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -261,7 +262,7 @@ const startServer = async () => {
 
           if (count === 1) {
             const count = await Game.countDocuments(filter).exec();
-            res.status(200).json([count]);
+            res.status(200).json(count);
             return;
           }
 
@@ -1915,10 +1916,17 @@ const startServer = async () => {
           })
         )
           return;
+        const { onlyAmount, forOrders, pageNr } = await parseQueries(req);
+        await validateQueriesTypes([
+          ["boolean", onlyAmount],
+          ["boolean", forOrders],
+          ["number", pageNr],
+        ]);
+
         const { loginOrEmail } =
           req.body as IRetrieveUsersBasedOnEmailOrLoginBodyFromRequest;
 
-        const retrievedUsers = await User.find({
+        const retrievedUsersFilter: mongoose.FilterQuery<IUser> = {
           $and: [
             {
               $or: [
@@ -1927,9 +1935,25 @@ const startServer = async () => {
               ],
             },
             { emailVerified: true },
-            // { orders: { $not: { $size: 0 } } },
+            ...(forOrders ? [{ orders: { $not: { $size: 0 } } }] : []),
           ],
-        }).limit(5);
+        };
+
+        if (onlyAmount) {
+          const retrievedUsersAmount = await User.countDocuments(
+            retrievedUsersFilter
+          );
+          return res.status(200).json(retrievedUsersAmount);
+        }
+
+        const retrievedUsersFromDB = await User.find(retrievedUsersFilter);
+        const retrievedUsers = await applyPageNrToArrOfDocuments(
+          "MAX_USERS_PER_PAGE",
+          pageNr,
+          retrievedUsersFromDB
+        );
+
+        applyPageNrToRetrievedOrders;
         res.status(200).json(
           retrievedUsers.map((retrievedUsersEntry) => ({
             login: retrievedUsersEntry.login,
@@ -1995,13 +2019,13 @@ const startServer = async () => {
             order._id.toString().includes(orderId.toLowerCase())
           );
         if (amount) return res.status(200).json(ordersToSend.length);
-        ordersToSend = await applyPageNrToRetrievedOrders(
+        ordersToSend = (await applyPageNrToRetrievedOrders(
           pageNr,
           sortRetrievedOrdersBasedOnSentSortProperties(
             sortProperties,
             ordersToSend
           )
-        );
+        )) as IOrderModel[];
 
         res.status(200).json(ordersToSend);
       } catch (e) {

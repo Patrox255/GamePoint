@@ -6,6 +6,7 @@ import GamesResults from "../main/nav/GamesResults";
 import OrderCustomization from "../UI/OrderCustomization";
 import PagesElement from "../UI/PagesElement";
 import { SearchCustomizationContext } from "../../store/products/SearchCustomizationContext";
+import { MAX_GAMES_PER_PAGE } from "../../lib/config";
 
 const appropriateDisplayNamesForGamesOrderEntries = {
   popularity: "Popularity",
@@ -23,6 +24,8 @@ export default function FetchedGames() {
     setPageNr,
     totalGamesAmountForQuery,
   } = useContext(ProductsContext);
+
+  console.log(totalGamesAmountForQuery);
 
   const {
     orderCustomizationState: orderCustomizationStateStable,
@@ -50,7 +53,7 @@ export default function FetchedGames() {
             propPageNr={pageNr}
             propSetPageNr={setPageNr}
             totalAmountOfElementsToDisplayOnPages={totalGamesAmountForQuery}
-            amountOfElementsPerPage={10}
+            amountOfElementsPerPage={MAX_GAMES_PER_PAGE}
           />
         </nav>
       </>

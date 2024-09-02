@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { motion } from "framer-motion";
-import { memo, useContext } from "react";
+import { memo, useContext, useEffect } from "react";
 
 import properties from "../../styles/properties";
 import { SliderProductElementArtworkContext } from "../main/slider/SliderProductElement";
@@ -47,6 +47,26 @@ const PagesElement = memo(
       ? ctxSetPageNr
       : undefined;
 
+    const maxPageNr =
+      totalAmountOfElementsToDisplayOnPages === null
+        ? null
+        : calcMaxPossiblePageNr(
+            totalAmountOfElementsToDisplayOnPages,
+            amountOfElementsPerPage
+          );
+
+    useEffect(() => {
+      if (maxPageNr === null || pageNr === undefined || !setPageNr) return;
+
+      if (pageNr > maxPageNr) setPageNr(maxPageNr);
+    }, [
+      amountOfElementsPerPage,
+      pageNr,
+      setPageNr,
+      maxPageNr,
+      totalAmountOfElementsToDisplayOnPages,
+    ]);
+
     const PageNrToSelect = function ({
       pageNr,
       active = false,
@@ -83,19 +103,12 @@ const PagesElement = memo(
       );
     };
 
-    const maxPageNr =
-      totalAmountOfElementsToDisplayOnPages === null
-        ? null
-        : calcMaxPossiblePageNr(
-            totalAmountOfElementsToDisplayOnPages,
-            amountOfElementsPerPage
-          );
-
     let content;
     if (pageNr === undefined || !setPageNr)
       content = (
         <Error message="Must provide page number to this component via pages manager context or directly by props" />
       );
+    else if (!totalAmountOfElementsToDisplayOnPages) content = <></>;
     else
       content = (
         <ul className="flex justify-center items-center gap-3">

@@ -1,3 +1,4 @@
+import PagesManagerContextProvider from "../../store/products/PagesManagerContext";
 import TabsComponent, { ITagsObjDefault } from "../structure/TabsComponent";
 import Header from "../UI/headers/Header";
 import ManageOrders from "./admin/ManageOrders";
@@ -17,7 +18,11 @@ const adminPanelPossibleSections: ITagsObjDefault<adminPanelPossibleSectionsName
       tagName: "manageOrders",
     },
     {
-      ComponentToRender: <ManageUsers />,
+      ComponentToRender: (
+        <PagesManagerContextProvider>
+          <ManageUsers />
+        </PagesManagerContextProvider>
+      ),
       header: "Manage users",
       tagName: "manageUsers",
     },

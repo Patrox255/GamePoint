@@ -9,15 +9,8 @@ import {
 } from "react";
 
 import { useInput } from "../../../../hooks/useInput";
-import { useQuery } from "@tanstack/react-query";
-import {
-  IRetrieveAvailableUsersPossibleReceivedData,
-  retrieveAvailableUsersBasedOnLoginOrEmailAddress,
-} from "../../../../lib/fetch";
-import {
-  FormActionBackendErrorResponse,
-  ValidationErrorsArr,
-} from "../../../../components/UI/FormWithErrorHandling";
+import { IRetrieveAvailableUsersPossibleReceivedData } from "../../../../lib/fetch";
+import { ValidationErrorsArr } from "../../../../components/UI/FormWithErrorHandling";
 import { IOrder } from "../../../../models/order.model";
 import { PagesManagerContext } from "../../../products/PagesManagerContext";
 import { UserOrdersManagerOrdersDetailsContext } from "../../UserOrdersManagerOrdersDetailsContext";
@@ -25,6 +18,7 @@ import useRetrieveOrdersData from "../../../../hooks/adminPanelRelated/useRetrie
 import { calcMaxPossiblePageNr } from "../../../../components/UI/PagesElement";
 import { MAX_ORDERS_PER_PAGE } from "../../../../lib/config";
 import { IUser } from "../../../../models/user.model";
+import useRetrieveFoundUsersDataBasedOnProvidedSearchQuery from "../../../../hooks/adminPanelRelated/useRetrieveFoundUsersDataBasedOnProvidedSearchQuery";
 
 const manageOrdersFindingInputsEntriesNames = [
   "orderFindingUser",
@@ -77,7 +71,7 @@ const defaultOrdersFindingCtxQueryDataObj = {
   differentError: null,
 };
 
-const retrieveFilledValidationErrorsArr = (
+export const retrieveFilledValidationErrorsArr = (
   validationErrorsArrs: (ValidationErrorsArr | false)[]
 ) => {
   const foundArr = validationErrorsArrs.find(
@@ -123,10 +117,6 @@ export const ManageOrdersFindingOrderContext = createContext<
   },
 });
 
-type receivedUsersFetchFnResult = {
-  data: IRetrieveAvailableUsersPossibleReceivedData;
-};
-
 export default function ManageOrdersFindingOrderContextProvider({
   children,
 }: {
@@ -146,39 +136,15 @@ export default function ManageOrdersFindingOrderContextProvider({
   const [selectedUserFromList, setSelectedUserFromList] = useState<string>("");
 
   const {
-    data: retrieveUsersData,
-    error: retrieveUsersError,
-    isLoading: retrieveUsersIsLoading,
-  } = useQuery<receivedUsersFetchFnResult, FormActionBackendErrorResponse>({
-    queryKey: ["retrieve-users", orderFindingUser.queryDebouncingState],
-    queryFn: ({ queryKey, signal }) =>
-      retrieveAvailableUsersBasedOnLoginOrEmailAddress(
-        queryKey[1] as string,
-        signal
-      ),
-    enabled:
-      orderFindingUser.queryDebouncingState?.trim() &&
-      selectedUserFromList === ""
-        ? true
-        : false,
-  });
-  const retrieveUsersArr = useMemo(
-    () => retrieveUsersData?.data,
-    [retrieveUsersData]
-  );
-  const retrieveUsersValidationErrors = useMemo(
-    () =>
-      Array.isArray(retrieveUsersError) &&
-      retrieveUsersError.length > 0 &&
-      retrieveUsersError,
-    [retrieveUsersError]
-  );
-  const retrieveUsersDifferentError = useMemo(
-    () =>
-      !retrieveUsersValidationErrors && retrieveUsersError
-        ? (retrieveUsersError as Error)
-        : null,
-    [retrieveUsersError, retrieveUsersValidationErrors]
+    retrieveUsersArr,
+    retrieveUsersDifferentError,
+    retrieveUsersValidationErrors,
+    retrieveUsersIsLoading,
+  } = useRetrieveFoundUsersDataBasedOnProvidedSearchQuery(
+    orderFindingUser.queryDebouncingState,
+    true,
+    false,
+    selectedUserFromList
   );
 
   const { pageNr, setPageNr } = useContext(PagesManagerContext);

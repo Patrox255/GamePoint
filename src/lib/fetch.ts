@@ -532,10 +532,17 @@ export type IRetrieveAvailableUsersPossibleReceivedData = {
 }[];
 export const retrieveAvailableUsersBasedOnLoginOrEmailAddress = async function (
   loginOrEmail: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  forOrders?: boolean,
+  onlyAmount?: boolean,
+  pageNr?: number
 ) {
   const data = await getJSON<IRetrieveAvailableUsersPossibleReceivedData>({
-    url: `${API_URL}/retrieve-users`,
+    url: generateUrlEndpointWithSearchParams(`${API_URL}/retrieve-users`, {
+      onlyAmount,
+      forOrders,
+      pageNr,
+    }),
     method: "POST",
     body: { loginOrEmail },
     signal,

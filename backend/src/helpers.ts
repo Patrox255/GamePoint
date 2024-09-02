@@ -14,6 +14,7 @@ import {
   IOrder,
   orderPossibleStatusesUserFriendlyMap,
 } from "./models/order.model";
+import { IProcessEnvVariables } from "../env";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -559,18 +560,26 @@ export const sortRetrievedOrdersBasedOnSentSortProperties = function <
   return ordersToSend;
 };
 
-export const applyPageNrToRetrievedOrders = async function <T extends IOrder>(
+export const applyPageNrToArrOfDocuments = async function <T extends object>(
+  maxPerPageEnvironmentVariableEntryName: keyof IProcessEnvVariables,
   pageNr: number,
-  orders: T[]
+  documents: T[]
 ) {
-  const MAX_ORDERS_PER_PAGE = accessEnvironmentVariable("MAX_ORDERS_PER_PAGE");
+  const MAX_DOCUMENTS_PER_PAGE = accessEnvironmentVariable(
+    maxPerPageEnvironmentVariableEntryName
+  );
   if (pageNr !== undefined)
-    return orders.slice(
-      pageNr * +MAX_ORDERS_PER_PAGE,
-      (pageNr + 1) * +MAX_ORDERS_PER_PAGE
+    return documents.slice(
+      pageNr * +MAX_DOCUMENTS_PER_PAGE,
+      (pageNr + 1) * +MAX_DOCUMENTS_PER_PAGE
     );
-  return orders.slice(0, 5);
+  return documents.slice(0, 5);
 };
+
+export const applyPageNrToRetrievedOrders = applyPageNrToArrOfDocuments.bind(
+  null,
+  "MAX_ORDERS_PER_PAGE"
+);
 
 export const convertOrderStatusToUserFriendlyOne = <T extends IOrder>(
   order: T

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { ReactNode, useContext, useMemo } from "react";
 import { motion } from "framer-motion";
 
@@ -25,6 +26,12 @@ import {
 import { IUser } from "../../../models/user.model";
 import { OrdersListAdditionalOrderDetailsEntriesContext } from "../../../store/userPanel/admin/orders/OrdersListAdditionalOrderDetailsEntriesContext";
 import { UpdateOrderDetailsContext } from "../../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
+
+export const listItemMotionProperties = {
+  initial: { opacity: 0 },
+  animate: { opacity: 0.7 },
+  whileHover: { opacity: 1 },
+};
 
 export const OrdersDetailsError = ({
   message = "Failed to retrieve your orders! Please try again later.",
@@ -261,7 +268,7 @@ export default function OrdersList() {
   if (ordersAmount === 0 && !serveAsAdminPanelOrdersListCtx)
     content = (
       <Header>
-        You haven't made any order in our shop yet! Feel free to buy your
+        You haven't placed any order in our shop yet! Feel free to buy your
         desired games at the best prices.
       </Header>
     );
@@ -290,9 +297,10 @@ export default function OrdersList() {
             return (
               <motion.li
                 className="w-full justify-center items-center flex flex-wrap bg-bodyBg px-4 py-8 rounded-xl gap-2 text-xs sm:text-base cursor-pointer"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.7 }}
-                whileHover={{ opacity: 1 }}
+                // initial={{ opacity: 0 }}
+                // animate={{ opacity: 0.7 }}
+                // whileHover={{ opacity: 1 }}
+                {...listItemMotionProperties}
                 key={ordersDetailsItem._id}
                 onClick={() =>
                   !serveAsAdminPanelOrdersListCtx
@@ -328,20 +336,14 @@ export default function OrdersList() {
             );
           })}
         </motion.ul>
-      </>
-    );
-
-  return (
-    <>
-      {content}
-      {ordersAmount !== 0 && (
         <article className="orders-pages-wrapper pt-4">
           <PagesElement
             amountOfElementsPerPage={MAX_ORDERS_PER_PAGE}
             totalAmountOfElementsToDisplayOnPages={ordersAmount}
           />
         </article>
-      )}
-    </>
-  );
+      </>
+    );
+
+  return content;
 }

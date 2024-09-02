@@ -9,6 +9,8 @@ import {
 import { useStateWithSearchParams } from "../../hooks/useStateWithSearchParams";
 import { SearchCustomizationContext } from "./SearchCustomizationContext";
 import { IOrderCustomizationProperty } from "../../hooks/useHandleElementsOrderCustomizationState";
+import { calcMaxPossiblePageNr } from "../../components/UI/PagesElement";
+import { MAX_GAMES_PER_PAGE } from "../../lib/config";
 
 export const ProductsContext = createContext<{
   games: IGame[];
@@ -17,7 +19,6 @@ export const ProductsContext = createContext<{
   error: Error | null;
   pageNr: number | null;
   setPageNr: (value: number) => void;
-  hasToChangePage: boolean;
   totalGamesAmountForQuery: number | null;
 }>({
   games: [],
@@ -26,7 +27,6 @@ export const ProductsContext = createContext<{
   error: null,
   pageNr: 0,
   setPageNr: () => {},
-  hasToChangePage: false,
   totalGamesAmountForQuery: null,
 });
 
@@ -98,16 +98,14 @@ export default function ProductsContextProvider({
   });
 
   let hasToChangePage = false;
+  const maxPageNr = countGamesData
+    ? calcMaxPossiblePageNr(countGamesData.data, MAX_GAMES_PER_PAGE)
+    : undefined;
 
-  if (
-    pageNr &&
-    countGamesData &&
-    pageNr !== 0 &&
-    pageNr * 10 > countGamesData.data
-  ) {
+  if (pageNr && maxPageNr && pageNr !== 0 && pageNr > maxPageNr) {
     hasToChangePage = true;
 
-    setPageNr(0);
+    setPageNr(maxPageNr);
   }
 
   const { debouncedPopularity, debouncedPrice, debouncedTitle } =
@@ -179,7 +177,6 @@ export default function ProductsContextProvider({
         isError: countGamesIsError || isError,
         pageNr,
         setPageNr,
-        hasToChangePage,
         totalGamesAmountForQuery:
           (countGamesData && countGamesData.data) || null,
       }}
