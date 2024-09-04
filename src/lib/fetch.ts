@@ -526,10 +526,12 @@ export const retrieveOrderData = async function (
   return data;
 };
 
-export type IRetrieveAvailableUsersPossibleReceivedData = {
+export type IRetrieveAvailableUsersPossibleReceivedDataObj = {
   login: string;
   email: string;
-}[];
+};
+export type IRetrieveAvailableUsersPossibleReceivedData =
+  IRetrieveAvailableUsersPossibleReceivedDataObj[];
 export const retrieveAvailableUsersBasedOnLoginOrEmailAddress = async function (
   loginOrEmail: string,
   signal: AbortSignal,

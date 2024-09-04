@@ -1,6 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
 import { ReactNode, useContext, useMemo } from "react";
-import { motion } from "framer-motion";
 
 import { dateTimeFormat } from "../../../helpers/dateTimeFormat";
 import {
@@ -12,10 +11,7 @@ import { useAppSelector } from "../../../hooks/reduxStore";
 import Error from "../../UI/Error";
 import LoadingFallback from "../../UI/LoadingFallback";
 import Header from "../../UI/headers/Header";
-import {
-  userOrdersComponentsMotionProperties,
-  UserOrdersManagerOrdersDetailsContext,
-} from "../../../store/userPanel/UserOrdersManagerOrdersDetailsContext";
+import { UserOrdersManagerOrdersDetailsContext } from "../../../store/userPanel/UserOrdersManagerOrdersDetailsContext";
 import PagesElement from "../../UI/PagesElement";
 import { MAX_ORDERS_PER_PAGE } from "../../../lib/config";
 import OrderCustomization from "../../UI/OrderCustomization";
@@ -26,6 +22,8 @@ import {
 import { IUser } from "../../../models/user.model";
 import { OrdersListAdditionalOrderDetailsEntriesContext } from "../../../store/userPanel/admin/orders/OrdersListAdditionalOrderDetailsEntriesContext";
 import { UpdateOrderDetailsContext } from "../../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
+import ListItems from "../../structure/ListItems";
+import useCreateAppropriateListItemEntriesConditionally from "../../../hooks/useCreateAppropriateListItemEntriesConditionally";
 
 export const listItemMotionProperties = {
   initial: { opacity: 0 },
@@ -61,8 +59,7 @@ GroupedOrderDetailsEntry.GroupElement = ({
   children: ReactNode;
 }) => <span className="flex justify-center items-center">{children}</span>;
 
-type orderDetailsCustomEntries = "totalValue";
-type orderDetailsEntriesWithAccessToOrderEntry = "";
+type orderDetailsEntriesWithAccessToOrderEntry = "totalValue";
 type orderDetailsEntryContentFn<T> = (value: T) => ReactNode;
 type IOrderDetailsEntryKeyValueObj<T = unknown> = {
   contentClassName: string;
@@ -72,9 +69,6 @@ type IOrderDetailsEntryKeyValueObj<T = unknown> = {
 
 export type IOrderDetailsNormalEntries = {
   [orderKey in keyof IOrder]?: IOrderDetailsEntryKeyValueObj<IOrder[orderKey]>;
-};
-export type IOrderDetailsCustomEntries<T extends string> = {
-  [key in T]?: IOrderDetailsEntryKeyValueObj;
 };
 type IOrderDetailsEntriesWithAccessToOrderEntryValue =
   IOrderDetailsEntryKeyValueObj<IOrder | (IOrder & { userId: IUser })>;
@@ -115,68 +109,23 @@ const orderDetailsEntries: IOrderDetailsNormalEntries = {
   },
 };
 
-const orderDetailsCustomEntries: IOrderDetailsCustomEntries<orderDetailsCustomEntries> =
+const orderDetailsEntriesWithAccessToOrderEntry: IOrderDetailsEntriesWithAccessToOrderEntry<orderDetailsEntriesWithAccessToOrderEntry> =
   {
     totalValue: {
-      contentFn: (totalValue) => (
-        <>
-          Total value:&nbsp;
-          <HighlightedOrderDetailsEntry>
-            {totalValue ? priceFormat.format(totalValue as number) : "Free"}
-          </HighlightedOrderDetailsEntry>
-        </>
-      ),
+      contentFn: (order) => {
+        const totalValue = order.totalValue;
+        return (
+          <>
+            Total value:&nbsp;
+            <HighlightedOrderDetailsEntry>
+              {totalValue ? priceFormat.format(totalValue as number) : "Free"}
+            </HighlightedOrderDetailsEntry>
+          </>
+        );
+      },
       contentClassName: "total-value",
     },
   };
-
-const orderDetailsEntriesWithAccessToOrderEntry: IOrderDetailsEntriesWithAccessToOrderEntry<orderDetailsEntriesWithAccessToOrderEntry> =
-  {};
-
-const modifyOrderDetailsEntriesWithAccessToOrderEntryToIndicateProperly = <
-  T extends string
->(
-  entries: IOrderDetailsEntriesWithAccessToOrderEntry<T>
-) =>
-  Object.fromEntries(
-    Object.entries(entries).map((entry) => [
-      entry[0],
-      {
-        ...(entry[1] as IOrderDetailsEntriesWithAccessToOrderEntryValue),
-        passTheWholeOrderEntryToTheContentFn: true,
-      },
-    ])
-  );
-
-const createOrderDetailsEntriesObjBasedOnCtxEntries = <
-  T extends string,
-  Y extends string
->(
-  customEntries?: IOrderDetailsCustomEntries<T>,
-  entriesBasedOnOrderDocumentKeys?: IOrderDetailsNormalEntries,
-  entriesWithAccessToOrderEntry?: IOrderDetailsEntriesWithAccessToOrderEntry<Y>
-) => {
-  let resultEntries: IOrderDetailsNormalEntries &
-    IOrderDetailsCustomEntries<T> &
-    IOrderDetailsEntriesWithAccessToOrderEntry<Y> = {};
-  [
-    customEntries,
-    entriesBasedOnOrderDocumentKeys,
-    entriesWithAccessToOrderEntry,
-  ].forEach((entriesObj) => {
-    if (!entriesObj) return;
-    const entriesArr = [...Object.entries(entriesObj)];
-    if (entriesArr.length < 1) return;
-    const entriesObjToMerge =
-      entriesObj === entriesWithAccessToOrderEntry
-        ? modifyOrderDetailsEntriesWithAccessToOrderEntryToIndicateProperly(
-            entriesWithAccessToOrderEntry
-          )
-        : entriesObj;
-    resultEntries = { ...resultEntries, ...entriesObjToMerge };
-  });
-  return resultEntries;
-};
 
 export default function OrdersList() {
   const {
@@ -233,33 +182,30 @@ export default function OrdersList() {
   );
 
   const {
-    customEntries,
-    entriesBasedOnOrderDocumentKeys,
-    entriesWithAccessToOrderEntry,
+    entriesBasedOnOrderDocumentKeysStable,
+    entriesWithAccessToOrderEntryStable,
   } = useContext(OrdersListAdditionalOrderDetailsEntriesContext);
 
-  const orderDetailsEntriesArr = useMemo(
-    () =>
-      [
-        ...Object.entries({
-          ...orderDetailsEntries,
-          ...orderDetailsCustomEntries,
-          ...modifyOrderDetailsEntriesWithAccessToOrderEntryToIndicateProperly(
-            orderDetailsEntriesWithAccessToOrderEntry
-          ),
-          ...createOrderDetailsEntriesObjBasedOnCtxEntries(
-            customEntries,
-            entriesBasedOnOrderDocumentKeys,
-            entriesWithAccessToOrderEntry
-          ),
-        }),
-      ] as [string, IOrderDetailsEntryKeyValueObj][],
-    [
-      customEntries,
-      entriesBasedOnOrderDocumentKeys,
-      entriesWithAccessToOrderEntry,
-    ]
+  const orderDetailsNormalEntriesStableArr = useMemo(
+    () => [entriesBasedOnOrderDocumentKeysStable, orderDetailsEntries],
+    [entriesBasedOnOrderDocumentKeysStable]
   );
+  const orderDetailsNormalEntries =
+    useCreateAppropriateListItemEntriesConditionally(
+      orderDetailsNormalEntriesStableArr
+    );
+
+  const orderDetailsEntriesWithAccessToOrderEntryObjStableArr = useMemo(
+    () => [
+      entriesWithAccessToOrderEntryStable,
+      orderDetailsEntriesWithAccessToOrderEntry,
+    ],
+    [entriesWithAccessToOrderEntryStable]
+  );
+  const orderDetailsEntriesWithAccessToOrderEntryObj =
+    useCreateAppropriateListItemEntriesConditionally(
+      orderDetailsEntriesWithAccessToOrderEntryObjStableArr
+    );
 
   let content;
   if (ordersDetailsError) content = <OrdersDetailsError />;
@@ -283,59 +229,24 @@ export default function OrdersList() {
           }}
           orderCustomizationDispatch={ordersSortDispatch}
         />
-        <motion.ul
-          className="user-orders-list flex w-full flex-col justify-center items-center gap-4"
-          {...userOrdersComponentsMotionProperties}
-        >
-          {ordersDetails.map((ordersDetailsItem) => {
-            const orderDetailsItemCustomEntriesValuesObj: {
-              [key in orderDetailsCustomEntries]: unknown;
-            } = {
-              totalValue: ordersDetailsItem.totalValue,
-            };
-
-            return (
-              <motion.li
-                className="w-full justify-center items-center flex flex-wrap bg-bodyBg px-4 py-8 rounded-xl gap-2 text-xs sm:text-base cursor-pointer"
-                // initial={{ opacity: 0 }}
-                // animate={{ opacity: 0.7 }}
-                // whileHover={{ opacity: 1 }}
-                {...listItemMotionProperties}
-                key={ordersDetailsItem._id}
-                onClick={() =>
-                  !serveAsAdminPanelOrdersListCtx
-                    ? orderEntryOnClickFromUserOrdersCtx(ordersDetailsItem._id)
-                    : orderEntryOnClickFromAdminOrderManagerCtx(
-                        ordersDetailsItem as IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin
-                      )
-                }
-              >
-                {orderDetailsEntriesArr.map((orderDetailsEntry) => {
-                  const orderDetailsItemDesiredValueKey = orderDetailsEntry[0];
-                  return (
-                    <section
-                      className={`order-${orderDetailsEntry[1].contentClassName} flex items-center justify-center text-wrap flex-wrap max-w-full`}
-                      key={`${ordersDetailsItem._id}-${orderDetailsEntry[1].contentClassName}`}
-                    >
-                      {orderDetailsEntry[1].contentFn(
-                        !orderDetailsEntry[1]
-                          .passTheWholeOrderEntryToTheContentFn
-                          ? orderDetailsItemDesiredValueKey in ordersDetailsItem
-                            ? ordersDetailsItem[
-                                orderDetailsItemDesiredValueKey as keyof IOrder
-                              ]
-                            : orderDetailsItemCustomEntriesValuesObj[
-                                orderDetailsItemDesiredValueKey as orderDetailsCustomEntries
-                              ]
-                          : ordersDetailsItem
-                      )}
-                    </section>
-                  );
-                })}
-              </motion.li>
-            );
-          })}
-        </motion.ul>
+        <ListItems
+          listItems={ordersDetails}
+          overAllListItemsIdentificator="order"
+          listItemKeyGeneratorFn={(ordersDetailsItem) => ordersDetailsItem._id}
+          listItemOnClick={(ordersDetailsItem) =>
+            !serveAsAdminPanelOrdersListCtx
+              ? orderEntryOnClickFromUserOrdersCtx(ordersDetailsItem._id)
+              : orderEntryOnClickFromAdminOrderManagerCtx(
+                  ordersDetailsItem as IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin
+                )
+          }
+          listItemEntriesBasedOnListItemPropertiesStable={
+            orderDetailsNormalEntries
+          }
+          listItemEntriesBasedOnListItemObjItselfStable={
+            orderDetailsEntriesWithAccessToOrderEntryObj
+          }
+        />
         <article className="orders-pages-wrapper pt-4">
           <PagesElement
             amountOfElementsPerPage={MAX_ORDERS_PER_PAGE}

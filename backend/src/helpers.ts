@@ -1,5 +1,5 @@
 import mongoose, { isValidObjectId, Types } from "mongoose";
-import { NextFunction, Request, Response } from "express";
+import { CookieOptions, NextFunction, Request, Response } from "express";
 import jwt, { JsonWebTokenError } from "jsonwebtoken";
 import { accessEnvironmentVariable } from "./app";
 import { CorsOptions } from "cors";
@@ -151,11 +151,30 @@ export const generateAndSaveJWT = (
     expiresIn: type === "access" ? "30min" : "1d",
   });
   const accessTokenMaxAge = 60 * 30 * 1000;
-  res.cookie(type === "access" ? "accessToken" : "refreshToken", newToken, {
+  const refreshTokenMaxAge = accessTokenMaxAge * 2 * 24;
+  const cookieOptions: CookieOptions = {
     httpOnly: true,
     secure: true,
-    maxAge: type === "access" ? accessTokenMaxAge : accessTokenMaxAge * 2 * 24,
-  });
+    maxAge: type === "access" ? accessTokenMaxAge : refreshTokenMaxAge,
+  };
+  const environmentCookieDomains = [
+    accessEnvironmentVariable("FRONTEND_URL_FOR_COOKIES", false),
+    accessEnvironmentVariable("BACKEND_URL_FOR_COOKIES", false),
+  ].filter((cookieDomain) => cookieDomain !== undefined);
+  if (environmentCookieDomains.length === 0)
+    res.cookie(
+      type === "access" ? "accessToken" : "refreshToken",
+      newToken,
+      cookieOptions
+    );
+  else
+    environmentCookieDomains.forEach((cookieDomain) =>
+      res.cookie(type === "access" ? "accessToken" : "refreshToken", newToken, {
+        ...cookieOptions,
+        domain: cookieDomain,
+      })
+    );
+
   return newToken;
 };
 

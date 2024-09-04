@@ -3,7 +3,7 @@ import TabsComponent, { ITagsObjDefault } from "../structure/TabsComponent";
 import Header from "../UI/headers/Header";
 import ManageOrders from "./admin/ManageOrders";
 import ManageProducts from "./admin/ManageProducts";
-import ManageUsers from "./admin/ManageUsers";
+import ManageUsers from "./admin/users/ManageUsers";
 
 type adminPanelPossibleSectionsNames =
   | "manageOrders"

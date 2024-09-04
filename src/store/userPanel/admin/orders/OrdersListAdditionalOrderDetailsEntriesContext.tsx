@@ -1,17 +1,14 @@
 import { createContext, ReactNode } from "react";
 import {
-  IOrderDetailsCustomEntries,
   IOrderDetailsEntriesWithAccessToOrderEntry,
   IOrderDetailsNormalEntries,
 } from "../../../../components/userPanel/orders/OrdersList";
 
-type orderCustomEntriesKeysFromCtx = "";
 type orderWithAccessToOrderEntryKeysFromCtx = "loginAndEmail";
 
 type IOrdersListAdditionalOrderDetailsEntriesContextBody = {
-  entriesBasedOnOrderDocumentKeys?: IOrderDetailsNormalEntries;
-  customEntries?: IOrderDetailsCustomEntries<orderCustomEntriesKeysFromCtx>;
-  entriesWithAccessToOrderEntry?: IOrderDetailsEntriesWithAccessToOrderEntry<orderWithAccessToOrderEntryKeysFromCtx>;
+  entriesBasedOnOrderDocumentKeysStable?: IOrderDetailsNormalEntries;
+  entriesWithAccessToOrderEntryStable?: IOrderDetailsEntriesWithAccessToOrderEntry<orderWithAccessToOrderEntryKeysFromCtx>;
 };
 
 export const OrdersListAdditionalOrderDetailsEntriesContext =

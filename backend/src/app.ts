@@ -107,23 +107,26 @@ const port = 3000;
 const cors = require("cors"); // eslint-disable-line
 
 export function accessEnvironmentVariable(
-  environmentVariable: keyof IProcessEnvVariables
+  environmentVariable: keyof IProcessEnvVariables,
+  throwErrInCaseOfLack?: boolean
 ): string;
 export function accessEnvironmentVariable(
-  environmentVariable: (keyof IProcessEnvVariables)[]
+  environmentVariable: (keyof IProcessEnvVariables)[],
+  throwErrInCaseOfLack?: boolean
 ): string[];
 
 export function accessEnvironmentVariable(
   environmentVariable:
     | keyof IProcessEnvVariables
-    | (keyof IProcessEnvVariables)[]
+    | (keyof IProcessEnvVariables)[],
+  throwErrInCaseOfLack: boolean = true
 ) {
   const isArray = Array.isArray(environmentVariable);
   const environmentVariablesArr = (
     isArray ? environmentVariable : [environmentVariable]
   ).map((environmentVariable) => {
     const environmentVariableValue = process.env[environmentVariable];
-    if (environmentVariableValue === undefined)
+    if (environmentVariableValue === undefined && throwErrInCaseOfLack)
       throw new Error(
         `Environment variable ${environmentVariable} is required for the app to function properly!`
       );

@@ -78,6 +78,10 @@ Create a file called '.env' inside the root directory of the back-end side of th
  MONGO_URL=your_mongo_db_url
  FRONTEND_URLS=your_frontend_urls_to_allow_in_cors (a string with each URL separated by a comma)
  MAX_ORDERS_PER_PAGE=your_choice_of_maximum_number_of_orders_which_will_be_displayed_at_one_time_on_user_panel_page
+ MAX_USERS_PER_PAGE=your_choice_of_maximum_number_of_users_which_will_be_displayed_at_one_time_on_admin_panel_page_users_section
+ FRONTEND_URL_FOR_COOKIES=domain_to_set_app_cookies_to_be_able_to_be_read_by_backend_from_frontend
+ BACKEND_URL_FOR_COOKIES=normally_you_only_have_to_set_the_above_one_but_in_case_your_backend_and_frontend_are_on_different_
+ domains_then_set_both_to_the_one_of_them
 ```
 
 10. Run back-end server

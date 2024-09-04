@@ -1,16 +1,36 @@
-import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { useContext, useMemo, useState } from "react";
 
-import { useInput } from "../../../hooks/useInput";
-import Error from "../../UI/Error";
-import OrdersFindingCredentialsAndUsersFindingInputFieldElement from "./OrdersFindingCredentialsAndUsersFindingInputFieldElement";
-import LoadingFallback from "../../UI/LoadingFallback";
-import useRetrieveFoundUsersDataBasedOnProvidedSearchQuery from "../../../hooks/adminPanelRelated/useRetrieveFoundUsersDataBasedOnProvidedSearchQuery";
-import { retrieveFilledValidationErrorsArr } from "../../../store/userPanel/admin/orders/ManageOrdersFindingOrderContext";
-import Header from "../../UI/headers/Header";
-import PagesElement from "../../UI/PagesElement";
-import { MAX_USERS_PER_PAGE } from "../../../lib/config";
-import { listItemMotionProperties } from "../orders/OrdersList";
+import { useInput } from "../../../../hooks/useInput";
+import Error from "../../../UI/Error";
+import OrdersFindingCredentialsAndUsersFindingInputFieldElement from "../OrdersFindingCredentialsAndUsersFindingInputFieldElement";
+import LoadingFallback from "../../../UI/LoadingFallback";
+import useRetrieveFoundUsersDataBasedOnProvidedSearchQuery from "../../../../hooks/adminPanelRelated/useRetrieveFoundUsersDataBasedOnProvidedSearchQuery";
+import { retrieveFilledValidationErrorsArr } from "../../../../store/userPanel/admin/orders/ManageOrdersFindingOrderContext";
+import Header from "../../../UI/headers/Header";
+import PagesElement from "../../../UI/PagesElement";
+import { MAX_USERS_PER_PAGE } from "../../../../lib/config";
+import { PagesManagerContext } from "../../../../store/products/PagesManagerContext";
+import ListItems, {
+  IListItemEntriesWithAccessToTheListItemItself,
+} from "../../../structure/ListItems";
+import { IRetrieveAvailableUsersPossibleReceivedDataObj } from "../../../../lib/fetch";
+import { ListItemLoginAndEmailEntriesContentFnResultComponent } from "../orders/OrderFindingMainTab";
+import SelectedUserManagement from "./SelectedUserManagement";
+
+const usersDetailsEntries: IListItemEntriesWithAccessToTheListItemItself<
+  IRetrieveAvailableUsersPossibleReceivedDataObj,
+  "loginAndEmail"
+> = {
+  loginAndEmail: {
+    contentClassName: "login-and-email",
+    contentFn: (retrievedUserObj) => (
+      <ListItemLoginAndEmailEntriesContentFnResultComponent
+        email={retrievedUserObj.email}
+        login={retrievedUserObj.login}
+      />
+    ),
+  },
+};
 
 export default function ManageUsers() {
   const {
@@ -24,7 +44,7 @@ export default function ManageUsers() {
     defaultStateValueInCaseOfCreatingStateHere: "",
   });
 
-  const [selectedUserFromList] = useState<string>("");
+  const [selectedUserFromList, setSelectedUserFromList] = useState<string>("");
 
   const {
     retrieveUsersArr: retrieveUsersAmount,
@@ -38,6 +58,8 @@ export default function ManageUsers() {
     selectedUserFromList
   );
 
+  const { pageNr } = useContext(PagesManagerContext);
+
   const {
     retrieveUsersArr,
     retrieveUsersDifferentError,
@@ -48,7 +70,8 @@ export default function ManageUsers() {
     false,
     false,
     selectedUserFromList,
-    retrieveUsersAmount !== undefined && retrieveUsersAmount > 0
+    retrieveUsersAmount !== undefined && retrieveUsersAmount > 0,
+    pageNr
   );
 
   const retrieveUsersValidationErrorsTransformed = useMemo(() => {
@@ -74,6 +97,8 @@ export default function ManageUsers() {
     ? retrieveUsersDifferentError
     : null;
 
+  console.log(retrieveUsersArr);
+
   if (differentErrorToDisplay)
     manageUsersListContent = (
       <Error message={differentErrorToDisplay.message} smallVersion />
@@ -91,23 +116,28 @@ export default function ManageUsers() {
   else if (retrieveUsersArr && retrieveUsersAmount)
     manageUsersListContent = (
       <>
-        <ul className="w-full flex flex-col justify-center items-center gap-4">
-          {retrieveUsersArr.map((retrieveUsersArrEntry) => (
-            <motion.li
-              {...listItemMotionProperties}
-              className="w-full flex flex-wrap justify-center items-center text-wrap px-4 py-4 bg-bodyBg rounded-xl"
-              key={retrieveUsersArrEntry.login}
-            >
-              <span>Login: {retrieveUsersArrEntry.login}&nbsp;</span>
-              <span>E-mail: {retrieveUsersArrEntry.email}</span>
-            </motion.li>
-          ))}
-        </ul>
+        <ListItems
+          listItems={retrieveUsersArr}
+          listItemKeyGeneratorFn={(retrievedUserEntry) =>
+            retrievedUserEntry.login
+          }
+          overAllListItemsIdentificator="user"
+          listItemOnClick={(retrievedUserEntry) =>
+            setSelectedUserFromList(retrievedUserEntry.login)
+          }
+          listItemEntriesBasedOnListItemObjItselfStable={usersDetailsEntries}
+        />
         <PagesElement
           amountOfElementsPerPage={MAX_USERS_PER_PAGE}
           totalAmountOfElementsToDisplayOnPages={retrieveUsersAmount}
         />
       </>
+    );
+  else if (!queryDebouncingState || !queryDebouncingState.trim())
+    manageUsersListContent = (
+      <Header>
+        Please provide us with appropriate login or e-mail to proceed searching
+      </Header>
     );
 
   return (
@@ -124,7 +154,11 @@ export default function ManageUsers() {
         />
       </section>
       <section id="manage-users-content" className="flex flex-col gap-8">
-        {manageUsersListContent}
+        {selectedUserFromList !== "" ? (
+          <SelectedUserManagement selectedUserLogin={selectedUserFromList} />
+        ) : (
+          manageUsersListContent
+        )}
       </section>
     </>
   );

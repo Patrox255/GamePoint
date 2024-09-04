@@ -10,11 +10,51 @@ import Error from "../../../UI/Error";
 import OrdersList, {
   GroupedOrderDetailsEntry,
   HighlightedOrderDetailsEntry,
+  IOrderDetailsEntriesWithAccessToOrderEntry,
 } from "../../orders/OrdersList";
 import Header from "../../../UI/headers/Header";
 import OrdersListAdditionalOrderDetailsEntriesContextProvider from "../../../../store/userPanel/admin/orders/OrdersListAdditionalOrderDetailsEntriesContext";
 import { IUser } from "../../../../models/user.model";
 import OrdersFindingCredentialsAndUsersFindingInputFieldElement from "../OrdersFindingCredentialsAndUsersFindingInputFieldElement";
+
+export const ListItemLoginAndEmailEntriesContentFnResultComponent = ({
+  login,
+  email,
+}: {
+  login: string;
+  email: string;
+}) => (
+  <GroupedOrderDetailsEntry>
+    <GroupedOrderDetailsEntry.GroupElement>
+      Login:&nbsp;
+      <HighlightedOrderDetailsEntry>{login}</HighlightedOrderDetailsEntry>
+    </GroupedOrderDetailsEntry.GroupElement>
+    <GroupedOrderDetailsEntry.GroupElement>
+      E-mail:&nbsp;
+      <HighlightedOrderDetailsEntry>{email}</HighlightedOrderDetailsEntry>
+    </GroupedOrderDetailsEntry.GroupElement>
+  </GroupedOrderDetailsEntry>
+);
+
+const entriesWithAccessToOrderEntry: IOrderDetailsEntriesWithAccessToOrderEntry<"loginAndEmail"> =
+  {
+    loginAndEmail: {
+      contentClassName: "orderer-information",
+      contentFn: (orderWithUserInfo) => {
+        const userOrderInformation = orderWithUserInfo.userId as
+          | IUser
+          | undefined;
+        return userOrderInformation ? (
+          <ListItemLoginAndEmailEntriesContentFnResultComponent
+            login={userOrderInformation.login}
+            email={userOrderInformation.email}
+          />
+        ) : (
+          "Placed without an account"
+        );
+      },
+    },
+  };
 
 export default function OrderFindingMainTab() {
   const {
@@ -46,34 +86,7 @@ export default function OrderFindingMainTab() {
   if (retrieveOrdersArr && retrieveOrdersArr.length > 0)
     availableOrdersContent = (
       <OrdersListAdditionalOrderDetailsEntriesContextProvider
-        entriesWithAccessToOrderEntry={{
-          loginAndEmail: {
-            contentClassName: "orderer-information",
-            contentFn: (orderWithUserInfo) => {
-              const userOrderInformation = orderWithUserInfo.userId as
-                | IUser
-                | undefined;
-              return userOrderInformation ? (
-                <GroupedOrderDetailsEntry>
-                  <GroupedOrderDetailsEntry.GroupElement>
-                    Login:&nbsp;
-                    <HighlightedOrderDetailsEntry>
-                      {userOrderInformation.login}
-                    </HighlightedOrderDetailsEntry>
-                  </GroupedOrderDetailsEntry.GroupElement>
-                  <GroupedOrderDetailsEntry.GroupElement>
-                    E-mail:&nbsp;
-                    <HighlightedOrderDetailsEntry>
-                      {userOrderInformation.email}
-                    </HighlightedOrderDetailsEntry>
-                  </GroupedOrderDetailsEntry.GroupElement>
-                </GroupedOrderDetailsEntry>
-              ) : (
-                "Placed without an account"
-              );
-            },
-          },
-        }}
+        entriesWithAccessToOrderEntryStable={entriesWithAccessToOrderEntry}
       >
         <OrdersList />
       </OrdersListAdditionalOrderDetailsEntriesContextProvider>

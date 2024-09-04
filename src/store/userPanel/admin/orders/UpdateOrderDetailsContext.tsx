@@ -15,6 +15,7 @@ import {
   onModifyGameQuantityFnStable,
 } from "../../../../components/products/FetchedGamesQuantityModificationAdditionalInformation";
 import useCompareComplexForUseMemo from "../../../../hooks/useCompareComplexForUseMemo";
+import { useStateWithSearchParams } from "../../../../hooks/useStateWithSearchParams";
 
 export type OrderItemsQuantityModificationEntries = {
   id: string;
@@ -23,7 +24,7 @@ export type OrderItemsQuantityModificationEntries = {
 
 export const UpdateOrderDetailsContext = createContext<{
   selectedOrderFromList: string;
-  setSelectedOrderFromList: React.Dispatch<React.SetStateAction<string>>;
+  setSelectedOrderFromList: (newSelectedOrder: string) => void;
   handleGoBackFromOrderSummary: undefined | (() => void);
   orderEntryOnClick: (
     order: IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin
@@ -54,7 +55,16 @@ export default function UpdateOrderDetailsContextProvider({
 }: {
   children: ReactNode;
 }) {
-  const [selectedOrderFromList, setSelectedOrderFromList] = useState("");
+  const {
+    state: selectedOrderFromList,
+    setStateWithSearchParams: setSelectedOrderFromList,
+  } = useStateWithSearchParams(
+    "",
+    "adminSelectedOrder",
+    undefined,
+    false,
+    false
+  );
   const {
     stateInformation: { setSelectedUserFromList },
     ordersFindingCredentials,
@@ -73,7 +83,7 @@ export default function UpdateOrderDetailsContextProvider({
 
   const handleGoBackFromOrderSummary = useCallback(() => {
     setSelectedOrderFromList("");
-  }, []);
+  }, [setSelectedOrderFromList]);
 
   const orderEntryOnClick = useCallback(
     (order: IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin) => {
@@ -84,7 +94,11 @@ export default function UpdateOrderDetailsContextProvider({
       userFindingInputCredentialsStable.handleInputChange(login);
       userFindingInputCredentialsStable.setQueryDebouncingState(login);
     },
-    [setSelectedUserFromList, userFindingInputCredentialsStable]
+    [
+      setSelectedOrderFromList,
+      setSelectedUserFromList,
+      userFindingInputCredentialsStable,
+    ]
   );
 
   const [
