@@ -127,7 +127,13 @@ const orderDetailsEntriesWithAccessToOrderEntry: IOrderDetailsEntriesWithAccessT
     },
   };
 
-export default function OrdersList() {
+export default function OrdersList({
+  ordersDetailsFromPropsStable,
+  orderItemOnClick,
+}: {
+  ordersDetailsFromPropsStable?: IOrder[];
+  orderItemOnClick?: (order: IOrder) => void;
+}) {
   const {
     ordersDetails: ordersDetailsFromUserOrdersCtx,
     ordersDetailsError: ordersDetailsErrorFromUserOrdersCtx,
@@ -157,24 +163,34 @@ export default function OrdersList() {
     ? retrieveOrdersAmountFromAdminOrderManagerCtx ?? 0
     : ordersAmountOfLoggedUser;
 
-  const [ordersDetails, ordersDetailsIsLoading, ordersDetailsError] = useMemo(
+  const ordersDetails = useMemo(
+    () =>
+      ordersDetailsFromPropsStable
+        ? ordersDetailsFromPropsStable
+        : serveAsAdminPanelOrdersListCtx
+        ? ordersDetailsFromAdminOrderManagerCtx
+        : ordersDetailsFromUserOrdersCtx,
+    [
+      ordersDetailsFromAdminOrderManagerCtx,
+      ordersDetailsFromPropsStable,
+      ordersDetailsFromUserOrdersCtx,
+      serveAsAdminPanelOrdersListCtx,
+    ]
+  );
+  const [ordersDetailsIsLoading, ordersDetailsError] = useMemo(
     () =>
       serveAsAdminPanelOrdersListCtx
         ? [
-            ordersDetailsFromAdminOrderManagerCtx,
             ordersDetailsIsLoadingFromAdminOrderManagerCtx,
             ordersDetailsErrorFromAdminOrderManagerCtx,
           ]
         : [
-            ordersDetailsFromUserOrdersCtx,
             ordersDetailsIsLoadingFromUserOrdersCtx,
             ordersDetailsErrorFromUserOrdersCtx,
           ],
     [
       ordersDetailsErrorFromAdminOrderManagerCtx,
       ordersDetailsErrorFromUserOrdersCtx,
-      ordersDetailsFromAdminOrderManagerCtx,
-      ordersDetailsFromUserOrdersCtx,
       ordersDetailsIsLoadingFromAdminOrderManagerCtx,
       ordersDetailsIsLoadingFromUserOrdersCtx,
       serveAsAdminPanelOrdersListCtx,
@@ -234,7 +250,9 @@ export default function OrdersList() {
           overAllListItemsIdentificator="order"
           listItemKeyGeneratorFn={(ordersDetailsItem) => ordersDetailsItem._id}
           listItemOnClick={(ordersDetailsItem) =>
-            !serveAsAdminPanelOrdersListCtx
+            orderItemOnClick
+              ? orderItemOnClick
+              : !serveAsAdminPanelOrdersListCtx
               ? orderEntryOnClickFromUserOrdersCtx(ordersDetailsItem._id)
               : orderEntryOnClickFromAdminOrderManagerCtx(
                   ordersDetailsItem as IReceivedOrdersDocumentWhenRetrievingThemAsAnAdmin

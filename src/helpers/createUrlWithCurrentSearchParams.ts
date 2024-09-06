@@ -9,41 +9,46 @@ export default function createUrlWithCurrentSearchParams({
   searchParams: URLSearchParams;
   pathname?: string;
   location?: Location;
-  searchParamsEntriesToOverride?: object;
+  searchParamsEntriesToOverride?: {
+    [searchParamEntry: string]: unknown | false;
+  }; // set searchParamEntry to false if you want to omit including this search param entry
 }) {
   const leftSearchParamsEntriesToOverride = searchParamsEntriesToOverride
     ? Object.entries(searchParamsEntriesToOverride)
     : [];
 
-  const readSearchParamsEntries = [...searchParams.entries()].map(
-    (searchParamEntry) => {
+  console.log([...searchParams.entries()], searchParamsEntriesToOverride);
+
+  const readSearchParamsEntries = [...searchParams.entries()]
+    .map((searchParamEntry) => {
       const leftSearchParamsEntriesToOverrideDesiredEntryIndex =
         leftSearchParamsEntriesToOverride.findIndex(
           (leftSearchParamsEntriesToOverrideEntry) =>
             leftSearchParamsEntriesToOverrideEntry[0] === searchParamEntry[0]
         );
-      const searchParamValue =
-        leftSearchParamsEntriesToOverrideDesiredEntryIndex !== -1
-          ? JSON.stringify(
-              leftSearchParamsEntriesToOverride[
-                leftSearchParamsEntriesToOverrideDesiredEntryIndex
-              ]
-            )
-          : searchParamEntry[1];
-      if (leftSearchParamsEntriesToOverrideDesiredEntryIndex)
+      let searchParamValue: string;
+      if (leftSearchParamsEntriesToOverrideDesiredEntryIndex !== -1) {
+        const leftSearchParamsEntriesToOverrideDesiredEntryValue =
+          leftSearchParamsEntriesToOverride[
+            leftSearchParamsEntriesToOverrideDesiredEntryIndex
+          ][1];
         leftSearchParamsEntriesToOverride.splice(
           leftSearchParamsEntriesToOverrideDesiredEntryIndex,
           1
         );
+        if (leftSearchParamsEntriesToOverrideDesiredEntryValue === false)
+          return false;
+        searchParamValue = JSON.stringify(
+          leftSearchParamsEntriesToOverrideDesiredEntryValue
+        );
+      } else searchParamValue = searchParamEntry[1];
       return `${searchParamEntry[0]}=${searchParamValue}`;
-    }
-  );
-
-  console.log(readSearchParamsEntries, leftSearchParamsEntriesToOverride);
+    })
+    .filter((searchParamStr) => searchParamStr !== false);
 
   return `${pathname ? pathname : location?.pathname}?${[
-    readSearchParamsEntries,
-    leftSearchParamsEntriesToOverride.map(
+    ...readSearchParamsEntries,
+    ...leftSearchParamsEntriesToOverride.map(
       (leftSearchParamsEntriesToOverrideEntry) =>
         `${leftSearchParamsEntriesToOverrideEntry[0]}=${JSON.stringify(
           leftSearchParamsEntriesToOverrideEntry[1]

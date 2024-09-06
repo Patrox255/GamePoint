@@ -1,4 +1,4 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useMemo } from "react";
 
 import { useInput } from "../../../../hooks/useInput";
 import Error from "../../../UI/Error";
@@ -16,6 +16,7 @@ import ListItems, {
 import { IRetrieveAvailableUsersPossibleReceivedDataObj } from "../../../../lib/fetch";
 import { ListItemLoginAndEmailEntriesContentFnResultComponent } from "../orders/OrderFindingMainTab";
 import SelectedUserManagement from "./SelectedUserManagement";
+import { useStateWithSearchParams } from "../../../../hooks/useStateWithSearchParams";
 
 const usersDetailsEntries: IListItemEntriesWithAccessToTheListItemItself<
   IRetrieveAvailableUsersPossibleReceivedDataObj,
@@ -44,7 +45,16 @@ export default function ManageUsers() {
     defaultStateValueInCaseOfCreatingStateHere: "",
   });
 
-  const [selectedUserFromList, setSelectedUserFromList] = useState<string>("");
+  const {
+    debouncingState: selectedUserFromList,
+    setStateWithSearchParams: setSelectedUserFromList,
+  } = useStateWithSearchParams(
+    "",
+    "adminSelectedUser",
+    undefined,
+    false,
+    false
+  );
 
   const {
     retrieveUsersArr: retrieveUsersAmount,
@@ -97,8 +107,6 @@ export default function ManageUsers() {
     ? retrieveUsersDifferentError
     : null;
 
-  console.log(retrieveUsersArr);
-
   if (differentErrorToDisplay)
     manageUsersListContent = (
       <Error message={differentErrorToDisplay.message} smallVersion />
@@ -140,22 +148,29 @@ export default function ManageUsers() {
       </Header>
     );
 
+  const selectedAnUser = selectedUserFromList !== "";
+
   return (
     <>
-      <section id="manage-users-control-section">
-        <OrdersFindingCredentialsAndUsersFindingInputFieldElement
-          {...{
-            handleInputChange,
-            inputValue: userQueryInputValue!,
-            name: "userFindingInput",
-            placeholder: "Requested user's login or e-mail address",
-            inputsValidationErrors: retrieveUsersValidationErrorsTransformed,
-          }}
-        />
-      </section>
+      {!selectedAnUser && (
+        <section id="manage-users-control-section">
+          <OrdersFindingCredentialsAndUsersFindingInputFieldElement
+            {...{
+              handleInputChange,
+              inputValue: userQueryInputValue!,
+              name: "userFindingInput",
+              placeholder: "Requested user's login or e-mail address",
+              inputsValidationErrors: retrieveUsersValidationErrorsTransformed,
+            }}
+          />
+        </section>
+      )}
       <section id="manage-users-content" className="flex flex-col gap-8">
-        {selectedUserFromList !== "" ? (
-          <SelectedUserManagement selectedUserLogin={selectedUserFromList} />
+        {selectedAnUser ? (
+          <SelectedUserManagement
+            selectedUserLogin={selectedUserFromList}
+            setSelectedUserLogin={setSelectedUserFromList}
+          />
         ) : (
           manageUsersListContent
         )}

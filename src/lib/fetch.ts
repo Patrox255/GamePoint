@@ -16,6 +16,12 @@ import { IOrder } from "../models/order.model";
 import { IOrderCustomizationProperty } from "../hooks/useHandleElementsOrderCustomizationState";
 import { IOrdersSortOnlyDebouncedProperties } from "../store/userPanel/UserOrdersManagerOrdersDetailsContext";
 import filterOrOnlyIncludeCertainPropertiesFromObj from "../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
+import { IUserPopulated } from "../models/user.model";
+import {
+  generalInformationModificationMode,
+  generalInformationModificationModeRelatedToModificationByBtn,
+  generalInformationModificationModesRelatedToModificationByBtn,
+} from "../components/userPanel/admin/users/SelectedUserManagement";
 
 export const queryClient = new QueryClient();
 
@@ -622,3 +628,45 @@ export async function updateOrderStatus({
 
   return data;
 }
+
+export const retrieveUserDataByAdmin = async function (
+  userLogin: string,
+  signal: AbortSignal
+) {
+  const data = await getJSON<IUserPopulated>({
+    url: `${API_URL}/retrieve-user-data`,
+    method: "POST",
+    body: { userLogin },
+    signal,
+  });
+  const { orders } = data.data;
+  if (Array.isArray(orders) && orders.length > 0)
+    orders.forEach((order) => (order.date = new Date(order.date)));
+  return data;
+};
+
+export const modifyUserDataByAdmin = async function ({
+  userLogin,
+  modificationMode,
+  modificationValue,
+}: {
+  userLogin: string;
+  modificationMode: generalInformationModificationMode;
+  modificationValue?: string;
+}) {
+  const data = await getJSON<string>({
+    url: `${API_URL}/modify-user-data`,
+    body: {
+      userLogin,
+      ...(modificationMode === "Login" && { login: modificationValue }),
+      ...(modificationMode === "E-mail" && { email: modificationValue }),
+      ...(generalInformationModificationModesRelatedToModificationByBtn.includes(
+        modificationMode as generalInformationModificationModeRelatedToModificationByBtn
+      ) && {
+        mode: modificationMode === "Admin" ? "admin" : "emailVerification",
+      }),
+    },
+    method: "POST",
+  });
+  return data;
+};

@@ -25,8 +25,6 @@ export default function FetchedGames() {
     totalGamesAmountForQuery,
   } = useContext(ProductsContext);
 
-  console.log(totalGamesAmountForQuery);
-
   const {
     orderCustomizationState: orderCustomizationStateStable,
     orderCustomizationDispatch,

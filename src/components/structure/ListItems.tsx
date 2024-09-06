@@ -130,8 +130,6 @@ export default function ListItems<T, Y extends string = "">({
     listItemEntriesBasedOnListItemObjItselfStable,
   ]);
 
-  console.log(listItemAllEntriesStable);
-
   return (
     <motion.ul
       className="user-orders-list flex w-full flex-col justify-center items-center gap-4"

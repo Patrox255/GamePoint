@@ -470,13 +470,14 @@ export const orderPopulateOptions: mongoose.PopulateOptions = {
   path: "items.gameId",
   model: "Game",
 };
+const userOrdersPopulateOptions: mongoose.PopulateOptions = {
+  path: "orders",
+  populate: orderPopulateOptions,
+};
 export const retrieveUserDocumentWithPopulatedOrdersDetails = async function (
   userId: string | mongoose.Types.ObjectId
 ) {
-  const user = await User.findById(userId).populate({
-    path: "orders",
-    populate: orderPopulateOptions,
-  });
+  const user = await User.findById(userId).populate(userOrdersPopulateOptions);
   return user;
 };
 
@@ -663,3 +664,32 @@ export const verifyProvidedOrderGamesEntriesAndTurnThemIntoOrderItemsArr =
         };
       })
     );
+
+const userAllFieldsPopulatedPopulateOptions: mongoose.PopulateOptions[] = [
+  userOrdersPopulateOptions,
+  {
+    path: "activeAdditionalContactInformation",
+    model: AdditionalContactInformation,
+  },
+  { path: "cart.id", model: Game },
+  {
+    path: "additionalContactInformation",
+    model: AdditionalContactInformation,
+  },
+];
+
+export const retrieveUserWithAllFieldsPopulated = async ({
+  userId,
+  userLogin,
+}: {
+  userId?: string | mongoose.Types.ObjectId;
+  userLogin?: string;
+}) => {
+  if (!userId && !userLogin) return null;
+  const retrieveUserMongooseQuery = userId
+    ? User.findById(userId)
+    : User.findOne({ login: userLogin });
+  retrieveUserMongooseQuery.populate(userAllFieldsPopulatedPopulateOptions);
+  const retrievedUser = await retrieveUserMongooseQuery;
+  return retrievedUser;
+};

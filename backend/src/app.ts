@@ -50,6 +50,7 @@ import {
   getUserContactInformationByLoginOrId,
   verifyProvidedOrderGamesEntriesAndTurnThemIntoOrderItemsArr,
   applyPageNrToRetrievedOrders,
+  retrieveUserWithAllFieldsPopulated,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -73,6 +74,7 @@ import {
   ILoginBodyFromRequest,
   IModifyOrAddContactInformationEntriesFromRequest,
   IModifyOrderBodyFromRequest,
+  IModifyUserDataBodyFromRequest,
   IOrderDataFromRequest,
   IOrderDataFromRequestContactInformationForGuests,
   IOrderDataFromRequestOrderedGamesDetails,
@@ -80,16 +82,19 @@ import {
   IRemoveReviewEntriesFromRequest,
   IRetrieveOrdersInAdminPanelBodyFromRequest,
   IRetrieveUserContactInformationPossibleBodyFromRequest,
+  IRetrieveUserDataByAdminBodyFromRequest,
   IRetrieveUsersBasedOnEmailOrLoginBodyFromRequest,
   IVerifyEmailEntriesFromRequest,
   loginBodyEntriesWithCart,
   modifyOrAddContactInformationValidationEntries,
   modifyOrderEntries,
+  modifyUserDataEntries,
   orderedGamesEntries,
   registerBodyEntries,
   removeReviewEntries,
   retrieveOrdersInAdminPanelEntries,
   retrieveUserContactInformationEntries,
+  retrieveUserDataByAdminEntries,
   retrieveUsersBasedOnEmailOrLoginEntries,
   verifyEmailEntries,
 } from "./validateBodyEntries";
@@ -2175,6 +2180,64 @@ const startServer = async () => {
           }
           await relatedOrder.save();
           return res.sendStatus(200);
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
+
+    app.post(
+      "/retrieve-user-data",
+      verifyJwtWithAdminGuard,
+      async (req, res, next) => {
+        try {
+          if (
+            !validateBodyEntries({
+              req,
+              res,
+              entries: retrieveUserDataByAdminEntries,
+            })
+          )
+            return;
+          const { userLogin } =
+            req.body as IRetrieveUserDataByAdminBodyFromRequest;
+          const relatedUser = await retrieveUserWithAllFieldsPopulated({
+            userLogin,
+          });
+          if (!relatedUser)
+            return res.status(200).json({
+              message: "We couldn't retrieve data for the user you selected!",
+            });
+          res.status(200).json(relatedUser);
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
+
+    app.post(
+      "/modify-user-data",
+      verifyJwtWithAdminGuard,
+      async (req, res, next) => {
+        try {
+          if (
+            !validateBodyEntries({ res, req, entries: modifyUserDataEntries })
+          )
+            return;
+          const { email, login, mode, userLogin } =
+            req.body as IModifyUserDataBodyFromRequest;
+          const relatedUser = await User.findOne({ login: userLogin });
+          if (!relatedUser)
+            return res
+              .status(200)
+              .json({ message: "Failed to access the selected user!" });
+          if (login) relatedUser.login = login;
+          if (email) relatedUser.email = email;
+          if (mode === "emailVerification")
+            relatedUser.emailVerified = !relatedUser.emailVerified;
+          if (mode === "admin") relatedUser.isAdmin = !relatedUser.isAdmin;
+          await relatedUser.save();
+          res.sendStatus(200);
         } catch (e) {
           next(e);
         }

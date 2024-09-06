@@ -22,6 +22,9 @@ export type OrderItemsQuantityModificationEntries = {
   newQuantity: number;
 }[];
 
+export const adminSelectedOrderSessionStorageAndSearchParamsEntryName =
+  "adminSelectedOrder";
+
 export const UpdateOrderDetailsContext = createContext<{
   selectedOrderFromList: string;
   setSelectedOrderFromList: (newSelectedOrder: string) => void;
@@ -60,7 +63,7 @@ export default function UpdateOrderDetailsContextProvider({
     setStateWithSearchParams: setSelectedOrderFromList,
   } = useStateWithSearchParams(
     "",
-    "adminSelectedOrder",
+    adminSelectedOrderSessionStorageAndSearchParamsEntryName,
     undefined,
     false,
     false

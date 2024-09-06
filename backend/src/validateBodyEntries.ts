@@ -452,3 +452,52 @@ export const retrieveUserContactInformationEntries: IValidateBodyEntry<IRetrieve
       validateFn: bodyEntryValidMongooseObjectIdValidateFn,
     },
   ];
+
+export interface IRetrieveUserDataByAdminBodyFromRequest
+  extends IBodyFromRequestToValidate {
+  userLogin: string;
+}
+
+export const retrieveUserDataByAdminEntries: IValidateBodyEntry<IRetrieveUserDataByAdminBodyFromRequest>[] =
+  [
+    {
+      ...loginBodyEntries[0],
+      requestBodyName: "userLogin",
+    } as unknown as IValidateBodyEntry<IRetrieveUserDataByAdminBodyFromRequest>,
+  ];
+
+export interface IModifyUserDataBodyFromRequest
+  extends IBodyFromRequestToValidate {
+  userLogin: string;
+  login?: string;
+  email?: string;
+  mode?: "emailVerification" | "admin";
+}
+
+export const modifyUserDataEntries: IValidateBodyEntry<IModifyUserDataBodyFromRequest>[] =
+  [
+    {
+      ...loginBodyEntries[0],
+      requestBodyName: "userLogin",
+    } as IValidateBodyEntry<IModifyUserDataBodyFromRequest>,
+    {
+      ...loginBodyEntries[0],
+      optional: true,
+    } as unknown as IValidateBodyEntry<IModifyUserDataBodyFromRequest>,
+    {
+      ...registerBodyEntries.find(
+        (registerBodyEntry) => registerBodyEntry.requestBodyName === "email"
+      ),
+      optional: true,
+    } as unknown as IValidateBodyEntry<IModifyUserDataBodyFromRequest>,
+    {
+      requestBodyName: "mode",
+      name: "Selected modification type",
+      type: "string",
+      optional: true,
+      validateFn: (mode) =>
+        ["emailVerification", "admin"].includes(mode as string) || {
+          message: "Unknown modification type selected!",
+        },
+    },
+  ];

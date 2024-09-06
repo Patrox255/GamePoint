@@ -5,7 +5,7 @@ import ManageOrders from "./admin/ManageOrders";
 import ManageProducts from "./admin/ManageProducts";
 import ManageUsers from "./admin/users/ManageUsers";
 
-type adminPanelPossibleSectionsNames =
+export type adminPanelPossibleSectionsNames =
   | "manageOrders"
   | "manageUsers"
   | "manageProducts";
@@ -45,6 +45,8 @@ export default function UserAdminPanel() {
         }
         generateAvailableTabsFromAllFnStable={(tags) => tags}
         possibleTabsStable={adminPanelPossibleSections}
+        sessionStorageAndSearchParamEntryNameIfYouWantToUseThem="adminPanelSection"
+        storeEvenInitialValueInSessionStorageAndSearchParams={false}
       />
     </>
   );

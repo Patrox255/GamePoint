@@ -4,6 +4,7 @@ import createUrlWithCurrentSearchParams from "../helpers/createUrlWithCurrentSea
 import useDebouncing from "./useDebouncing";
 import generateInitialStateFromSearchParams from "../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
 import useCompareComplexForUseMemo from "./useCompareComplexForUseMemo";
+import { isEqual } from "lodash";
 
 export const useStateWithSearchParams = function <T>(
   initialStateStable: T,
@@ -30,39 +31,52 @@ export const useStateWithSearchParams = function <T>(
   const stateStable = useCompareComplexForUseMemo(state);
   const debouncingStateStable = useCompareComplexForUseMemo(debouncingState);
 
-  const debouncingFn = useCallback(() => {
-    setDebouncingState(stateStable);
-    if (!searchParamName) return;
-    const navigateToRefreshChangedSearchParams = () =>
+  const navigateToRefreshChangedSearchParams = useCallback(
+    () =>
       navigate(
         createUrlWithCurrentSearchParams({
           searchParams,
           pathname: pathName ? pathName : pathname,
         }),
         { replace: true }
-      );
-    if (!storeEvenInitialValue && stateStable === initialStateStable) {
-      searchParams.delete(searchParamName);
-      sessionStorage.removeItem(searchParamName);
+      ),
+    [navigate, pathName, pathname, searchParams]
+  );
+
+  const updateSearchParamsAndSessionStorageStoredState = useCallback(
+    (newState: T) => {
+      if (!storeEvenInitialValue && isEqual(newState, initialStateStable)) {
+        searchParams.delete(searchParamName);
+        sessionStorage.removeItem(searchParamName);
+        console.log([...searchParams.entries()], searchParamName, newState);
+        navigateToRefreshChangedSearchParams();
+        return;
+      }
+      searchParams.set(searchParamName, JSON.stringify(newState));
+      sessionStorage.setItem(searchParamName, JSON.stringify(newState));
       navigateToRefreshChangedSearchParams();
-      return;
-    }
-    searchParams.set(searchParamName, JSON.stringify(stateStable));
-    sessionStorage.setItem(searchParamName, JSON.stringify(stateStable));
-    navigateToRefreshChangedSearchParams();
+    },
+    [
+      initialStateStable,
+      navigateToRefreshChangedSearchParams,
+      searchParamName,
+      searchParams,
+      storeEvenInitialValue,
+    ]
+  );
+
+  const debouncingFn = useCallback(() => {
+    setDebouncingState(stateStable);
+    if (!searchParamName) return;
+    updateSearchParamsAndSessionStorageStoredState(stateStable);
   }, [
     stateStable,
     searchParamName,
-    storeEvenInitialValue,
-    initialStateStable,
-    searchParams,
-    navigate,
-    pathName,
-    pathname,
+    updateSearchParamsAndSessionStorageStoredState,
   ]);
   useDebouncing(
     debouncingFn,
-    debouncingState != state,
+    !isEqual(debouncingState, state),
     useDebouncingTimeout ? 500 : 0
   );
 
@@ -70,10 +84,20 @@ export const useStateWithSearchParams = function <T>(
     setState(newState);
   }, []);
 
+  const setNormalAndDebouncingState = useCallback(
+    (newState: T) => {
+      setState(newState);
+      setDebouncingState(newState);
+      updateSearchParamsAndSessionStorageStoredState(newState);
+    },
+    [updateSearchParamsAndSessionStorageStoredState]
+  );
+
   return {
     state: stateStable,
     setStateWithSearchParams,
     searchParams,
     debouncingState: debouncingStateStable,
+    setNormalAndDebouncingState,
   };
 };

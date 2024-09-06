@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { ReactNode, useCallback, useMemo } from "react";
+import { createContext, ReactNode, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { useStateWithSearchParams } from "../../hooks/useStateWithSearchParams";
@@ -11,6 +11,20 @@ export const tabsSectionElementTransitionProperties = {
   exit: { opacity: 0 },
   transition: { duration: 0.5 },
 };
+
+type tabsComponentContextSetTabsStateDispatchFn = (newState: string) => void;
+
+export const TabsComponentContext = createContext<{
+  tabsState: string;
+  debouncingTabsState: string;
+  setTabsState: tabsComponentContextSetTabsStateDispatchFn;
+  setNormalAndDebouncingTabsState: tabsComponentContextSetTabsStateDispatchFn;
+}>({
+  tabsState: "",
+  debouncingTabsState: "",
+  setNormalAndDebouncingTabsState: () => {},
+  setTabsState: () => {},
+});
 
 export type ITagsObjDefault<tagName> = {
   ComponentToRender: ReactNode;
@@ -30,19 +44,25 @@ export default function TabsComponent<
   generateAvailableTabsFromAllFnStable,
   possibleTabsStable,
   sessionStorageAndSearchParamEntryNameIfYouWantToUseThem,
+  storeEvenInitialValueInSessionStorageAndSearchParams,
 }: {
   defaultTabsStateValue: tagName;
   possibleTabsStable: tagsObj[];
   generateAvailableTabsFromAllFnStable: (possibleTabs: tagsObj[]) => tagsObj[];
   sessionStorageAndSearchParamEntryNameIfYouWantToUseThem?: string;
+  storeEvenInitialValueInSessionStorageAndSearchParams?: boolean;
 }) {
   const {
     state: tabsState,
     debouncingState: debouncingTabsState,
     setStateWithSearchParams: setTabsState,
+    setNormalAndDebouncingState: setNormalAndDebouncingTabsState,
   } = useStateWithSearchParams(
     defaultTabsStateValue,
-    sessionStorageAndSearchParamEntryNameIfYouWantToUseThem || ""
+    sessionStorageAndSearchParamEntryNameIfYouWantToUseThem || "",
+    undefined,
+    undefined,
+    storeEvenInitialValueInSessionStorageAndSearchParams
   );
 
   const availableTabs = useMemo(
@@ -87,7 +107,18 @@ export default function TabsComponent<
           key={`user-panel-content-${curActiveTabEntry.tagName}`}
           className="py-8 w-full flex justify-center items-center text-center flex-col gap-4"
         >
-          <CurTabComponent />
+          <TabsComponentContext.Provider
+            value={{
+              debouncingTabsState,
+              tabsState,
+              setTabsState:
+                setTabsState as tabsComponentContextSetTabsStateDispatchFn,
+              setNormalAndDebouncingTabsState:
+                setNormalAndDebouncingTabsState as tabsComponentContextSetTabsStateDispatchFn,
+            }}
+          >
+            <CurTabComponent />
+          </TabsComponentContext.Provider>
         </motion.article>
       </AnimatePresence>
     </>
