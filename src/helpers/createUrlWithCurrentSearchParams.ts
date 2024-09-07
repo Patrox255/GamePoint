@@ -17,8 +17,6 @@ export default function createUrlWithCurrentSearchParams({
     ? Object.entries(searchParamsEntriesToOverride)
     : [];
 
-  console.log([...searchParams.entries()], searchParamsEntriesToOverride);
-
   const readSearchParamsEntries = [...searchParams.entries()]
     .map((searchParamEntry) => {
       const leftSearchParamsEntriesToOverrideDesiredEntryIndex =

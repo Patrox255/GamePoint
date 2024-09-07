@@ -19,6 +19,7 @@ import { calcMaxPossiblePageNr } from "../../../../components/UI/PagesElement";
 import { MAX_ORDERS_PER_PAGE } from "../../../../lib/config";
 import { IUser } from "../../../../models/user.model";
 import useRetrieveFoundUsersDataBasedOnProvidedSearchQuery from "../../../../hooks/adminPanelRelated/useRetrieveFoundUsersDataBasedOnProvidedSearchQuery";
+import { ManageUsersContext } from "../users/ManageUsersContext";
 
 const manageOrdersFindingInputsEntriesNames = [
   "orderFindingUser",
@@ -122,10 +123,17 @@ export default function ManageOrdersFindingOrderContextProvider({
 }: {
   children: ReactNode;
 }) {
+  const { selectedUserFromList: selectedUserFromListFromUserManagementCtx } =
+    useContext(ManageUsersContext);
+  const { insideManageUsersComponent } = useContext(
+    UserOrdersManagerOrdersDetailsContext
+  );
   const orderFindingUser = useInput<string>({
     searchParamName: manageOrdersFindingInputsEntriesNames[0],
     defaultStateValueInCaseOfCreatingStateHere: "",
     saveDebouncedStateInSearchParams: false,
+    saveDebouncedStateInSessionStorage: !insideManageUsersComponent, // to omit creating this entry when it won't be used as
+    // in selected user orders list section I do not need another selecting user component
   });
   const orderFindingOrderId = useInput<string>({
     searchParamName: manageOrdersFindingInputsEntriesNames[1],
@@ -133,7 +141,11 @@ export default function ManageOrdersFindingOrderContextProvider({
     saveDebouncedStateInSearchParams: false,
   });
 
-  const [selectedUserFromList, setSelectedUserFromList] = useState<string>("");
+  const [selectedUserFromListState, setSelectedUserFromListState] =
+    useState<string>("");
+  const selectedUserFromList = insideManageUsersComponent
+    ? selectedUserFromListFromUserManagementCtx!
+    : selectedUserFromListState;
 
   const {
     retrieveUsersArr,
@@ -144,7 +156,8 @@ export default function ManageOrdersFindingOrderContextProvider({
     orderFindingUser.queryDebouncingState,
     true,
     false,
-    selectedUserFromList
+    selectedUserFromList,
+    !insideManageUsersComponent
   );
 
   const { pageNr, setPageNr } = useContext(PagesManagerContext);
@@ -185,6 +198,7 @@ export default function ManageOrdersFindingOrderContextProvider({
       pageNr <= calcMaxPossiblePageNr(retrieveOrdersAmount, MAX_ORDERS_PER_PAGE)
     )
       return;
+    console.log(retrieveOrdersAmount, pageNr, "CHANGE");
     setPageNr(0);
   }, [pageNr, retrieveOrdersArrTyped, setPageNr, retrieveOrdersAmount]);
 
@@ -223,7 +237,7 @@ export default function ManageOrdersFindingOrderContextProvider({
         },
         stateInformation: {
           selectedUserFromList,
-          setSelectedUserFromList,
+          setSelectedUserFromList: setSelectedUserFromListState,
         },
       }}
     >

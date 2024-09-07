@@ -1,4 +1,5 @@
 import PagesManagerContextProvider from "../../store/products/PagesManagerContext";
+import ManageUsersContextProvider from "../../store/userPanel/admin/users/ManageUsersContext";
 import TabsComponent, { ITagsObjDefault } from "../structure/TabsComponent";
 import Header from "../UI/headers/Header";
 import ManageOrders from "./admin/ManageOrders";
@@ -20,7 +21,9 @@ const adminPanelPossibleSections: ITagsObjDefault<adminPanelPossibleSectionsName
     {
       ComponentToRender: (
         <PagesManagerContextProvider>
-          <ManageUsers />
+          <ManageUsersContextProvider>
+            <ManageUsers />
+          </ManageUsersContextProvider>
         </PagesManagerContextProvider>
       ),
       header: "Manage users",

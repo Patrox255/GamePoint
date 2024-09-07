@@ -25,6 +25,7 @@ import { createDebouncedKeys } from "../../components/UI/OrderCustomization";
 import useCreateOrderCustomizationSortPropertiesToSend from "../../hooks/orderCustomizationRelated/useCreateOrderCustomizationSortPropertiesToSend";
 import { useLocation, useNavigate } from "react-router-dom";
 import createUrlWithCurrentSearchParams from "../../helpers/createUrlWithCurrentSearchParams";
+import { ManageUsersContext } from "./admin/users/ManageUsersContext";
 
 export type IOrdersSortProperties =
   IOrderCustomizationStateObjWithDebouncedFields<ordersSortPropertiesFieldsNames>;
@@ -52,6 +53,7 @@ export const UserOrdersManagerOrdersDetailsContext = createContext<{
   ordersSortPropertiesStable: IOrdersSortProperties | undefined;
   ordersSortDispatch: React.Dispatch<IOrderCustomizationReducer>;
   serveAsAdminPanelOrdersListCtx: boolean;
+  insideManageUsersComponent: boolean;
   ordersSortPropertiesToSend: IOrdersSortOnlyDebouncedProperties | undefined;
   orderEntryOnClick: (orderId: string) => void;
 }>({
@@ -61,6 +63,7 @@ export const UserOrdersManagerOrdersDetailsContext = createContext<{
   ordersSortPropertiesStable: undefined,
   ordersSortDispatch: () => {},
   serveAsAdminPanelOrdersListCtx: false,
+  insideManageUsersComponent: false,
   ordersSortPropertiesToSend: undefined,
   orderEntryOnClick: () => {},
 });
@@ -92,6 +95,10 @@ export default function UserOrdersManagerOrdersDetailsContextProvider({
   const serveAsAdminPanelOrdersListCtx =
     sortCustomizationSearchParamsAndSessionStorageEntryName ===
     "sortAdminRetrievedOrdersProperties";
+  const { selectedUserFromList: selectedUserFromListFromUserManagementCtx } =
+    useContext(ManageUsersContext);
+  const insideManageUsersComponent =
+    selectedUserFromListFromUserManagementCtx !== undefined;
 
   const { pageNr } = useContext(PagesManagerContext);
   const ordersSortPropertiesToSend =
@@ -143,6 +150,7 @@ export default function UserOrdersManagerOrdersDetailsContextProvider({
         ordersSortDispatch: orderCustomizationDispatch,
         ordersSortPropertiesStable: orderCustomizationStateStable,
         serveAsAdminPanelOrdersListCtx,
+        insideManageUsersComponent,
         ordersSortPropertiesToSend,
         orderEntryOnClick,
       }}

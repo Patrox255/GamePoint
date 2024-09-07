@@ -1,17 +1,27 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useLocation, useNavigate } from "react-router-dom";
 import { ReactNode, useCallback, useContext, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import createUrlWithCurrentSearchParams from "../../../../helpers/createUrlWithCurrentSearchParams";
 import { TabsComponentContext } from "../../../structure/TabsComponent";
 import { adminPanelPossibleSectionsNames } from "../../UserAdminPanel";
 import { adminSelectedOrderSessionStorageAndSearchParamsEntryName } from "../../../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
 import Header from "../../../UI/headers/Header";
-import { retrieveUserDataByAdmin } from "../../../../lib/fetch";
+import {
+  IModifyUserDataByAdminQueryFnArg,
+  modifyUserDataByAdmin,
+  queryClient,
+  retrieveUserDataByAdmin,
+} from "../../../../lib/fetch";
 import useExtractStableDataOrErrorsFromMyBackendUseQueryResponse from "../../../../hooks/queryRelated/useExtractStableDataOrErrorsFromMyBackendUseQueryResponse";
 import Error from "../../../UI/Error";
-import { ValidationErrorsArr } from "../../../UI/FormWithErrorHandling";
+import FormWithErrorHandling, {
+  FormActionBackendErrorResponse,
+  FormActionBackendResponse,
+  IFormInputField,
+  ValidationErrorsArr,
+} from "../../../UI/FormWithErrorHandling";
 import LoadingFallback from "../../../UI/LoadingFallback";
 import {
   GroupedOrderDetailsEntry,
@@ -20,6 +30,15 @@ import {
 import Button from "../../../UI/Button";
 import Input from "../../../UI/Input";
 import { IOrder } from "../../../../models/order.model";
+import { ManageUsersContext } from "../../../../store/userPanel/admin/users/ManageUsersContext";
+import ManageOrdersFindingOrderContextProvider from "../../../../store/userPanel/admin/orders/ManageOrdersFindingOrderContext";
+import UserOrdersManagerOrdersDetailsContextProvider from "../../../../store/userPanel/UserOrdersManagerOrdersDetailsContext";
+import PagesManagerContextProvider from "../../../../store/products/PagesManagerContext";
+import OrdersListContextProvider from "../../../../store/userPanel/admin/orders/OrdersListContext";
+import AdminOrdersListWrapper from "../orders/AdminOrdersListWrapper";
+import inputFieldsObjs from "../../../../lib/inputFieldsObjs";
+import InputFieldElement from "../../../UI/InputFieldElement";
+import { IUserPopulated } from "../../../../models/user.model";
 
 const searchParamsEntriesToOverrideToGetToTheDesiredOrderSummary = (
   orderId: string
@@ -41,7 +60,7 @@ const SelectedUserDataEntryComponent = ({
   </GroupedOrderDetailsEntry.GroupElement>
 );
 
-const transformGeneralInformationModificationUserFriendlyModeToOneStoredInQuery =
+export const transformGeneralInformationModificationUserFriendlyModeToOneStoredInQuery =
   (
     generalInformationModificationUserFriendlyMode: generalInformationModificationMode
   ) =>
@@ -51,7 +70,7 @@ const transformGeneralInformationModificationUserFriendlyModeToOneStoredInQuery 
 
 type transformedMode<T extends string> =
   T extends `${infer First} ${infer Rest}`
-    ? `${Lowercase<First>}-${transformedMode<Rest>}}`
+    ? `${Lowercase<First>}-${transformedMode<Rest>}`
     : Lowercase<T>;
 
 export const generalInformationModificationModesRelatedToModificationByBtn = [
@@ -61,17 +80,41 @@ export const generalInformationModificationModesRelatedToModificationByBtn = [
 export type generalInformationModificationModeRelatedToModificationByBtn =
   (typeof generalInformationModificationModesRelatedToModificationByBtn)[number];
 
-const generalInformationModificationModes = [
+const generalInformationModificationModesWithInput = [
   "Login",
   "E-mail",
+] as const;
+type generalInformationModificationModesWithInput =
+  (typeof generalInformationModificationModesWithInput)[number];
+
+const generalInformationModificationModes = [
+  ...generalInformationModificationModesWithInput,
   ...generalInformationModificationModesRelatedToModificationByBtn,
 ] as const;
 export type generalInformationModificationMode =
   (typeof generalInformationModificationModes)[number];
-type generalInformationModificationStoredInQueryMode =
+export type generalInformationModificationStoredInQueryMode =
   transformedMode<generalInformationModificationMode>;
 
-type IGeneralInformationModificationQuery = {
+type IGeneralInformationModificationModeWithInputToAppropriateInputFieldMap =
+  Record<generalInformationModificationModesWithInput, IFormInputField>;
+const generalInformationModificationModeWithInputToAppropriateInputFieldMap: IGeneralInformationModificationModeWithInputToAppropriateInputFieldMap =
+  Object.fromEntries(
+    Object.entries({
+      Login: inputFieldsObjs.login,
+      "E-mail": inputFieldsObjs.email,
+    }).map((inputFieldMapEntry) => [
+      inputFieldMapEntry[0],
+      {
+        ...inputFieldMapEntry[1],
+        placeholder: undefined,
+        omitMovingTheInputFieldUponSelecting: true,
+        renderLabel: false,
+      },
+    ])
+  ) as IGeneralInformationModificationModeWithInputToAppropriateInputFieldMap;
+
+export type IGeneralInformationModificationQuery = {
   [generalInformationModificationEntry in generalInformationModificationStoredInQueryMode]: string;
 };
 const initialGeneralInformationModificationQuery = Object.fromEntries(
@@ -97,13 +140,7 @@ const createModifiedGeneralInformationModificationQueryBasedOnIndividualModifica
     )]: newQueryValue,
   });
 
-export default function SelectedUserManagement({
-  selectedUserLogin,
-  setSelectedUserLogin,
-}: {
-  selectedUserLogin: string;
-  setSelectedUserLogin: (newUserLogin: string) => void;
-}) {
+export default function SelectedUserManagement() {
   const { search, pathname } = useLocation();
   const searchParamsStable = useMemo(
     () => new URLSearchParams(search),
@@ -111,11 +148,17 @@ export default function SelectedUserManagement({
   );
   const navigate = useNavigate();
 
+  const {
+    selectedUserFromList: selectedUserLogin,
+    setSelectedUserFromList: setSelectedUserLogin,
+  } = useContext(ManageUsersContext);
+
   const { setNormalAndDebouncingTabsState } = useContext(TabsComponentContext);
 
   const handleNavigateToOrderDetails = useCallback(
     (selectedOrder: IOrder) => {
       const selectedOrderId = selectedOrder._id;
+      console.log(selectedOrderId, selectedOrder);
       setNormalAndDebouncingTabsState(manageOrdersAdminPanelTabSectionName);
       sessionStorage.setItem(
         adminSelectedOrderSessionStorageAndSearchParamsEntryName,
@@ -136,13 +179,18 @@ export default function SelectedUserManagement({
     [navigate, pathname, searchParamsStable, setNormalAndDebouncingTabsState]
   );
 
+  const userDataQueryKey = useMemo(
+    () => ["user-data-admin", selectedUserLogin],
+    [selectedUserLogin]
+  );
   const {
     data: userDataFromQuery,
     error: userDataErrorFromQuery,
     isLoading: userDataIsLoading,
   } = useQuery({
-    queryFn: ({ signal }) => retrieveUserDataByAdmin(selectedUserLogin, signal),
-    queryKey: ["user-data-admin", selectedUserLogin],
+    queryFn: ({ signal }) =>
+      retrieveUserDataByAdmin(selectedUserLogin!, signal),
+    queryKey: userDataQueryKey,
   });
 
   const {
@@ -170,6 +218,74 @@ export default function SelectedUserManagement({
         generalInformationModificationMode
       )
     ];
+  const curInputFieldElementAccordingToCurModificationMode = useMemo(
+    () =>
+      generalInformationModificationModesWithInput.includes(
+        generalInformationModificationMode as generalInformationModificationModesWithInput
+      )
+        ? generalInformationModificationModeWithInputToAppropriateInputFieldMap[
+            generalInformationModificationMode as generalInformationModificationModesWithInput
+          ]
+        : undefined,
+    [generalInformationModificationMode]
+  );
+
+  const {
+    mutate: modifyUserGeneralDataMutate,
+    data: modifyUserGeneralData,
+    error: modifyUserGeneralDataError,
+    isPending: modifyUserGeneralDataIsPending,
+  } = useMutation<
+    FormActionBackendResponse,
+    FormActionBackendErrorResponse,
+    IModifyUserDataByAdminQueryFnArg
+  >({
+    mutationFn: modifyUserDataByAdmin,
+    onMutate: (mutateData) => {
+      const curUserData = queryClient.getQueryData(userDataQueryKey) as {
+        data: IUserPopulated;
+      };
+      const { modificationMode, modificationValue } = mutateData;
+      const optimisticUserData = { ...curUserData.data };
+      if (modificationMode === "login")
+        optimisticUserData.login = modificationValue!;
+      if (modificationMode === "e-mail")
+        optimisticUserData.email = modificationValue!;
+      if (modificationMode === "admin")
+        optimisticUserData.isAdmin = !optimisticUserData.isAdmin;
+      if (modificationMode === "e-mail-verification")
+        optimisticUserData.emailVerified = !optimisticUserData.emailVerified;
+      queryClient.setQueryData(userDataQueryKey, { data: optimisticUserData });
+      return curUserData;
+    },
+    onError: (_, __, context) => {
+      queryClient.setQueryData(userDataQueryKey, context);
+    },
+    onSuccess: (_, mutateData) => {
+      if (mutateData.modificationMode === "login")
+        setSelectedUserLogin!(mutateData.modificationValue!);
+    },
+    onSettled: async () => {
+      queryClient.invalidateQueries({ queryKey: userDataQueryKey });
+    },
+  });
+  const handleModifyUserData = useCallback(
+    () =>
+      modifyUserGeneralDataMutate({
+        modificationMode:
+          transformGeneralInformationModificationUserFriendlyModeToOneStoredInQuery(
+            generalInformationModificationMode
+          ),
+        userLogin: selectedUserLogin!,
+        modificationValue: curGeneralInformationModificationModeInputValue,
+      }),
+    [
+      curGeneralInformationModificationModeInputValue,
+      generalInformationModificationMode,
+      modifyUserGeneralDataMutate,
+      selectedUserLogin,
+    ]
+  );
 
   console.log(generalInformationModificationQuery);
 
@@ -191,13 +307,7 @@ export default function SelectedUserManagement({
       <LoadingFallback customText="Retrieving selected user data..." />
     );
   if (userData) {
-    const {
-      login,
-      email,
-      isAdmin,
-      emailVerified,
-      // orders
-    } = userData;
+    const { login, email, isAdmin, emailVerified } = userData;
     userManagementContent = (
       <>
         <section className="user-management-general-information flex flex-col gap-4">
@@ -227,54 +337,84 @@ export default function SelectedUserManagement({
               ></SelectedUserDataEntryComponent>
             </GroupedOrderDetailsEntry>
           </section>
-          <section className="user-management-general-information-control">
-            <Input
-              type="select"
-              options={
-                generalInformationModificationModes as unknown as string[]
-              }
-              value={generalInformationModificationMode}
-              onChange={(newMode: string) =>
-                setGeneralInformationModificationMode(
-                  newMode as generalInformationModificationMode
-                )
-              }
-            />
-            {generalInformationModificationMode}
-            {!generalInformationModificationModesRelatedToModificationByBtn.includes(
-              generalInformationModificationMode as generalInformationModificationModeRelatedToModificationByBtn
-            ) && (
+          <section className="user-management-general-information-control flex flex-col gap-4 justify-center items-center">
+            <FormWithErrorHandling
+              queryRelatedToActionState={{
+                data: modifyUserGeneralData,
+                error: modifyUserGeneralDataError,
+                isPending: modifyUserGeneralDataIsPending,
+              }}
+              onSubmit={handleModifyUserData}
+            >
               <Input
-                value={curGeneralInformationModificationModeInputValue}
-                onChange={(newQuery: string) =>
-                  setGeneralInformationModificationQuery(
-                    (curGeneralInformationModificationQuery) =>
-                      createModifiedGeneralInformationModificationQueryBasedOnIndividualModificationModeChangeEntry(
-                        curGeneralInformationModificationQuery,
-                        generalInformationModificationMode,
-                        newQuery
-                      )
+                type="select"
+                options={
+                  generalInformationModificationModes as unknown as string[]
+                }
+                value={generalInformationModificationMode}
+                onChange={(newMode: string) =>
+                  setGeneralInformationModificationMode(
+                    newMode as generalInformationModificationMode
                   )
                 }
               />
-            )}
-            {generalInformationModificationModesRelatedToModificationByBtn.includes(
-              generalInformationModificationMode as generalInformationModificationModeRelatedToModificationByBtn
-            ) && <Button></Button>}
+              {!generalInformationModificationModesRelatedToModificationByBtn.includes(
+                generalInformationModificationMode as generalInformationModificationModeRelatedToModificationByBtn
+              ) && (
+                <InputFieldElement
+                  inputFieldObjFromProps={
+                    curInputFieldElementAccordingToCurModificationMode!
+                  }
+                  value={curGeneralInformationModificationModeInputValue}
+                  onChange={(newQuery: string) =>
+                    setGeneralInformationModificationQuery(
+                      (curGeneralInformationModificationQuery) =>
+                        createModifiedGeneralInformationModificationQueryBasedOnIndividualModificationModeChangeEntry(
+                          curGeneralInformationModificationQuery,
+                          generalInformationModificationMode,
+                          newQuery
+                        )
+                    )
+                  }
+                />
+              )}
+              <Button
+                disabled={
+                  (generalInformationModificationMode === "Login" &&
+                    curGeneralInformationModificationModeInputValue ===
+                      login) ||
+                  (generalInformationModificationMode === "E-mail" &&
+                    curGeneralInformationModificationModeInputValue === email)
+                }
+              >
+                {generalInformationModificationMode === "Admin"
+                  ? `Transform to ${
+                      userData.isAdmin ? "a normal user" : "an admin"
+                    }`
+                  : generalInformationModificationMode === "E-mail verification"
+                  ? `${
+                      userData.emailVerified ? "Unverify" : "Verify"
+                    } the user's e-mail address`
+                  : "Apply changes"}
+              </Button>
+            </FormWithErrorHandling>
           </section>
         </section>
         <section className="user-management-orders">
-          {/* <OrdersList
-            orderItemOnClick={handleNavigateToOrderDetails}
-            ordersDetailsFromPropsStable={orders}
-          /> */}
-          <p
-            onClick={() =>
-              handleNavigateToOrderDetails({} as unknown as IOrder)
-            }
+          <OrdersListContextProvider
+            orderItemOnClickStable={handleNavigateToOrderDetails}
           >
-            Click
-          </p>
+            <PagesManagerContextProvider>
+              <UserOrdersManagerOrdersDetailsContextProvider
+                orderDetailsQueryEnabled={false}
+                sortCustomizationSearchParamsAndSessionStorageEntryName="sortSelectedUserByAdminOrdersProperties"
+              >
+                <ManageOrdersFindingOrderContextProvider>
+                  <AdminOrdersListWrapper />
+                </ManageOrdersFindingOrderContextProvider>
+              </UserOrdersManagerOrdersDetailsContextProvider>
+            </PagesManagerContextProvider>
+          </OrdersListContextProvider>
         </section>
       </>
     );
@@ -283,7 +423,7 @@ export default function SelectedUserManagement({
   return (
     <>
       {userManagementContent}
-      <Button onClick={() => setSelectedUserLogin("")}>Go back</Button>
+      <Button onClick={() => setSelectedUserLogin!("")}>Go back</Button>
     </>
   );
 }

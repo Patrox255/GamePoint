@@ -18,9 +18,9 @@ import { IOrdersSortOnlyDebouncedProperties } from "../store/userPanel/UserOrder
 import filterOrOnlyIncludeCertainPropertiesFromObj from "../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
 import { IUserPopulated } from "../models/user.model";
 import {
-  generalInformationModificationMode,
-  generalInformationModificationModeRelatedToModificationByBtn,
   generalInformationModificationModesRelatedToModificationByBtn,
+  generalInformationModificationStoredInQueryMode,
+  transformGeneralInformationModificationUserFriendlyModeToOneStoredInQuery,
 } from "../components/userPanel/admin/users/SelectedUserManagement";
 
 export const queryClient = new QueryClient();
@@ -498,6 +498,7 @@ export const retrieveUserOrdersDetails = async function (
   pageNr: number,
   sortProperties: IOrdersSortOnlyDebouncedProperties
 ) {
+  console.log(sortProperties);
   const data = await getJSON<
     IDataOrErrorObjBackendResponse<IRetrieveOrdersDetailsBackendResponse>
   >({
@@ -621,7 +622,6 @@ export async function updateOrderStatus({
       orderId,
       newUserContactInformationEntryId,
       ordererLoginToDeterminePossibleContactInformationEntries,
-      // modifiedCartItems: modifiedCartItems?.map(modifiedCartItem=>({...modifiedCartItem, _id: modifiedCartItem.})),
       modifiedCartItems,
     },
   });
@@ -641,29 +641,40 @@ export const retrieveUserDataByAdmin = async function (
   });
   const { orders } = data.data;
   if (Array.isArray(orders) && orders.length > 0)
-    orders.forEach((order) => (order.date = new Date(order.date)));
+    parseDatesOfReceivedOrders(orders);
   return data;
 };
 
+export interface IModifyUserDataByAdminQueryFnArg {
+  userLogin: string;
+  modificationMode: generalInformationModificationStoredInQueryMode;
+  modificationValue?: string;
+}
 export const modifyUserDataByAdmin = async function ({
   userLogin,
   modificationMode,
   modificationValue,
-}: {
-  userLogin: string;
-  modificationMode: generalInformationModificationMode;
-  modificationValue?: string;
-}) {
+}: IModifyUserDataByAdminQueryFnArg) {
+  const generalInformationModificationModesRelatedToModificationByBtnTransformedToQuery =
+    generalInformationModificationModesRelatedToModificationByBtn.map(
+      (generalInformationModificationModesRelatedToModificationByBtnEntry) =>
+        transformGeneralInformationModificationUserFriendlyModeToOneStoredInQuery(
+          generalInformationModificationModesRelatedToModificationByBtnEntry
+        )
+    );
   const data = await getJSON<string>({
-    url: `${API_URL}/modify-user-data`,
+    url: `${API_URL}/modify-user-data-admin`,
     body: {
       userLogin,
-      ...(modificationMode === "Login" && { login: modificationValue }),
-      ...(modificationMode === "E-mail" && { email: modificationValue }),
-      ...(generalInformationModificationModesRelatedToModificationByBtn.includes(
-        modificationMode as generalInformationModificationModeRelatedToModificationByBtn
+      ...(modificationMode === "login" && { login: modificationValue }),
+      ...(modificationMode === "e-mail" && { email: modificationValue }),
+      ...(generalInformationModificationModesRelatedToModificationByBtnTransformedToQuery.includes(
+        modificationMode
       ) && {
-        mode: modificationMode === "Admin" ? "admin" : "emailVerification",
+        mode:
+          modificationMode === "e-mail-verification"
+            ? "emailVerification"
+            : modificationMode,
       }),
     },
     method: "POST",

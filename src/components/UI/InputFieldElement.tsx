@@ -25,12 +25,12 @@ export interface IInputFieldValidationError {
 }
 
 export const generateValidationErrorsRelatedToAnInput = (
-  errorsRelatedToValidationArr: ValidationErrorsArr | undefined,
+  errorsRelatedToValidationArr: ValidationErrorsArr | undefined | null,
   inputName: string
 ) => {
-  return (
-    errorsRelatedToValidationArr &&
-    errorsRelatedToValidationArr
+  let content;
+  if (errorsRelatedToValidationArr)
+    content = errorsRelatedToValidationArr
       .filter(
         (errorRelatedToValidation) =>
           errorRelatedToValidation.errInputName === inputName
@@ -41,8 +41,8 @@ export const generateValidationErrorsRelatedToAnInput = (
           message={errorRelatedToValidation.message}
           key={`${errorRelatedToValidation.errInputName}-${errorRelatedToValidation.message}`}
         />
-      ))
-  );
+      ));
+  return content;
 };
 
 const InputFieldSingleRowCtx = createContext<boolean>(false);

@@ -2018,9 +2018,9 @@ const startServer = async () => {
           }
           ordersToSend = relatedUser.orders as unknown as IOrderModel[];
         } else {
-          ordersToSend = await Order.find().populate(
-            orderPopulateUserDocumentOptions
-          );
+          ordersToSend = await Order.find()
+            .populate(orderPopulateUserDocumentOptions)
+            .lean();
         }
         if (orderId)
           ordersToSend = ordersToSend?.filter((order) =>
@@ -2216,7 +2216,7 @@ const startServer = async () => {
     );
 
     app.post(
-      "/modify-user-data",
+      "/modify-user-data-admin",
       verifyJwtWithAdminGuard,
       async (req, res, next) => {
         try {
@@ -2226,6 +2226,7 @@ const startServer = async () => {
             return;
           const { email, login, mode, userLogin } =
             req.body as IModifyUserDataBodyFromRequest;
+          console.log(mode);
           const relatedUser = await User.findOne({ login: userLogin });
           if (!relatedUser)
             return res

@@ -58,7 +58,15 @@ const PagesElement = memo(
     useEffect(() => {
       if (maxPageNr === null || pageNr === undefined || !setPageNr) return;
 
-      if (pageNr > maxPageNr) setPageNr(maxPageNr);
+      if (pageNr > maxPageNr) {
+        setPageNr(maxPageNr);
+        console.log(
+          "CHANGE",
+          totalAmountOfElementsToDisplayOnPages,
+          maxPageNr,
+          pageNr
+        );
+      }
     }, [
       amountOfElementsPerPage,
       pageNr,

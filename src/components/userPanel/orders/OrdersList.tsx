@@ -24,6 +24,7 @@ import { OrdersListAdditionalOrderDetailsEntriesContext } from "../../../store/u
 import { UpdateOrderDetailsContext } from "../../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
 import ListItems from "../../structure/ListItems";
 import useCreateAppropriateListItemEntriesConditionally from "../../../hooks/useCreateAppropriateListItemEntriesConditionally";
+import { OrdersListContext } from "../../../store/userPanel/admin/orders/OrdersListContext";
 
 export const listItemMotionProperties = {
   initial: { opacity: 0 },
@@ -127,13 +128,7 @@ const orderDetailsEntriesWithAccessToOrderEntry: IOrderDetailsEntriesWithAccessT
     },
   };
 
-export default function OrdersList({
-  ordersDetailsFromPropsStable,
-  orderItemOnClick,
-}: {
-  ordersDetailsFromPropsStable?: IOrder[];
-  orderItemOnClick?: (order: IOrder) => void;
-}) {
+export default function OrdersList() {
   const {
     ordersDetails: ordersDetailsFromUserOrdersCtx,
     ordersDetailsError: ordersDetailsErrorFromUserOrdersCtx,
@@ -141,8 +136,12 @@ export default function OrdersList({
     ordersSortDispatch,
     ordersSortPropertiesStable,
     serveAsAdminPanelOrdersListCtx,
+    insideManageUsersComponent,
     orderEntryOnClick: orderEntryOnClickFromUserOrdersCtx,
   } = useContext(UserOrdersManagerOrdersDetailsContext);
+
+  const { orderItemOnClick, orderDetails: orderDetailsFromContext } =
+    useContext(OrdersListContext);
 
   const {
     retrieveOrdersQueryData: {
@@ -159,27 +158,29 @@ export default function OrdersList({
   const ordersAmountOfLoggedUser = useAppSelector(
     (state) => state.userAuthSlice.ordersAmount
   );
-  const ordersAmount = serveAsAdminPanelOrdersListCtx
-    ? retrieveOrdersAmountFromAdminOrderManagerCtx ?? 0
-    : ordersAmountOfLoggedUser;
+  const ordersAmount =
+    serveAsAdminPanelOrdersListCtx || insideManageUsersComponent
+      ? retrieveOrdersAmountFromAdminOrderManagerCtx ?? 0
+      : ordersAmountOfLoggedUser;
 
   const ordersDetails = useMemo(
     () =>
-      ordersDetailsFromPropsStable
-        ? ordersDetailsFromPropsStable
-        : serveAsAdminPanelOrdersListCtx
+      orderDetailsFromContext
+        ? orderDetailsFromContext
+        : serveAsAdminPanelOrdersListCtx || insideManageUsersComponent
         ? ordersDetailsFromAdminOrderManagerCtx
         : ordersDetailsFromUserOrdersCtx,
     [
       ordersDetailsFromAdminOrderManagerCtx,
-      ordersDetailsFromPropsStable,
+      orderDetailsFromContext,
       ordersDetailsFromUserOrdersCtx,
       serveAsAdminPanelOrdersListCtx,
+      insideManageUsersComponent,
     ]
   );
   const [ordersDetailsIsLoading, ordersDetailsError] = useMemo(
     () =>
-      serveAsAdminPanelOrdersListCtx
+      serveAsAdminPanelOrdersListCtx || insideManageUsersComponent
         ? [
             ordersDetailsIsLoadingFromAdminOrderManagerCtx,
             ordersDetailsErrorFromAdminOrderManagerCtx,
@@ -194,6 +195,7 @@ export default function OrdersList({
       ordersDetailsIsLoadingFromAdminOrderManagerCtx,
       ordersDetailsIsLoadingFromUserOrdersCtx,
       serveAsAdminPanelOrdersListCtx,
+      insideManageUsersComponent,
     ]
   );
 
@@ -227,7 +229,11 @@ export default function OrdersList({
   if (ordersDetailsError) content = <OrdersDetailsError />;
   if (ordersDetailsIsLoading)
     content = <LoadingFallback customText="Loading your orders..." />;
-  if (ordersAmount === 0 && !serveAsAdminPanelOrdersListCtx)
+  if (
+    ordersAmount === 0 &&
+    !serveAsAdminPanelOrdersListCtx &&
+    !insideManageUsersComponent
+  )
     content = (
       <Header>
         You haven't placed any order in our shop yet! Feel free to buy your
@@ -251,7 +257,7 @@ export default function OrdersList({
           listItemKeyGeneratorFn={(ordersDetailsItem) => ordersDetailsItem._id}
           listItemOnClick={(ordersDetailsItem) =>
             orderItemOnClick
-              ? orderItemOnClick
+              ? orderItemOnClick(ordersDetailsItem)
               : !serveAsAdminPanelOrdersListCtx
               ? orderEntryOnClickFromUserOrdersCtx(ordersDetailsItem._id)
               : orderEntryOnClickFromAdminOrderManagerCtx(
@@ -265,12 +271,14 @@ export default function OrdersList({
             orderDetailsEntriesWithAccessToOrderEntryObj
           }
         />
-        <article className="orders-pages-wrapper pt-4">
-          <PagesElement
-            amountOfElementsPerPage={MAX_ORDERS_PER_PAGE}
-            totalAmountOfElementsToDisplayOnPages={ordersAmount}
-          />
-        </article>
+        {ordersAmount > 0 && (
+          <article className="orders-pages-wrapper pt-4">
+            <PagesElement
+              amountOfElementsPerPage={MAX_ORDERS_PER_PAGE}
+              totalAmountOfElementsToDisplayOnPages={ordersAmount}
+            />
+          </article>
+        )}
       </>
     );
 

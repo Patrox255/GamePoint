@@ -14,9 +14,9 @@ import ListItems, {
   IListItemEntriesWithAccessToTheListItemItself,
 } from "../../../structure/ListItems";
 import { IRetrieveAvailableUsersPossibleReceivedDataObj } from "../../../../lib/fetch";
-import { ListItemLoginAndEmailEntriesContentFnResultComponent } from "../orders/OrderFindingMainTab";
 import SelectedUserManagement from "./SelectedUserManagement";
-import { useStateWithSearchParams } from "../../../../hooks/useStateWithSearchParams";
+import { ManageUsersContext } from "../../../../store/userPanel/admin/users/ManageUsersContext";
+import { ListItemLoginAndEmailEntriesContentFnResultComponent } from "../orders/AdminOrdersListWrapper";
 
 const usersDetailsEntries: IListItemEntriesWithAccessToTheListItemItself<
   IRetrieveAvailableUsersPossibleReceivedDataObj,
@@ -45,16 +45,8 @@ export default function ManageUsers() {
     defaultStateValueInCaseOfCreatingStateHere: "",
   });
 
-  const {
-    debouncingState: selectedUserFromList,
-    setStateWithSearchParams: setSelectedUserFromList,
-  } = useStateWithSearchParams(
-    "",
-    "adminSelectedUser",
-    undefined,
-    false,
-    false
-  );
+  const { selectedUserFromList, setSelectedUserFromList } =
+    useContext(ManageUsersContext);
 
   const {
     retrieveUsersArr: retrieveUsersAmount,
@@ -131,7 +123,7 @@ export default function ManageUsers() {
           }
           overAllListItemsIdentificator="user"
           listItemOnClick={(retrievedUserEntry) =>
-            setSelectedUserFromList(retrievedUserEntry.login)
+            setSelectedUserFromList!(retrievedUserEntry.login)
           }
           listItemEntriesBasedOnListItemObjItselfStable={usersDetailsEntries}
         />
@@ -166,14 +158,7 @@ export default function ManageUsers() {
         </section>
       )}
       <section id="manage-users-content" className="flex flex-col gap-8">
-        {selectedAnUser ? (
-          <SelectedUserManagement
-            selectedUserLogin={selectedUserFromList}
-            setSelectedUserLogin={setSelectedUserFromList}
-          />
-        ) : (
-          manageUsersListContent
-        )}
+        {selectedAnUser ? <SelectedUserManagement /> : manageUsersListContent}
       </section>
     </>
   );

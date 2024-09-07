@@ -218,12 +218,19 @@ export async function genSalt() {
 export const sameRegex = (regex1: RegExp, regex2: RegExp) =>
   regex1.source === regex2.source && regex1.flags === regex2.flags;
 
-export const filterPropertiesFromObj = (obj: object, properties: string[]) => ({
+export const filterPropertiesFromObj = (
+  obj: object,
+  properties: string[],
+  onlyFilteredPropertiesRemain: boolean = false
+) => ({
   ...Object.fromEntries(
-    Object.entries(obj).filter(
-      (objEntry) =>
-        !properties.find((propertiesEntry) => propertiesEntry === objEntry[0])
-    )
+    Object.entries(obj).filter((objEntry) => {
+      const propertyInFilterArr =
+        properties.find(
+          (propertiesEntry) => propertiesEntry === objEntry[0]
+        ) !== undefined;
+      return propertyInFilterArr === onlyFilteredPropertiesRemain;
+    })
   ),
 });
 
@@ -541,8 +548,15 @@ export const acquireAndValidatePageNrAndSortPropertiesWhenRetrievingOrders =
     return { pageNr, sortProperties, amount };
   };
 
-const transformDateNotToTakeTimeIntoAccount = (date: Date) => {
-  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0);
+const transformDateNotToTakeSecondsAndMilisecondsIntoAccount = (date: Date) => {
+  return Date.UTC(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    0
+  );
 };
 
 export const sortRetrievedOrdersBasedOnSentSortProperties = function <
@@ -562,11 +576,13 @@ export const sortRetrievedOrdersBasedOnSentSortProperties = function <
   const ordersToSend = [...orders];
   Object.entries(sortPropertiesNotEmpty)
     .reverse()
-    .forEach(([propertyName, propertyOrder]) =>
+    .forEach(([propertyName, propertyOrder]) => {
       ordersToSend.sort((o1, o2) => {
         const getValueFromOrderObj = (order: T, key: keyof T) =>
           typeof order[key] === "object"
-            ? transformDateNotToTakeTimeIntoAccount(order[key] as Date)
+            ? transformDateNotToTakeSecondsAndMilisecondsIntoAccount(
+                order[key] as Date
+              )
             : +order[key];
         const [v1, v2] = [
           getValueFromOrderObj(o1, propertyName as keyof T),
@@ -575,8 +591,8 @@ export const sortRetrievedOrdersBasedOnSentSortProperties = function <
         const subtraction = v1 - v2;
         if (propertyOrder === 1) return subtraction;
         return -subtraction;
-      })
-    );
+      });
+    });
   return ordersToSend;
 };
 

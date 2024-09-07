@@ -48,7 +48,6 @@ export const useStateWithSearchParams = function <T>(
       if (!storeEvenInitialValue && isEqual(newState, initialStateStable)) {
         searchParams.delete(searchParamName);
         sessionStorage.removeItem(searchParamName);
-        console.log([...searchParams.entries()], searchParamName, newState);
         navigateToRefreshChangedSearchParams();
         return;
       }
