@@ -18,7 +18,7 @@ export type IInputFieldsDefaultValues = {
   [key in keyof IInputFieldsObjs]: inputValue;
 };
 
-export default function RegisterFormContent({
+export default function ContactInformationFormInputFieldsContent({
   defaultValuesObjFromProps,
   children,
 }: {

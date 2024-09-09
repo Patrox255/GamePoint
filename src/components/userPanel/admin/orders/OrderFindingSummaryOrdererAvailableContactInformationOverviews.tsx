@@ -20,7 +20,7 @@ export default function OrderFindingSummaryOrdererAvailableContactInformationOve
     stateInformation: { selectedUserFromList },
   } = useContext(ManageOrdersFindingOrderContext);
   const { contactInformationArr, error, isLoading } =
-    useRetrieveContactInformation(selectedUserFromList);
+    useRetrieveContactInformation({ customUserLogin: selectedUserFromList });
 
   let content;
   if (isLoading)

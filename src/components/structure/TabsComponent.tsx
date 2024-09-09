@@ -57,13 +57,12 @@ export default function TabsComponent<
     debouncingState: debouncingTabsState,
     setStateWithSearchParams: setTabsState,
     setNormalAndDebouncingState: setNormalAndDebouncingTabsState,
-  } = useStateWithSearchParams(
-    defaultTabsStateValue,
-    sessionStorageAndSearchParamEntryNameIfYouWantToUseThem || "",
-    undefined,
-    undefined,
-    storeEvenInitialValueInSessionStorageAndSearchParams
-  );
+  } = useStateWithSearchParams({
+    initialStateStable: defaultTabsStateValue,
+    searchParamName:
+      sessionStorageAndSearchParamEntryNameIfYouWantToUseThem || "",
+    storeEvenInitialValue: storeEvenInitialValueInSessionStorageAndSearchParams,
+  });
 
   const availableTabs = useMemo(
     () =>

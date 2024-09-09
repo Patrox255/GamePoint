@@ -13,8 +13,8 @@ import inputFieldsObjs from "../lib/inputFieldsObjs";
 import Button from "../components/UI/Button";
 import InputFieldElement from "../components/UI/InputFieldElement";
 import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
-import RegisterFormContent from "../components/formRelated/RegisterFormContent";
 import { ContactInformationFormContentContext } from "../components/formRelated/ContactInformationFormContent";
+import ContactInformationFormInputFieldsContent from "../components/formRelated/ContactInformationFormInputFieldsContent";
 
 export const RegisterPageFormControls = ({
   additionalResetClickAction,
@@ -135,7 +135,9 @@ export default function RegisterPage() {
           onChangeCheckbox={setExpandedContactInformation}
           checkedCheckbox={expandedContactInformation}
         />
-        {expandedContactInformation && <RegisterFormContent />}
+        {expandedContactInformation && (
+          <ContactInformationFormInputFieldsContent />
+        )}
         <RegisterPageFormControls
           additionalResetClickAction={handleFormReset}
         />

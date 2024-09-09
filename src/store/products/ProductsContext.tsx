@@ -47,7 +47,11 @@ export default function ProductsContextProvider({
     selectedDevelopersState: { debouncedStateArr: debouncedDevelopers },
   } = useContext(SearchCustomizationContext);
   const { state: pageNr, setStateWithSearchParams: setPageNr } =
-    useStateWithSearchParams(0, "page", "/products");
+    useStateWithSearchParams({
+      initialStateStable: 0,
+      searchParamName: "page",
+      pathName: "/products",
+    });
 
   const {
     data: countGamesData,

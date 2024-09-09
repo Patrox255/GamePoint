@@ -6,13 +6,21 @@ import generateInitialStateFromSearchParams from "../helpers/generateInitialStat
 import useCompareComplexForUseMemo from "./useCompareComplexForUseMemo";
 import { isEqual } from "lodash";
 
-export const useStateWithSearchParams = function <T>(
-  initialStateStable: T,
-  searchParamName: string,
-  pathName?: string,
-  useDebouncingTimeout: boolean = true,
-  storeEvenInitialValue: boolean = true
-) {
+export const useStateWithSearchParams = function <T>({
+  initialStateStable,
+  searchParamName,
+  storeEvenInitialValue = true,
+  useDebouncingTimeout = true,
+  pathName,
+  storeStateOnlyInSessionStorage = false,
+}: {
+  initialStateStable: T;
+  searchParamName: string;
+  pathName?: string;
+  useDebouncingTimeout?: boolean;
+  storeEvenInitialValue?: boolean;
+  storeStateOnlyInSessionStorage?: boolean;
+}) {
   const { search, pathname } = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
   const navigate = useNavigate();
@@ -20,7 +28,10 @@ export const useStateWithSearchParams = function <T>(
   const initialValueForUseState = generateInitialStateFromSearchParams(
     initialStateStable,
     searchParams,
-    searchParamName
+    searchParamName,
+    undefined,
+    undefined,
+    !storeStateOnlyInSessionStorage
   );
 
   const [state, setState] = useState<T>(initialValueForUseState);
@@ -46,13 +57,15 @@ export const useStateWithSearchParams = function <T>(
   const updateSearchParamsAndSessionStorageStoredState = useCallback(
     (newState: T) => {
       if (!storeEvenInitialValue && isEqual(newState, initialStateStable)) {
-        searchParams.delete(searchParamName);
         sessionStorage.removeItem(searchParamName);
+        if (storeStateOnlyInSessionStorage) return;
+        searchParams.delete(searchParamName);
         navigateToRefreshChangedSearchParams();
         return;
       }
-      searchParams.set(searchParamName, JSON.stringify(newState));
       sessionStorage.setItem(searchParamName, JSON.stringify(newState));
+      if (storeStateOnlyInSessionStorage) return;
+      searchParams.set(searchParamName, JSON.stringify(newState));
       navigateToRefreshChangedSearchParams();
     },
     [
@@ -61,6 +74,7 @@ export const useStateWithSearchParams = function <T>(
       searchParamName,
       searchParams,
       storeEvenInitialValue,
+      storeStateOnlyInSessionStorage,
     ]
   );
 

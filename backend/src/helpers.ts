@@ -6,7 +6,11 @@ import { CorsOptions } from "cors";
 import bcrypt from "bcrypt";
 import Game, { IGame } from "./models/game.model";
 import User, { IUser } from "./models/user.model";
-import { IReceivedGameDetailsEntry, receivedCart } from "./validateBodyEntries";
+import {
+  IReceivedGameDetailsEntry,
+  IRetrieveOrModifyContactInformationCustomUserInformation,
+  receivedCart,
+} from "./validateBodyEntries";
 import AdditionalContactInformation, {
   IAdditionalContactInformation,
 } from "./models/additionalContactInformation.model";
@@ -77,6 +81,11 @@ const allowedOrigins = FRONTEND_URLS.split(",");
 
 export const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
+    console.log(
+      origin,
+      allowedOrigins,
+      origin && allowedOrigins.indexOf(origin) !== -1
+    );
     if (!origin || allowedOrigins.indexOf(origin) !== -1)
       return callback(null, true);
     return callback(new Error("Rejected by CORS policy"));
@@ -156,11 +165,13 @@ export const generateAndSaveJWT = (
     httpOnly: true,
     secure: true,
     maxAge: type === "access" ? accessTokenMaxAge : refreshTokenMaxAge,
+    sameSite: "none",
   };
   const environmentCookieDomains = [
     accessEnvironmentVariable("FRONTEND_URL_FOR_COOKIES", false),
     accessEnvironmentVariable("BACKEND_URL_FOR_COOKIES", false),
   ].filter((cookieDomain) => cookieDomain !== undefined);
+  console.log("domains", environmentCookieDomains);
   if (environmentCookieDomains.length === 0)
     res.cookie(
       type === "access" ? "accessToken" : "refreshToken",
@@ -276,6 +287,7 @@ interface IJwtPayload {
 const jwtVerifyPromisified = (token: string, secretKey: string) =>
   new Promise<string | jwt.JwtPayload | undefined>((resolve, reject) => {
     jwt.verify(token, secretKey, (err, decoded) => {
+      console.log("errVerifyJWT", err);
       if (err) reject(err);
       resolve(decoded);
     });
@@ -297,6 +309,7 @@ export interface IRequestAdditionAfterAccessJwtfMiddleware {
 
 const accessJwt = async (req: Request, res: Response) => {
   const refreshToken = req.cookies.refreshToken;
+  console.log(req.cookies);
   if (!refreshToken) return { message: "Could not authorize", status: 401 };
 
   try {
@@ -313,6 +326,7 @@ const accessJwt = async (req: Request, res: Response) => {
     if (!accessToken) {
       accessToken = generateAndSaveJWT(res, userId, "access");
     }
+    console.log(accessToken);
     let decodedJwtAccessToken: jwt.JwtPayload = {};
     try {
       decodedJwtAccessToken = (await jwtVerifyPromisified(
@@ -352,6 +366,7 @@ export const verifyJwt = async (
   next: NextFunction
 ) => {
   const accessJwtResult = await accessJwt(req, res);
+  console.log(accessJwtResult);
   if (typeof accessJwtResult !== "object") return next();
   return res
     .status(accessJwtResult.status)
@@ -381,22 +396,93 @@ export const onlyAccessJwt = async (
   next();
 };
 
+interface IUserLoginOrIdArg {
+  login?: string;
+  userId?: string;
+  projection?: mongoose.ProjectionType<IUser> | null;
+  session?: mongoose.mongo.ClientSession | null;
+}
+
+type relatedUserMongooseQueryGenericDocumentType = mongoose.Document<
+  unknown,
+  object,
+  IUser
+> &
+  IUser & {
+    _id: Types.ObjectId;
+  };
+type relatedUserMongooseQuery = mongoose.Query<
+  relatedUserMongooseQueryGenericDocumentType | null,
+  relatedUserMongooseQueryGenericDocumentType,
+  object,
+  IUser,
+  "findOne",
+  object
+>;
+
+export async function getRelatedUserBasedOnHisLoginOrId(
+  params: IUserLoginOrIdArg & {
+    onlyRequest: true;
+  }
+): Promise<relatedUserMongooseQuery>;
+export async function getRelatedUserBasedOnHisLoginOrId(
+  params: IUserLoginOrIdArg & { onlyRequest?: false }
+): Promise<relatedUserMongooseQueryGenericDocumentType | null>;
+export async function getRelatedUserBasedOnHisLoginOrId({
+  login,
+  userId,
+  projection,
+  onlyRequest = false,
+  session = null,
+}: IUserLoginOrIdArg & { onlyRequest?: boolean }): Promise<
+  relatedUserMongooseQuery | relatedUserMongooseQueryGenericDocumentType | null
+> {
+  if (!login && !userId)
+    throw new Error(
+      "You have to provide either login or identifiactor of the desired user!"
+    );
+  let relatedUserReq = login
+    ? User.findOne({ login }, projection)
+    : User.findById(userId, projection);
+  relatedUserReq = relatedUserReq.session(session);
+  if (onlyRequest) return relatedUserReq as relatedUserMongooseQuery;
+  const relatedUser = await relatedUserReq.exec();
+  return relatedUser as relatedUserMongooseQueryGenericDocumentType | null;
+}
+
+export const validateWhetherRequestedContactInformationCanBeDoneInCaseItTriesToDoAdminOperation =
+  function <
+    T extends IRetrieveOrModifyContactInformationCustomUserInformation,
+    Y extends IRequestAdditionAfterVerifyJwtfMiddleware
+  >(reqBody: T, reqWithToken: Y, res: Response) {
+    const {
+      token: { isAdmin },
+    } = reqWithToken;
+    const { customUserId, customUserLogin } = reqBody;
+    if (isAdmin || (!customUserId && !customUserLogin)) return true;
+    res.status(200).json({
+      message:
+        "You have to be an admin in order to manage someone else's contact details!",
+    });
+    return false;
+  };
+
 export const getUserContactInformationByLoginOrId = async ({
   login,
   userId,
-}: {
-  login?: string;
-  userId?: string;
-}) => {
+}: IUserLoginOrIdArg) => {
   const userContactInformationProjection: mongoose.ProjectionType<IUser> = {
     additionalContactInformation: true,
     activeAdditionalContactInformation: true,
   };
 
-  const relatedUserDBReq = login
-    ? User.findOne({ login }, userContactInformationProjection)
-    : User.findById(userId, userContactInformationProjection);
-  relatedUserDBReq.populate("additionalContactInformation");
+  let relatedUserDBReq = (await getRelatedUserBasedOnHisLoginOrId({
+    login,
+    userId,
+    onlyRequest: true,
+    projection: userContactInformationProjection,
+  })) as unknown as relatedUserMongooseQuery;
+  relatedUserDBReq = relatedUserDBReq!.populate("additionalContactInformation");
 
   const relatedUser = await relatedUserDBReq;
   if (!relatedUser) return undefined;
@@ -653,7 +739,6 @@ export const verifyProvidedOrderGamesEntriesAndTurnThemIntoOrderItemsArr =
             "One of your order games has an incorrect identificator provided!"
           );
         const relatedGame = await Game.findById(orderedGamesDetailsEntry._id);
-        console.log(relatedGame, orderedGamesDetailsEntry._id);
         if (!relatedGame)
           throw new Error(
             "One of your order games might have just been deleted!"

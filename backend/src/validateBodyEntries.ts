@@ -259,8 +259,38 @@ export const removeReviewEntries: IValidateBodyEntry<IRemoveReviewEntriesFromReq
     },
   ];
 
-export interface IChangeActiveContactInformationEntriesFromRequest
+export interface IRetrieveOrModifyContactInformationCustomUserInformation
   extends IBodyFromRequestToValidate {
+  customUserId?: string;
+  customUserLogin?: string;
+}
+
+export const retrieveOrModifyContactInformationCustomUserInformationEntries: IValidateBodyEntry<IRetrieveOrModifyContactInformationCustomUserInformation>[] =
+  [
+    {
+      requestBodyName: "customUserId",
+      type: "string",
+      name: "Your selected user's identificator",
+      optional: true,
+      validateFn: bodyEntryValidMongooseObjectIdValidateFn,
+    },
+    {
+      requestBodyName: "customUserLogin",
+      type: "string",
+      name: "Your selected user's login",
+      optional: true,
+    },
+  ];
+
+export interface IRetrieveUserContactInformationPossibleBodyFromRequest
+  extends IBodyFromRequestToValidate,
+    IRetrieveOrModifyContactInformationCustomUserInformation {}
+
+export const retrieveUserContactInformationEntries: IValidateBodyEntry<IRetrieveUserContactInformationPossibleBodyFromRequest>[] =
+  retrieveOrModifyContactInformationCustomUserInformationEntries;
+
+export interface IChangeActiveContactInformationEntriesFromRequest
+  extends IRetrieveOrModifyContactInformationCustomUserInformation {
   newActiveAdditionalInformationEntryId: string;
 }
 
@@ -272,9 +302,11 @@ export const changeActiveContactInformationEntries: IValidateBodyEntry<IChangeAc
       type: "string",
       optional: true,
     },
+    ...(retrieveOrModifyContactInformationCustomUserInformationEntries as unknown as IValidateBodyEntry<IChangeActiveContactInformationEntriesFromRequest>[]),
   ];
 
-export interface IModifyOrAddContactInformationEntriesFromRequest {
+export interface IModifyOrAddContactInformationEntriesFromRequest
+  extends IRetrieveOrModifyContactInformationCustomUserInformation {
   newContactInformation: IContactInformationEntriesFromRequest;
   updateContactInformationId?: string;
 }
@@ -434,22 +466,6 @@ export const modifyOrderEntries: IValidateBodyEntry<IModifyOrderBodyFromRequest>
           isValidObjectId(gameWithQuantity._id)
         ) || { message: `${name} are not valid!` },
       optional: true,
-    },
-  ];
-
-export interface IRetrieveUserContactInformationPossibleBodyFromRequest
-  extends IBodyFromRequestToValidate {
-  customUserId?: string;
-}
-
-export const retrieveUserContactInformationEntries: IValidateBodyEntry<IRetrieveUserContactInformationPossibleBodyFromRequest>[] =
-  [
-    {
-      requestBodyName: "customUserId",
-      type: "string",
-      name: "Your selected user's identificator",
-      optional: true,
-      validateFn: bodyEntryValidMongooseObjectIdValidateFn,
     },
   ];
 

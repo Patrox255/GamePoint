@@ -27,7 +27,7 @@ import {
   IAdditionalContactInformation,
   IAdditionalContactInformationFrontEnd,
 } from "../../models/additionalContactInformation.model";
-import { IInputFieldsDefaultValues } from "../formRelated/RegisterFormContent";
+import { IInputFieldsDefaultValues } from "../formRelated/ContactInformationFormInputFieldsContent";
 import OrderSummary from "./OrderSummary";
 import LoadingFallback from "../UI/LoadingFallback";
 import { IGameWithQuantityBasedOnCartDetailsEntry } from "../../helpers/generateGamesWithQuantityOutOfCartDetailsEntries";
@@ -221,6 +221,7 @@ export default function OrderPageContent() {
             defaultValuesObj={
               contactInformationFromFormToProvideStable as unknown as IInputFieldsDefaultValues
             }
+            includeGuestEmailField
           />
         </FormWithErrorHandling>
       </>

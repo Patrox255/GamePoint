@@ -3,14 +3,16 @@ import { useMutation } from "@tanstack/react-query";
 import { useLoaderData } from "react-router-dom";
 
 import { IActionMutateArgsContact } from "../../pages/RegisterPage";
-import { IInputFieldsDefaultValues } from "../formRelated/RegisterFormContent";
+import { IInputFieldsDefaultValues } from "../formRelated/ContactInformationFormInputFieldsContent";
 import FormWithErrorHandling, {
   FormActionBackendErrorResponse,
   FormActionBackendResponse,
 } from "../UI/FormWithErrorHandling";
 import {
   changeUserActiveAdditionalInformation,
+  IChangeUserActiveAdditionalInformationQueryArg,
   IRetrievedContactInformation,
+  IRetrieveOrModifyContactInformationCustomUserDataProperties,
   manageContactInformation,
   queryClient,
 } from "../../lib/fetch";
@@ -30,7 +32,8 @@ interface IActionMutateArgsContactUserPanelFormData {
 }
 
 export interface IActionMutateArgsContactUserPanel
-  extends IActionMutateArgsContactUserPanelFormData {
+  extends IActionMutateArgsContactUserPanelFormData,
+    IRetrieveOrModifyContactInformationCustomUserDataProperties {
   updateContactInformationId?: string;
 }
 
@@ -59,14 +62,47 @@ interface IRetrievedContactInformationQueryRes {
   data: IRetrievedContactInformation;
 }
 
-export default function UserContactInformation() {
+export default function UserContactInformation({
+  customLoginInCaseOfAdminManagement,
+  customIdInCaseOfAdminManagement,
+  customAvailableContactDetailsEntriesHeader,
+  customNoAvailableContactDetailsEntriesHeader,
+}: {
+  customLoginInCaseOfAdminManagement?: string;
+  customIdInCaseOfAdminManagement?: string;
+  customNoAvailableContactDetailsEntriesHeader?: string;
+  customAvailableContactDetailsEntriesHeader?: string;
+}) {
   const [contactInformationSectionState, setContactInformationSectionState] =
     useState<string>("");
-  const { login } = useLoaderData() as IUserPanelLoaderData;
-  const contactInformationQueryKey = useMemo(
-    () => ["contact-information", login],
-    [login]
-  );
+  const { login: curLogin } = useLoaderData() as IUserPanelLoaderData;
+  const login = customLoginInCaseOfAdminManagement
+    ? customLoginInCaseOfAdminManagement
+    : curLogin;
+
+  const customUserDataInformationObjForQueries =
+    useMemo<IRetrieveOrModifyContactInformationCustomUserDataProperties>(
+      () => ({
+        customUserId: customIdInCaseOfAdminManagement,
+        customUserLogin: customLoginInCaseOfAdminManagement,
+      }),
+      [customIdInCaseOfAdminManagement, customLoginInCaseOfAdminManagement]
+    );
+
+  const {
+    data: contactInformationData,
+    error: contactInformationError,
+    isLoading: contactInformationLoading,
+    contactInformationArr,
+    contactInformationQueryKey,
+  } = useRetrieveContactInformation({
+    ...customUserDataInformationObjForQueries,
+    customUserLogin: login,
+  });
+  const activeContactInformationOverviewIdFromReq =
+    contactInformationData?.data?.activeAdditionalContactInformation || "";
+  const hasContactInformationSaved =
+    contactInformationArr && contactInformationArr.length > 0;
 
   const { mutate, data, error, isPending } = useMutation<
     FormActionBackendResponse,
@@ -95,23 +131,17 @@ export default function UserContactInformation() {
         ...(selectedContactInformationEntryId && {
           updateContactInformationId: selectedContactInformationEntryId,
         }),
+        ...customUserDataInformationObjForQueries,
       }),
-    [selectedContactInformationEntryId, mutate]
+    [
+      mutate,
+      selectedContactInformationEntryId,
+      customUserDataInformationObjForQueries,
+    ]
   );
   const handleGoToContactInformationMainPage = useCallback(() => {
     setContactInformationSectionState("");
   }, []);
-
-  const {
-    data: contactInformationData,
-    error: contactInformationError,
-    isLoading: contactInformationLoading,
-    contactInformationArr,
-  } = useRetrieveContactInformation();
-  const activeContactInformationOverviewIdFromReq =
-    contactInformationData?.data?.activeAdditionalContactInformation || "";
-  const hasContactInformationSaved =
-    contactInformationArr && contactInformationArr.length > 0;
 
   const {
     mutate: changeUserActiveAdditionalInformationMutate,
@@ -120,7 +150,7 @@ export default function UserContactInformation() {
   } = useMutation<
     FormActionBackendResponse,
     FormActionBackendErrorResponse,
-    string,
+    IChangeUserActiveAdditionalInformationQueryArg,
     IRetrievedContactInformationQueryRes
   >({
     mutationFn: changeUserActiveAdditionalInformation,
@@ -151,11 +181,17 @@ export default function UserContactInformation() {
   });
 
   const handleApplyClick = useCallback(
-    (newActiveAdditionalInformationId: string) =>
-      changeUserActiveAdditionalInformationMutate(
-        newActiveAdditionalInformationId
-      ),
-    [changeUserActiveAdditionalInformationMutate]
+    (newActiveAdditionalInformationEntryId: string) =>
+      changeUserActiveAdditionalInformationMutate({
+        newActiveAdditionalInformationEntryId,
+        customUserId: customIdInCaseOfAdminManagement,
+        customUserLogin: customLoginInCaseOfAdminManagement,
+      }),
+    [
+      changeUserActiveAdditionalInformationMutate,
+      customIdInCaseOfAdminManagement,
+      customLoginInCaseOfAdminManagement,
+    ]
   );
 
   const defaultContactInformationFormValues = useMemo(() => {
@@ -212,7 +248,11 @@ export default function UserContactInformation() {
           <>
             <Header usePaddingBottom={false} additionalTailwindClasses="pb-8">
               {hasContactInformationSaved
-                ? "Here are your saved contact details"
+                ? customAvailableContactDetailsEntriesHeader
+                  ? customAvailableContactDetailsEntriesHeader
+                  : "Here are your saved contact details"
+                : customNoAvailableContactDetailsEntriesHeader
+                ? customNoAvailableContactDetailsEntriesHeader
                 : "You haven't saved any contact details yet! Feel free to add them down there"}
             </Header>
 

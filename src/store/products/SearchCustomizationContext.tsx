@@ -21,8 +21,8 @@ type IOrderCustomization = IOrderCustomizationStateObjWithDebouncedFields<
 
 const searchCustomizationOrderFieldsNames = [
   "popularity",
-  "price",
   "title",
+  "price",
 ] as const;
 
 export interface ISearchCustomizationContext {
@@ -140,7 +140,11 @@ export default function SearchCustomizationContextProvider({
     state: discountActive,
     setStateWithSearchParams: setDiscountActive,
     debouncingState: debouncedDiscountActive,
-  } = useStateWithSearchParams(0, "discount", location.pathname);
+  } = useStateWithSearchParams({
+    initialStateStable: 0,
+    searchParamName: "discount",
+    pathName: location.pathname,
+  });
 
   const searchCustomizationComponentWithInputAndTagsHookDefaultArguments = {
     location,

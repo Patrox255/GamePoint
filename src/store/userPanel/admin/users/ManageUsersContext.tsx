@@ -14,13 +14,12 @@ export default function ManageUsersContextProvider({
   const {
     debouncingState: selectedUserFromList,
     setStateWithSearchParams: setSelectedUserFromList,
-  } = useStateWithSearchParams(
-    "",
-    "adminSelectedUser",
-    undefined,
-    false,
-    false
-  );
+  } = useStateWithSearchParams({
+    initialStateStable: "",
+    searchParamName: "adminSelectedUser",
+    useDebouncingTimeout: false,
+    storeEvenInitialValue: false,
+  });
 
   return (
     <ManageUsersContext.Provider

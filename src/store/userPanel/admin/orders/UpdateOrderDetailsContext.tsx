@@ -61,13 +61,12 @@ export default function UpdateOrderDetailsContextProvider({
   const {
     state: selectedOrderFromList,
     setStateWithSearchParams: setSelectedOrderFromList,
-  } = useStateWithSearchParams(
-    "",
-    adminSelectedOrderSessionStorageAndSearchParamsEntryName,
-    undefined,
-    false,
-    false
-  );
+  } = useStateWithSearchParams({
+    initialStateStable: "",
+    searchParamName: adminSelectedOrderSessionStorageAndSearchParamsEntryName,
+    storeEvenInitialValue: false,
+    useDebouncingTimeout: false,
+  });
   const {
     stateInformation: { setSelectedUserFromList },
     ordersFindingCredentials,

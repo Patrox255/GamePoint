@@ -5,7 +5,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
 } from "react";
 
 import { useInput } from "../../../../hooks/useInput";
@@ -20,6 +19,7 @@ import { MAX_ORDERS_PER_PAGE } from "../../../../lib/config";
 import { IUser } from "../../../../models/user.model";
 import useRetrieveFoundUsersDataBasedOnProvidedSearchQuery from "../../../../hooks/adminPanelRelated/useRetrieveFoundUsersDataBasedOnProvidedSearchQuery";
 import { ManageUsersContext } from "../users/ManageUsersContext";
+import { useStateWithSearchParams } from "../../../../hooks/useStateWithSearchParams";
 
 const manageOrdersFindingInputsEntriesNames = [
   "orderFindingUser",
@@ -96,7 +96,7 @@ export const ManageOrdersFindingOrderContext = createContext<
   } & {
     stateInformation: {
       selectedUserFromList: string;
-      setSelectedUserFromList: React.Dispatch<React.SetStateAction<string>>;
+      setSelectedUserFromList: (newSelectedUserLogin: string) => void;
     };
   } & {
     retrieveOrdersQueryData: IOrdersFindingCtxQueryDataObj<IReceivedOrdersDocumentsWhenRetrievingThemAsAnAdmin> & {
@@ -141,8 +141,26 @@ export default function ManageOrdersFindingOrderContextProvider({
     saveDebouncedStateInSearchParams: false,
   });
 
-  const [selectedUserFromListState, setSelectedUserFromListState] =
-    useState<string>("");
+  const {
+    debouncingState: selectedUserFromListState,
+    setNormalAndDebouncingState: setSelectedUserFromListState,
+  } = useStateWithSearchParams({
+    initialStateStable: "",
+    searchParamName: "adminSelectedUserForOrdersFinding",
+    useDebouncingTimeout: false,
+    storeEvenInitialValue: false,
+    storeStateOnlyInSessionStorage: true,
+  });
+  const { handleInputChange, setQueryDebouncingState } = orderFindingUser;
+
+  useEffect(() => {
+    if (!selectedUserFromListState) return;
+    handleInputChange(selectedUserFromListState);
+    setQueryDebouncingState(selectedUserFromListState);
+  }, [selectedUserFromListState, setQueryDebouncingState, handleInputChange]);
+  // in case admin refreshes the page on the order summary section and because of that when going back from this section
+  // the orderer's login input won't be filled as expected
+
   const selectedUserFromList = insideManageUsersComponent
     ? selectedUserFromListFromUserManagementCtx!
     : selectedUserFromListState;
@@ -198,7 +216,6 @@ export default function ManageOrdersFindingOrderContextProvider({
       pageNr <= calcMaxPossiblePageNr(retrieveOrdersAmount, MAX_ORDERS_PER_PAGE)
     )
       return;
-    console.log(retrieveOrdersAmount, pageNr, "CHANGE");
     setPageNr(0);
   }, [pageNr, retrieveOrdersArrTyped, setPageNr, retrieveOrdersAmount]);
 

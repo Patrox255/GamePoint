@@ -1,9 +1,9 @@
 import { createContext } from "react";
 import { RegisterPageFormControls } from "../../pages/RegisterPage";
 import Button from "../UI/Button";
-import RegisterFormContent, {
+import ContactInformationFormInputFieldsContent, {
   IInputFieldsDefaultValues,
-} from "./RegisterFormContent";
+} from "./ContactInformationFormInputFieldsContent";
 import InputFieldElement from "../UI/InputFieldElement";
 
 export const ContactInformationFormContentContext = createContext<props>({});
@@ -19,18 +19,31 @@ export default function ContactInformationFormContent({
   goBackBtnClickHandler,
   submitBtnText,
   showGoBackBtn = true,
-}: props & { showGoBackBtn?: boolean }) {
+  includeGuestEmailField = false,
+}: props & { showGoBackBtn?: boolean; includeGuestEmailField?: boolean }) {
   return (
     <ContactInformationFormContentContext.Provider
       value={{ defaultValuesObj, goBackBtnClickHandler, submitBtnText }}
     >
-      <RegisterFormContent>
-        {(inputFieldsObjs) => (
-          <InputFieldElement inputFieldObjFromProps={inputFieldsObjs.email} />
-        )}
-      </RegisterFormContent>
+      <ContactInformationFormInputFieldsContent>
+        {includeGuestEmailField
+          ? (inputFieldsObjs) => (
+              <InputFieldElement
+                inputFieldObjFromProps={{
+                  ...inputFieldsObjs.email,
+                  placeholder:
+                    "Enter e-mail address which will be assigned to this order and You will receive appropriate order information there",
+                }}
+              />
+            )
+          : undefined}
+      </ContactInformationFormInputFieldsContent>
       <RegisterPageFormControls>
-        {showGoBackBtn && <Button type="button">Go back</Button>}
+        {showGoBackBtn && (
+          <Button type="button" onClick={goBackBtnClickHandler}>
+            Go back
+          </Button>
+        )}
       </RegisterPageFormControls>
     </ContactInformationFormContentContext.Provider>
   );

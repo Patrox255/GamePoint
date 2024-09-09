@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -11,6 +12,7 @@ import createUrlWithCurrentSearchParams from "../helpers/createUrlWithCurrentSea
 import { ActionCreatorWithPayload } from "@reduxjs/toolkit";
 import { useAppDispatch } from "./reduxStore";
 import useDebouncing from "./useDebouncing";
+import useCompareComplexForUseMemo from "./useCompareComplexForUseMemo";
 
 const sameTimeOccurrenceIdsAndArrays: {
   [key: string]: { [key: string]: number };
@@ -53,9 +55,20 @@ export const useInput = function <
     defaultStateValueInCaseOfCreatingStateHere
   );
   const usingExternalStateValue = stateValue !== undefined;
-  const stateValueToSupervise = usingExternalStateValue
-    ? stateValue
-    : queryState!;
+  const stateValueToSuperviseStable = useCompareComplexForUseMemo(
+    usingExternalStateValue ? stateValue : queryState!
+  );
+
+  const initialStateValueToAvoidRecreatingHandleInputChangeFn =
+    useRef<stateType>();
+  if (
+    !initialStateValueToAvoidRecreatingHandleInputChangeFn.current &&
+    stateValueToSuperviseStable !==
+      initialStateValueToAvoidRecreatingHandleInputChangeFn.current
+  ) {
+    initialStateValueToAvoidRecreatingHandleInputChangeFn.current =
+      stateValueToSuperviseStable;
+  }
 
   useEffect(() => {
     if (!sameTimeOccurrenceChanceId) return;
@@ -84,20 +97,23 @@ export const useInput = function <
   }, [sameTimeOccurrenceChanceId, searchParamName]);
 
   const debouncingFn = useCallback(() => {
-    setQueryDebouncingState(stateValueToSupervise!);
+    setQueryDebouncingState(stateValueToSuperviseStable!);
     if (saveDebouncedStateInSessionStorage)
       sessionStorage.setItem(
         searchParamName,
-        JSON.stringify(stateValueToSupervise)
+        JSON.stringify(stateValueToSuperviseStable)
       );
     if (saveDebouncedStateInSearchParams) {
-      searchParams.set(searchParamName, JSON.stringify(stateValueToSupervise));
+      searchParams.set(
+        searchParamName,
+        JSON.stringify(stateValueToSuperviseStable)
+      );
       navigate(createUrlWithCurrentSearchParams({ searchParams, pathname }), {
         replace: true,
       });
     }
   }, [
-    stateValueToSupervise,
+    stateValueToSuperviseStable,
     saveDebouncedStateInSessionStorage,
     searchParamName,
     saveDebouncedStateInSearchParams,
@@ -108,8 +124,8 @@ export const useInput = function <
 
   useDebouncing(
     debouncingFn,
-    stateValueToSupervise !== undefined &&
-      stateValueToSupervise !== queryDebouncingState,
+    stateValueToSuperviseStable !== undefined &&
+      stateValueToSuperviseStable !== queryDebouncingState,
     debouncingTime +
       (sameTimeOccurrenceChanceId &&
       sameTimeOccurrenceIdsAndArrays[sameTimeOccurrenceChanceId] !==
@@ -123,20 +139,29 @@ export const useInput = function <
         : 0)
   );
 
-  function handleInputChange(newValue: stateType) {
-    if (stateValueToSupervise === undefined) return;
-    const setStateArg =
-      typeof stateValueToSupervise === "string" ||
-      typeof stateValueToSupervise === "object"
-        ? (newValue as stateType)
-        : (parseFloat(newValue as string) as stateType);
-    usingExternalStateValue
-      ? setStateValue && setStateValue(setStateArg)
-      : setQueryState(setStateArg);
-    typeof newValue === "string" &&
-      setStateAction &&
-      dispatch(setStateAction(newValue));
-  }
+  const handleInputChange = useCallback(
+    (newValue: stateType) => {
+      if (stateValueToSuperviseStable === undefined) return;
+      const setStateArg =
+        typeof stateValueToSuperviseStable === "string" ||
+        typeof stateValueToSuperviseStable === "object"
+          ? (newValue as stateType)
+          : (parseFloat(newValue as string) as stateType);
+      usingExternalStateValue
+        ? setStateValue && setStateValue(setStateArg)
+        : setQueryState(setStateArg);
+      typeof newValue === "string" &&
+        setStateAction &&
+        dispatch(setStateAction(newValue));
+    },
+    [
+      dispatch,
+      setStateAction,
+      setStateValue,
+      stateValueToSuperviseStable,
+      usingExternalStateValue,
+    ]
+  );
 
   return {
     handleInputChange,

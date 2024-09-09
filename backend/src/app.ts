@@ -51,6 +51,8 @@ import {
   verifyProvidedOrderGamesEntriesAndTurnThemIntoOrderItemsArr,
   applyPageNrToRetrievedOrders,
   retrieveUserWithAllFieldsPopulated,
+  getRelatedUserBasedOnHisLoginOrId,
+  validateWhetherRequestedContactInformationCanBeDoneInCaseItTriesToDoAdminOperation,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -93,12 +95,13 @@ import {
   registerBodyEntries,
   removeReviewEntries,
   retrieveOrdersInAdminPanelEntries,
+  retrieveOrModifyContactInformationCustomUserInformationEntries,
   retrieveUserContactInformationEntries,
   retrieveUserDataByAdminEntries,
   retrieveUsersBasedOnEmailOrLoginEntries,
   verifyEmailEntries,
 } from "./validateBodyEntries";
-import { validateBodyEntries } from "./validateBodyFn";
+import { IValidateBodyEntry, validateBodyEntries } from "./validateBodyFn";
 import { IOrderItem } from "./models/orderItem.model";
 import Order, {
   IOrder,
@@ -1525,14 +1528,16 @@ const startServer = async () => {
         )
           return;
         const {
-          token: { login },
+          token: { login, isAdmin },
         } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
-        const { customUserId } =
+        const { customUserId, customUserLogin } =
           req.body as IRetrieveUserContactInformationPossibleBodyFromRequest;
+        if (!isAdmin && (customUserId || customUserLogin))
+          return res.sendStatus(403);
 
         const userContactInformation =
           await getUserContactInformationByLoginOrId({
-            ...(login && { login }),
+            login: customUserLogin ?? login,
             ...(customUserId && { userId: customUserId }),
           });
         if (!userContactInformation) return res.sendStatus(404); // only in case of sending a request with bad login as an admin
@@ -1553,8 +1558,14 @@ const startServer = async () => {
 
     app.post("/contact-information/add", verifyJwt, async (req, res, next) => {
       try {
-        const { newContactInformation, updateContactInformationId } =
+        const reqBody =
           req.body as IModifyOrAddContactInformationEntriesFromRequest;
+        const {
+          newContactInformation,
+          updateContactInformationId,
+          customUserId,
+          customUserLogin,
+        } = reqBody;
 
         if (
           !validateBodyEntries<IContactInformationEntriesFromRequest>({
@@ -1565,6 +1576,38 @@ const startServer = async () => {
         )
           return;
 
+        if (
+          !validateBodyEntries<IContactInformationEntriesFromRequest>({
+            req,
+            res,
+            entries:
+              retrieveOrModifyContactInformationCustomUserInformationEntries as unknown as IValidateBodyEntry<IContactInformationEntriesFromRequest>[],
+          })
+        )
+          return;
+
+        const reqTyped = req as Request &
+          IRequestAdditionAfterVerifyJwtfMiddleware;
+        const {
+          token: { login },
+        } = reqTyped;
+        if (
+          !validateWhetherRequestedContactInformationCanBeDoneInCaseItTriesToDoAdminOperation(
+            reqBody,
+            reqTyped,
+            res
+          )
+        )
+          return;
+        const session = await startSession();
+        session.startTransaction();
+        const relatedUser = await getRelatedUserBasedOnHisLoginOrId({
+          session,
+          ...(customUserId
+            ? { userId: customUserId }
+            : { login: customUserLogin || login }),
+        });
+
         const dateOfBirthToSave = createAndVerifyDateOfBirthFromInput(
           newContactInformation.dateOfBirth,
           res
@@ -1574,8 +1617,6 @@ const startServer = async () => {
           ...newContactInformation,
           dateOfBirth: dateOfBirthToSave,
         };
-        const session = await startSession();
-        session.startTransaction();
 
         if (updateContactInformationId) {
           const failedToFindErr = {
@@ -1583,6 +1624,15 @@ const startServer = async () => {
           };
           if (!isValidObjectId(updateContactInformationId))
             return res.status(200).json(failedToFindErr);
+          if (
+            !relatedUser?.additionalContactInformation?.includes(
+              new Types.ObjectId(updateContactInformationId)
+            )
+          )
+            return res.status(200).json({
+              message:
+                "You do not appear to be the owner of the desired contact details entry you would like to modify or such an entry doesn't exist!",
+            });
           const relatedAdditionalContactInformation =
             await AdditionalContactInformation.findById(
               updateContactInformationId
@@ -1603,9 +1653,6 @@ const startServer = async () => {
           return res.sendStatus(200);
         }
 
-        const {
-          token: { login },
-        } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
         const { newObjs } = await createDocumentsOfObjsAndInsert(
           [contactInformationToSave],
           AdditionalContactInformation,
@@ -1613,8 +1660,6 @@ const startServer = async () => {
         );
 
         const createdContactInformationObjectId = newObjs[0]._id!;
-        const relatedUser = await User.findOne({ login }).session(session);
-        // relatedUser has to be true as its existence has been already checked within verifyJwt middleware
         relatedUser!.additionalContactInformation!.push(
           createdContactInformationObjectId
         );
@@ -1634,9 +1679,11 @@ const startServer = async () => {
       verifyJwt,
       async (req, res, next) => {
         try {
+          const reqTyped = req as Request &
+            IRequestAdditionAfterVerifyJwtfMiddleware;
           const {
             token: { login },
-          } = req as Request & IRequestAdditionAfterVerifyJwtfMiddleware;
+          } = reqTyped;
 
           if (
             !validateBodyEntries({
@@ -1646,12 +1693,27 @@ const startServer = async () => {
             })
           )
             return;
-          const { newActiveAdditionalInformationEntryId } =
+          const reqBody =
             req.body as IChangeActiveContactInformationEntriesFromRequest;
+          const {
+            newActiveAdditionalInformationEntryId,
+            customUserId,
+            customUserLogin,
+          } = reqBody;
+          if (
+            !validateWhetherRequestedContactInformationCanBeDoneInCaseItTriesToDoAdminOperation(
+              reqBody,
+              reqTyped,
+              res
+            )
+          )
+            return;
 
           const userContactInformation =
             await getUserContactInformationByLoginOrId({
-              login,
+              ...(customUserId
+                ? { userId: customUserId }
+                : { login: customUserLogin ?? login }),
             });
           const { additionalContactInformation, relatedUser } =
             userContactInformation!;
@@ -2226,7 +2288,6 @@ const startServer = async () => {
             return;
           const { email, login, mode, userLogin } =
             req.body as IModifyUserDataBodyFromRequest;
-          console.log(mode);
           const relatedUser = await User.findOne({ login: userLogin });
           if (!relatedUser)
             return res

@@ -392,15 +392,22 @@ export interface IRetrievedContactInformation {
   activeAdditionalContactInformation: string | null;
 }
 
-export const retrieveContactInformation = async function (
-  signal: AbortSignal,
-  customUserId?: string
-) {
+export interface IRetrieveOrModifyContactInformationCustomUserDataProperties {
+  customUserId?: string;
+  customUserLogin?: string;
+}
+export const retrieveContactInformation = async function ({
+  signal,
+  customUserId,
+  customUserLogin,
+}: {
+  signal: AbortSignal;
+} & IRetrieveOrModifyContactInformationCustomUserDataProperties) {
   const data = await getJSON<IRetrievedContactInformation>({
     url: `${API_URL}/contact-information`,
     signal,
     method: "POST",
-    body: { customUserId },
+    body: { customUserId, customUserLogin },
   });
 
   data.data.additionalContactInformation.forEach(
@@ -413,12 +420,22 @@ export const retrieveContactInformation = async function (
   return data;
 };
 
-export const changeUserActiveAdditionalInformation = async function (
-  newActiveAdditionalInformationEntryId: string
-) {
+export interface IChangeUserActiveAdditionalInformationQueryArg
+  extends IRetrieveOrModifyContactInformationCustomUserDataProperties {
+  newActiveAdditionalInformationEntryId: string;
+}
+export const changeUserActiveAdditionalInformation = async function ({
+  newActiveAdditionalInformationEntryId,
+  customUserId,
+  customUserLogin,
+}: IChangeUserActiveAdditionalInformationQueryArg) {
   const data = await getJSON<string>({
     url: `${API_URL}/contact-information-active`,
-    body: { newActiveAdditionalInformationEntryId },
+    body: {
+      newActiveAdditionalInformationEntryId,
+      customUserId,
+      customUserLogin,
+    },
     method: "POST",
   });
 
@@ -498,7 +515,6 @@ export const retrieveUserOrdersDetails = async function (
   pageNr: number,
   sortProperties: IOrdersSortOnlyDebouncedProperties
 ) {
-  console.log(sortProperties);
   const data = await getJSON<
     IDataOrErrorObjBackendResponse<IRetrieveOrdersDetailsBackendResponse>
   >({

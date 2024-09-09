@@ -39,6 +39,7 @@ import AdminOrdersListWrapper from "../orders/AdminOrdersListWrapper";
 import inputFieldsObjs from "../../../../lib/inputFieldsObjs";
 import InputFieldElement from "../../../UI/InputFieldElement";
 import { IUserPopulated } from "../../../../models/user.model";
+import UserContactInformation from "../../UserContactInformation";
 
 const searchParamsEntriesToOverrideToGetToTheDesiredOrderSummary = (
   orderId: string
@@ -158,7 +159,6 @@ export default function SelectedUserManagement() {
   const handleNavigateToOrderDetails = useCallback(
     (selectedOrder: IOrder) => {
       const selectedOrderId = selectedOrder._id;
-      console.log(selectedOrderId, selectedOrder);
       setNormalAndDebouncingTabsState(manageOrdersAdminPanelTabSectionName);
       sessionStorage.setItem(
         adminSelectedOrderSessionStorageAndSearchParamsEntryName,
@@ -261,7 +261,9 @@ export default function SelectedUserManagement() {
     onError: (_, __, context) => {
       queryClient.setQueryData(userDataQueryKey, context);
     },
-    onSuccess: (_, mutateData) => {
+    onSuccess: (res, mutateData, context) => {
+      if (typeof res.data === "object")
+        return queryClient.setQueryData(userDataQueryKey, context);
       if (mutateData.modificationMode === "login")
         setSelectedUserLogin!(mutateData.modificationValue!);
     },
@@ -286,8 +288,6 @@ export default function SelectedUserManagement() {
       selectedUserLogin,
     ]
   );
-
-  console.log(generalInformationModificationQuery);
 
   let userManagementContent;
   if (userDataOtherErrors || userDataValidationErrors)
@@ -399,6 +399,13 @@ export default function SelectedUserManagement() {
               </Button>
             </FormWithErrorHandling>
           </section>
+        </section>
+        <section className="user-management-contact-information">
+          <UserContactInformation
+            customLoginInCaseOfAdminManagement={selectedUserLogin}
+            customAvailableContactDetailsEntriesHeader="Here are selected user's saved contact details"
+            customNoAvailableContactDetailsEntriesHeader="Selecter user hasn't saved any contact details yet!"
+          />
         </section>
         <section className="user-management-orders">
           <OrdersListContextProvider

@@ -32,7 +32,7 @@ export default function OrdersFindingCredentialsAndUsersFindingInputFieldElement
   retrieveUsersArr?: IRetrieveAvailableUsersPossibleReceivedData;
   retrieveUsersIsLoading?: boolean;
   selectedUserFromList?: string;
-  setSelectedUserFromList?: React.Dispatch<React.SetStateAction<string>>;
+  setSelectedUserFromList?: (newSelectedUserLogin: string) => void;
   setQueryDebouncingState?: React.Dispatch<React.SetStateAction<string>>;
 }) {
   const isRelatedToUserFinding =

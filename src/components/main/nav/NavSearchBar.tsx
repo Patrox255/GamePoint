@@ -15,7 +15,7 @@ export default function NavSearchBar({ placeholder }: { placeholder: string }) {
   const searchTerm = useAppSelector(
     (state) => state.mainSearchBarSlice.searchTerm
   );
-  actions.setSearchTerm;
+  // actions.setSearchTerm;
   const { handleInputChange, queryDebouncingState } = useInput({
     stateValue: searchTerm,
     setStateAction: actions.setSearchTerm,

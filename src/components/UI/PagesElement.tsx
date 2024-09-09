@@ -60,12 +60,6 @@ const PagesElement = memo(
 
       if (pageNr > maxPageNr) {
         setPageNr(maxPageNr);
-        console.log(
-          "CHANGE",
-          totalAmountOfElementsToDisplayOnPages,
-          maxPageNr,
-          pageNr
-        );
       }
     }, [
       amountOfElementsPerPage,
