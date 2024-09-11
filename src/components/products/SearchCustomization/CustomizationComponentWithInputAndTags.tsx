@@ -7,6 +7,7 @@ import LoadingFallback from "../../UI/LoadingFallback";
 import Error from "../../UI/Error";
 import {
   ISearchCustomizationContext,
+  retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj,
   SearchCustomizationContext,
 } from "../../../store/products/SearchCustomizationContext";
 import Button from "../../UI/Button";
@@ -17,9 +18,10 @@ import {
 import useQueryGetTagsAccordingToQuery from "../../../hooks/searchCustomizationRelated/useQueryGetTagsAccordingToQuery";
 import useQueryGetTheMostPopularTags from "../../../hooks/searchCustomizationRelated/useQueryGetTheMostPopularTags";
 import { useQueryGetTagsAvailableTagsNames } from "../../../hooks/searchCustomizationRelated/useQueryGetTagsTypes";
+import { ProductsSearchCustomizationCustomInformationContext } from "../../../store/products/ProductsSearchCustomizationCustomInformationContext";
 
 export default function CustomizationComponentWithInputAndTags({
-  paramName,
+  tagType,
   searchCustomizationCtxStateName,
   searchCustomizationCtxDispatchName,
   propertyNameToRetrieveTagFromDataObj,
@@ -27,7 +29,7 @@ export default function CustomizationComponentWithInputAndTags({
   inputPlaceholder,
   customGameDocumentPropertyNameForTag,
 }: {
-  paramName: useQueryGetTagsAvailableTagsNames;
+  tagType: useQueryGetTagsAvailableTagsNames;
   searchCustomizationCtxStateName: keyof ISearchCustomizationContext;
   searchCustomizationCtxDispatchName: keyof ISearchCustomizationContext;
   propertyNameToRetrieveTagFromDataObj: string;
@@ -35,12 +37,27 @@ export default function CustomizationComponentWithInputAndTags({
   inputPlaceholder: string;
   customGameDocumentPropertyNameForTag?: string;
 }) {
+  const { customSearchParamsAndSessionStorageEntriesNames } = useContext(
+    ProductsSearchCustomizationCustomInformationContext
+  );
+
+  const relatedSearchParamName =
+    retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+      tagType,
+      customSearchParamsAndSessionStorageEntriesNames
+    );
+  const relatedTagType =
+    retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+      tagType,
+      customSearchParamsAndSessionStorageEntriesNames,
+      true
+    ) as useQueryGetTagsAvailableTagsNames;
   const {
     data: mostPopularTagsData,
     error: mostPopularTagsError,
     isLoading: mostPopularTagsIsLoading,
   } = useQueryGetTheMostPopularTags(
-    paramName,
+    relatedTagType,
     customGameDocumentPropertyNameForTag
   );
 
@@ -48,7 +65,7 @@ export default function CustomizationComponentWithInputAndTags({
   const { handleInputChange, queryDebouncingState } = useInput({
     stateValue: tagSearch,
     setStateValue: setTagSearch,
-    searchParamName: paramName,
+    searchParamName: relatedSearchParamName,
     saveDebouncedStateInSearchParams: false,
     saveDebouncedStateInSessionStorage: false,
   });
@@ -59,7 +76,7 @@ export default function CustomizationComponentWithInputAndTags({
     error: queryTagsError,
   } = useQueryGetTagsAccordingToQuery(
     queryDebouncingState,
-    paramName,
+    relatedTagType,
     customGameDocumentPropertyNameForTag
   );
 
@@ -125,7 +142,7 @@ export default function CustomizationComponentWithInputAndTags({
             }
             active={selectedTagsState.stateArr.includes(tag)}
             canClickWhileActive
-            passedKey={`search-customization-tag-btn-${paramName}-${tag}${
+            passedKey={`search-customization-tag-btn-${relatedSearchParamName}-${tag}${
               selectedTagsState.stateArr.includes(tag) ? "-active" : ""
             }`}
           >

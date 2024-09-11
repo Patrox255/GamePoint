@@ -81,11 +81,6 @@ const allowedOrigins = FRONTEND_URLS.split(",");
 
 export const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
-    console.log(
-      origin,
-      allowedOrigins,
-      origin && allowedOrigins.indexOf(origin) !== -1
-    );
     if (!origin || allowedOrigins.indexOf(origin) !== -1)
       return callback(null, true);
     return callback(new Error("Rejected by CORS policy"));
@@ -123,7 +118,7 @@ export const randomizeArrOrder = function <T extends unknown[]>(arr: T) {
 export const generateRandomStr = (length: number, prefix: string = "") => {
   let str = prefix;
   const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#";
   str += Array.from({ length: length - prefix.length }, () =>
     random(0, characters.length - 1)
   ).reduce((str, random) => str + characters[random], "");
@@ -132,7 +127,8 @@ export const generateRandomStr = (length: number, prefix: string = "") => {
 export const generateUniqueRandomStrs = (
   amount: number,
   prefix: string = "",
-  lengthArg: number | number[]
+  lengthArg: number | number[],
+  additionalRandomStrFormatFn?: (randomStr: string) => boolean
 ) => {
   const strs: string[] = [];
   for (let i = 0; i < amount; i++) {
@@ -142,7 +138,10 @@ export const generateUniqueRandomStrs = (
       : lengthArg;
     do {
       randomStr = generateRandomStr(length, prefix);
-    } while (strs.includes(randomStr));
+    } while (
+      strs.includes(randomStr) ||
+      (additionalRandomStrFormatFn && !additionalRandomStrFormatFn(randomStr))
+    );
     strs.push(randomStr);
   }
   return strs;
@@ -171,7 +170,6 @@ export const generateAndSaveJWT = (
     accessEnvironmentVariable("FRONTEND_URL_FOR_COOKIES", false),
     accessEnvironmentVariable("BACKEND_URL_FOR_COOKIES", false),
   ].filter((cookieDomain) => cookieDomain !== undefined);
-  console.log("domains", environmentCookieDomains);
   if (environmentCookieDomains.length === 0)
     res.cookie(
       type === "access" ? "accessToken" : "refreshToken",
@@ -287,7 +285,6 @@ interface IJwtPayload {
 const jwtVerifyPromisified = (token: string, secretKey: string) =>
   new Promise<string | jwt.JwtPayload | undefined>((resolve, reject) => {
     jwt.verify(token, secretKey, (err, decoded) => {
-      console.log("errVerifyJWT", err);
       if (err) reject(err);
       resolve(decoded);
     });
@@ -309,7 +306,6 @@ export interface IRequestAdditionAfterAccessJwtfMiddleware {
 
 const accessJwt = async (req: Request, res: Response) => {
   const refreshToken = req.cookies.refreshToken;
-  console.log(req.cookies);
   if (!refreshToken) return { message: "Could not authorize", status: 401 };
 
   try {
@@ -326,7 +322,6 @@ const accessJwt = async (req: Request, res: Response) => {
     if (!accessToken) {
       accessToken = generateAndSaveJWT(res, userId, "access");
     }
-    console.log(accessToken);
     let decodedJwtAccessToken: jwt.JwtPayload = {};
     try {
       decodedJwtAccessToken = (await jwtVerifyPromisified(
@@ -366,7 +361,6 @@ export const verifyJwt = async (
   next: NextFunction
 ) => {
   const accessJwtResult = await accessJwt(req, res);
-  console.log(accessJwtResult);
   if (typeof accessJwtResult !== "object") return next();
   return res
     .status(accessJwtResult.status)

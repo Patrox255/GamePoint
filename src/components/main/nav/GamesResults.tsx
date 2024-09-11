@@ -7,19 +7,14 @@ import {
   Variants,
 } from "framer-motion";
 import slugify from "slugify";
-import {
-  createContext,
-  ReactNode,
-  useCallback,
-  useContext,
-  useMemo,
-} from "react";
+import { createContext, ReactNode, useContext, useMemo } from "react";
 
 import PriceTag from "../../game/PriceTag";
 import { IGame } from "../../../models/game.model";
 import LinkToDifferentPageWithCurrentPageInformation from "../../UI/LinkToDifferentPageWithCurrentPageInformation";
 import HeaderLinkOrHeaderAnimation from "../../UI/headers/HeaderLinkOrHeaderAnimation";
 import Header from "../../UI/headers/Header";
+import { ProductsSearchCustomizationCustomInformationContext } from "../../../store/products/ProductsSearchCustomizationCustomInformationContext";
 
 const gameContainerClasses =
   "w-full grid grid-cols-gameSearchBarResult items-center gap-2 px-6";
@@ -58,10 +53,37 @@ export const dropdownListElementsMotionConfigurationGenerator: (
 export const GameResultContext = createContext<{
   game: IGame | undefined;
   showQuantityAndFinalPrice: boolean;
+  headerLinkInsteadOfWholeGameContainer?: boolean;
 }>({
   game: undefined,
   showQuantityAndFinalPrice: false,
+  headerLinkInsteadOfWholeGameContainer: false,
 });
+
+const GameContainer = function ({ children }: { children: ReactNode }) {
+  const { game, headerLinkInsteadOfWholeGameContainer } =
+    useContext(GameResultContext);
+  const { productEntryOnClickStableFn } = useContext(
+    ProductsSearchCustomizationCustomInformationContext
+  );
+  return headerLinkInsteadOfWholeGameContainer ||
+    productEntryOnClickStableFn ? (
+    <div
+      className={`${gameContainerClasses} ${
+        productEntryOnClickStableFn ? "cursor-pointer" : ""
+      }`}
+      onClick={
+        productEntryOnClickStableFn
+          ? () => productEntryOnClickStableFn(game as IGame)
+          : undefined
+      }
+    >
+      {children}
+    </div>
+  ) : (
+    <GameLink useContainerClasses={true}>{children}</GameLink>
+  );
+};
 
 const GameLink = ({
   children,
@@ -103,16 +125,6 @@ export default function GamesResults<T extends IGame>({
   AdditionalGameInformation?: ({ game }: { game: T }) => ReactNode;
   showQuantityAndFinalPrice?: boolean;
 }) {
-  const GameContainer = useCallback(
-    ({ children }: { children: ReactNode }) =>
-      headerLinkInsteadOfWholeGameContainer ? (
-        <div className={gameContainerClasses}>{children}</div>
-      ) : (
-        <GameLink useContainerClasses={true}>{children}</GameLink>
-      ),
-    [headerLinkInsteadOfWholeGameContainer]
-  );
-
   const gameResultEntryElementMotionConfiguration = useMemo(
     () =>
       dropdownListElementsMotionConfigurationGenerator(
@@ -147,7 +159,11 @@ export default function GamesResults<T extends IGame>({
             {...gameResultEntryElementMotionConfiguration}
           >
             <GameResultContext.Provider
-              value={{ game, showQuantityAndFinalPrice }}
+              value={{
+                game,
+                showQuantityAndFinalPrice,
+                headerLinkInsteadOfWholeGameContainer,
+              }}
             >
               <GameContainer>
                 <figure className="grid grid-cols-2 items-center gap-2 justify-center">

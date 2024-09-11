@@ -11,6 +11,17 @@ GamePoint is a project of computer games shop web application with various addit
 
 [Vercel Deploy](https://game-point-xi.vercel.app/)
 
+### Demo Users Credentials
+
+Basically all of the created sample users thanks to the **/init** endpoint have their password set to their login with first letter capitalized so that it is fairly easy to log into their accounts. Because of that you can for instance find an user which you like on any product reviews section as reviews of the products are also automatically generated and simply log into the chosen account using provided formula!
+
+Some of the accounts have been set to be admins as well but to save time looking for them here are credentials for one of the admin accounts:
+
+**Login:** `testing123!`  
+**Password:** `Testing123!`
+
+_Note: These credentials are for demonstration purposes only._
+
 ## Installation for development
 
 ### Requirements
@@ -81,7 +92,7 @@ Create a file called '.env' inside the root directory of the back-end side of th
  MAX_USERS_PER_PAGE=your_choice_of_maximum_number_of_users_which_will_be_displayed_at_one_time_on_admin_panel_page_users_section
  FRONTEND_URL_FOR_COOKIES=domain_to_set_app_cookies_to_be_able_to_be_read_by_backend_from_frontend
  BACKEND_URL_FOR_COOKIES=normally_you_only_have_to_set_the_above_one_but_in_case_your_backend_and_frontend_are_on_different_
- domains_then_set_both_to_the_one_of_them
+ domains_then_set_them_correctly
 ```
 
 10. Run back-end server

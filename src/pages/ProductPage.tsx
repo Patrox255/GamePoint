@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+/* eslint-disable react-refresh/only-export-components */
 import {
   ErrorResponse,
   LoaderFunction,
@@ -8,44 +8,18 @@ import {
 
 import { getGameData, queryClient } from "../lib/fetch";
 import MainWrapper from "../components/structure/MainWrapper";
-import Error from "../components/UI/Error";
-import ExtendedGamePreview, {
-  IExtendedGamePreviewGameArg,
-} from "../components/products/ExtendedGamePreview";
-import useCompareComplexForUseMemo from "../hooks/useCompareComplexForUseMemo";
-import { IGame } from "../models/game.model";
+import Product from "../components/product/Product";
+import ProductContextProvider from "../store/product/ProductContext";
 
 export default function ProductPage() {
   const { productSlug } = useParams();
 
-  const { data, error } = useQuery({
-    queryFn: ({ signal }) =>
-      getGameData<IExtendedGamePreviewGameArg>({
-        signal,
-        productSlug: productSlug!,
-      }),
-    queryKey: ["games", productSlug],
-  });
-
-  const gameStable = useCompareComplexForUseMemo(
-    data && data.data ? data.data : {}
-  );
-
-  let content;
-  if (error) content = <Error message={error.message} />;
-  if (data && data.data) {
-    content = (
-      <ExtendedGamePreview
-        game={gameStable as IExtendedGamePreviewGameArg}
-        key={`product-${(gameStable as IGame).slug}`}
-      />
-    );
-  }
-
   return (
     <MainWrapper>
       <div className="w-3/5 flex flex-col justify-center items-center">
-        {content}
+        <ProductContextProvider productSlug={productSlug}>
+          <Product />
+        </ProductContextProvider>
       </div>
     </MainWrapper>
   );

@@ -6,7 +6,6 @@ import ReviewContent from "./ReviewContent";
 import { PagesManagerContext } from "../../store/products/PagesManagerContext";
 import { MAX_REVIEWS_PER_PAGE } from "../../helpers/config";
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
 import { getGameData } from "../../lib/fetch";
 import LoadingFallback from "../UI/LoadingFallback";
 import Error from "../UI/Error";
@@ -14,6 +13,7 @@ import Header from "../UI/headers/Header";
 import RemoveReviewContextProvider, {
   RemoveReviewContext,
 } from "../../store/product/RemoveReviewContext";
+import { ProductContext } from "../../store/product/ProductContext";
 
 export const ReviewContext = createContext<{
   review: IReview | undefined;
@@ -57,19 +57,20 @@ export interface IGameReviewsResponse {
 }
 
 export default function ReviewsWrapper() {
-  const { productSlug } = useParams();
+  const { productId, productSlug } = useContext(ProductContext);
   const { pageNr } = useContext(PagesManagerContext);
 
   const { data, error, isLoading } = useQuery({
     queryFn: ({ signal }) =>
       getGameData<IGameReviewsResponse>({
         signal,
-        productSlug: productSlug!,
+        productId,
+        productSlug,
         onlyReviews: true,
         maxReviewsPerPage: MAX_REVIEWS_PER_PAGE,
         reviewsPageNr: pageNr,
       }),
-    queryKey: ["games", productSlug, "reviews", pageNr],
+    queryKey: ["games", productSlug ?? productId, "reviews", pageNr],
   });
 
   let content;

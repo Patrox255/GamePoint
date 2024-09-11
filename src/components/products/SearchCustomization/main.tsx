@@ -32,7 +32,7 @@ export default function SearchCustomization() {
           <PriceCustomization />
           <DiscountCustomization />
           <CustomizationComponentWithInputAndTags
-            paramName="genres"
+            tagType="genres"
             propertyNameToRetrieveTagFromDataObj="name"
             searchCustomizationCtxStateName="selectedGenresState"
             searchCustomizationCtxDispatchName="selectedGenresDispatch"
@@ -40,7 +40,7 @@ export default function SearchCustomization() {
             inputPlaceholder="Type in a genre name"
           />
           <CustomizationComponentWithInputAndTags
-            paramName="platforms"
+            tagType="platforms"
             propertyNameToRetrieveTagFromDataObj="name"
             searchCustomizationCtxStateName="selectedPlatformsState"
             searchCustomizationCtxDispatchName="selectedPlatformsDispatch"
@@ -48,7 +48,7 @@ export default function SearchCustomization() {
             inputPlaceholder="Type in a platform name"
           />
           <CustomizationComponentWithInputAndTags
-            paramName="developers"
+            tagType="developers"
             propertyNameToRetrieveTagFromDataObj="name"
             searchCustomizationCtxStateName="selectedDevelopersState"
             searchCustomizationCtxDispatchName="selectedDevelopersDispatch"
@@ -57,7 +57,7 @@ export default function SearchCustomization() {
             customGameDocumentPropertyNameForTag="developer"
           />
           <CustomizationComponentWithInputAndTags
-            paramName="publishers"
+            tagType="publishers"
             propertyNameToRetrieveTagFromDataObj="name"
             searchCustomizationCtxStateName="selectedPublishersState"
             searchCustomizationCtxDispatchName="selectedPublishersDispatch"

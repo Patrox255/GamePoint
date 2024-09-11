@@ -4,6 +4,10 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import { useStateWithSearchParams } from "../../hooks/useStateWithSearchParams";
 import Button from "../UI/Button";
+import ArrowSVG from "../UI/ArrowSVG";
+import leftArrow from "../../assets/left-arrow.svg";
+import rightArrow from "../../assets/right-arrow.svg";
+import Header from "../UI/headers/Header";
 
 export const tabsSectionElementTransitionProperties = {
   initial: { opacity: 0 },
@@ -45,12 +49,16 @@ export default function TabsComponent<
   possibleTabsStable,
   sessionStorageAndSearchParamEntryNameIfYouWantToUseThem,
   storeEvenInitialValueInSessionStorageAndSearchParams,
+  forceDisableNavigation = false,
+  useAlternativeLookAsASlider = false,
 }: {
   defaultTabsStateValue: tagName;
   possibleTabsStable: tagsObj[];
   generateAvailableTabsFromAllFnStable: (possibleTabs: tagsObj[]) => tagsObj[];
   sessionStorageAndSearchParamEntryNameIfYouWantToUseThem?: string;
   storeEvenInitialValueInSessionStorageAndSearchParams?: boolean;
+  forceDisableNavigation?: boolean;
+  useAlternativeLookAsASlider?: boolean;
 }) {
   const {
     state: tabsState,
@@ -78,32 +86,90 @@ export default function TabsComponent<
     () => curActiveTabEntry.ComponentToRender,
     [curActiveTabEntry]
   );
+  const curTabIndex = availableTabs.findIndex(
+    (availableTab) => availableTab.tagName === tabsState
+  );
+  const handleModifyTabsStateUsingAlternativeLookSliderControls = useCallback(
+    (indexAddition: number) => {
+      let newTabIndex = curTabIndex + indexAddition;
+      if (newTabIndex < 0) newTabIndex = availableTabs.length - 1;
+      if (newTabIndex > availableTabs.length - 1) newTabIndex = 0;
+      setTabsState(availableTabs[newTabIndex].tagName);
+    },
+    [availableTabs, curTabIndex, setTabsState]
+  );
+  const duringNavigationTransition =
+    tabsState !== debouncingTabsState || forceDisableNavigation;
+  const tabsNavigationContent = !useAlternativeLookAsASlider ? (
+    availableTabs.map((availableTab) => {
+      const active = availableTab.tagName === tabsState;
+      const disabled = active || duringNavigationTransition;
+      return (
+        <Button
+          onClick={
+            !disabled ? () => setTabsState(availableTab.tagName) : undefined
+          }
+          disabled={disabled}
+          key={`${availableTab.tagName}${disabled ? "-disabled" : ""}`}
+          active={active}
+        >
+          {availableTab.header}
+        </Button>
+      );
+    })
+  ) : (
+    <>
+      <ArrowSVG
+        arrowSrc={leftArrow}
+        alt="Arrow pointing to the left"
+        onClick={() =>
+          handleModifyTabsStateUsingAlternativeLookSliderControls(-1)
+        }
+        disabled={duringNavigationTransition}
+        customWidthTailwindClass="w-12"
+      />
+      <motion.div className="tabs-container w-full flex items-center relative overflow-hidden">
+        {availableTabs.map((availableTab, availableTabIndex) => (
+          <motion.div
+            className="w-full flex-shrink-0 absolute top-0 left-0 h-full flex justify-center items-center"
+            animate={{
+              translateX: `${(availableTabIndex - curTabIndex) * 100}%`,
+            }}
+            key={availableTab.header}
+            transition={{ duration: 0.5 }}
+          >
+            <Header>{availableTab.header}</Header>
+          </motion.div>
+        ))}
+      </motion.div>
+      <ArrowSVG
+        arrowSrc={rightArrow}
+        alt="Arrow pointing to the right"
+        onClick={() =>
+          handleModifyTabsStateUsingAlternativeLookSliderControls(1)
+        }
+        disabled={duringNavigationTransition}
+        customWidthTailwindClass="w-12"
+        translateXVal="2rem"
+      />
+    </>
+  );
 
   return (
     <>
-      <nav className="user-panel-nav flex gap-4">
-        {availableTabs.map((availableTab) => {
-          const active = availableTab.tagName === tabsState;
-          const disabled =
-            active || tabsState !== debouncingTabsState ? true : false;
-          return (
-            <Button
-              onClick={
-                !disabled ? () => setTabsState(availableTab.tagName) : undefined
-              }
-              disabled={disabled}
-              key={`${availableTab.tagName}${disabled ? "-disabled" : ""}`}
-              active={active}
-            >
-              {availableTab.header}
-            </Button>
-          );
-        })}
-      </nav>
+      {availableTabs.length !== 0 && (
+        <nav
+          className={`flex gap-4 ${
+            useAlternativeLookAsASlider ? "w-1/2" : "w-full"
+          } justify-center`}
+        >
+          {tabsNavigationContent}
+        </nav>
+      )}
       <AnimatePresence mode="wait">
         <motion.article
           {...tabsSectionElementTransitionProperties}
-          key={`user-panel-content-${curActiveTabEntry.tagName}`}
+          key={`user-panel-content-${curActiveTabEntry?.tagName}`}
           className="py-8 w-full flex justify-center items-center text-center flex-col gap-4"
         >
           <TabsComponentContext.Provider
@@ -116,7 +182,13 @@ export default function TabsComponent<
                 setNormalAndDebouncingTabsState as tabsComponentContextSetTabsStateDispatchFn,
             }}
           >
-            <CurTabComponent />
+            {curActiveTabEntry ? (
+              <CurTabComponent />
+            ) : (
+              <Header>
+                There are no remaining tabs possible to choose from!
+              </Header>
+            )}
           </TabsComponentContext.Provider>
         </motion.article>
       </AnimatePresence>

@@ -1,13 +1,10 @@
 import { useContext } from "react";
 
 import Input from "../UI/Input";
-import { useAppSelector } from "../../hooks/reduxStore";
 import { SearchCustomizationContext } from "../../store/products/SearchCustomizationContext";
 
 export default function MainSearchBar() {
-  const searchTerm = useAppSelector(
-    (state) => state.mainSearchBarSlice.searchTerm
-  );
+  const searchTerm = useContext(SearchCustomizationContext).searchTerm;
   const { handleSearchTermChange } = useContext(SearchCustomizationContext);
 
   return (

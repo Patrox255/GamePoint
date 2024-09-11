@@ -1,9 +1,10 @@
 import PagesManagerContextProvider from "../../store/products/PagesManagerContext";
+import ManageProductsContextProvider from "../../store/userPanel/admin/products/ManageProductsContext";
 import ManageUsersContextProvider from "../../store/userPanel/admin/users/ManageUsersContext";
 import TabsComponent, { ITagsObjDefault } from "../structure/TabsComponent";
 import Header from "../UI/headers/Header";
 import ManageOrders from "./admin/ManageOrders";
-import ManageProducts from "./admin/ManageProducts";
+import ManageProducts from "./admin/products/ManageProducts";
 import ManageUsers from "./admin/users/ManageUsers";
 
 export type adminPanelPossibleSectionsNames =
@@ -30,7 +31,11 @@ const adminPanelPossibleSections: ITagsObjDefault<adminPanelPossibleSectionsName
       tagName: "manageUsers",
     },
     {
-      ComponentToRender: <ManageProducts />,
+      ComponentToRender: (
+        <ManageProductsContextProvider>
+          <ManageProducts />
+        </ManageProductsContextProvider>
+      ),
       header: "Manage products",
       tagName: "manageProducts",
     },

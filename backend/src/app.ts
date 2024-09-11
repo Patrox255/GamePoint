@@ -101,7 +101,11 @@ import {
   retrieveUsersBasedOnEmailOrLoginEntries,
   verifyEmailEntries,
 } from "./validateBodyEntries";
-import { IValidateBodyEntry, validateBodyEntries } from "./validateBodyFn";
+import {
+  IValidateBodyEntry,
+  validateBodyEntries,
+  validatePasswordFn,
+} from "./validateBodyFn";
 import { IOrderItem } from "./models/orderItem.model";
 import Order, {
   IOrder,
@@ -356,21 +360,32 @@ const startServer = async () => {
     );
 
     app.get(
-      "/products/:productSlug",
+      "/products/product-data",
       onlyAccessJwt,
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          const { productSlug } = req.params;
           const queries = await parseQueries(req);
-          const { onlyReviews, reviewsPageNr, maxReviewsPerPage } = queries;
+          const {
+            onlyReviews,
+            reviewsPageNr,
+            maxReviewsPerPage,
+            productSlug,
+            productId,
+          } = queries;
           await validateQueriesTypes([
             ["boolean", onlyReviews],
             ["number", reviewsPageNr],
             ["number", maxReviewsPerPage],
+            ["string", productSlug],
+            ["string", productId],
           ]);
-          const game = await Game.findOne({
-            slug: { $regex: productSlug, $options: "i" },
-          }).populate([
+          if (productId && !isValidObjectId(productId))
+            return res.sendStatus(422);
+
+          const retrieveGameMongooseQuery = productId
+            ? Game.findById(productId)
+            : Game.findOne({ slug: { $regex: productSlug, $options: "i" } });
+          const game = await retrieveGameMongooseQuery.populate([
             "genres",
             "publisher",
             "developer",
@@ -785,7 +800,9 @@ const startServer = async () => {
           const sampleUsersLogins = generateUniqueRandomStrs(
             10,
             "test",
-            [4, 10]
+            [8, 13],
+            (generatedLogin) =>
+              validatePasswordFn(generatedLogin, "") === true ? true : false
           );
           const salt = await genSalt();
           const sampleUsersToSave: IUser[] = await Promise.all(

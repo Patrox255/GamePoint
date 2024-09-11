@@ -22,6 +22,7 @@ import {
   generalInformationModificationStoredInQueryMode,
   transformGeneralInformationModificationUserFriendlyModeToOneStoredInQuery,
 } from "../components/userPanel/admin/users/SelectedUserManagement";
+import { INewOrExistingProductManagementStateToSend } from "../components/product/NewOrExistingProductManagementForm";
 
 export const queryClient = new QueryClient();
 
@@ -182,26 +183,32 @@ export const retrieveMinAndMaxOfExistingPrices = async (
   return data;
 };
 
+export type IGetGameDataNecessaryInformation = {
+  productSlug?: string;
+  productId?: string;
+};
 export const getGameData = async <T = IGame>({
   signal,
   productSlug,
+  productId,
   onlyReviews,
   reviewsPageNr,
   maxReviewsPerPage,
 }: {
   signal?: AbortSignal;
-  productSlug: string;
   onlyReviews?: boolean;
   reviewsPageNr?: number;
   maxReviewsPerPage?: number;
-}) => {
+} & IGetGameDataNecessaryInformation) => {
   const data = await getJSON<IGame>({
     url: generateUrlEndpointWithSearchParams(
-      `${API_URL}/products/${productSlug}`,
+      `${API_URL}/products/product-data`,
       {
         onlyReviews,
         reviewsPageNr,
         maxReviewsPerPage,
+        productSlug,
+        productId,
       }
     ),
     signal,
@@ -694,6 +701,17 @@ export const modifyUserDataByAdmin = async function ({
       }),
     },
     method: "POST",
+  });
+  return data;
+};
+
+export const productManagement = async function (
+  productManagementDataToSend: INewOrExistingProductManagementStateToSend
+) {
+  const data = await getJSON<string>({
+    url: `${API_URL}/products-management`,
+    method: "POST",
+    body: productManagementDataToSend,
   });
   return data;
 };

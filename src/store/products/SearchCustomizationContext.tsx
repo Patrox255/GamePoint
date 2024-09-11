@@ -1,4 +1,5 @@
-import { createContext, ReactNode, useMemo, useState } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, ReactNode, useContext, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useInput } from "../../hooks/useInput";
@@ -14,6 +15,8 @@ import useHandleElementsOrderCustomizationState, {
   IOrderCustomizationReducer,
   IOrderCustomizationStateObjWithDebouncedFields,
 } from "../../hooks/useHandleElementsOrderCustomizationState";
+import { ProductsSearchCustomizationCustomInformationContext } from "./ProductsSearchCustomizationCustomInformationContext";
+import { useQueryGetTagsAvailableTagsNames } from "../../hooks/searchCustomizationRelated/useQueryGetTagsTypes";
 
 type IOrderCustomization = IOrderCustomizationStateObjWithDebouncedFields<
   (typeof searchCustomizationOrderFieldsNames)[number]
@@ -47,7 +50,80 @@ export interface ISearchCustomizationContext {
   selectedDevelopersDispatch: React.Dispatch<ISelectedTagsReducer>;
   selectedPublishersState: ISelectedTags;
   selectedPublishersDispatch: React.Dispatch<ISelectedTagsReducer>;
+  searchTerm: string;
 }
+
+export type usedSearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization =
+
+    | "query"
+    | "min"
+    | "max"
+    | "searchCustomizationOrder"
+    | "discount"
+    | "genres"
+    | "platforms"
+    | "developers"
+    | "publishers";
+export type usedSearchParamsAndSessionStorageIdsOfDeeperStatesForProductsSearchCustomization =
+  "products-search-tags" | "priceRange";
+export type ISearchParamsAndSessionStorageEntryValueWithSetTagType = {
+  searchParam: string;
+  tagType: useQueryGetTagsAvailableTagsNames;
+};
+export type ISearchParamsAndSessionStorageEntriesNames<
+  searchParamsAndSessionStorageEntriesNames extends string,
+  searchParamsAndSessionStorageIdsOfDeeperStates extends
+    | string
+    | undefined = undefined
+> = {
+  [key in searchParamsAndSessionStorageEntriesNames]?:
+    | string
+    | ISearchParamsAndSessionStorageEntryValueWithSetTagType;
+} & {
+  defaultSearchParamsAndSessionStorageEntriesNamesPrefix?: string;
+  defaultSearchParamsAndSessionStorageEntriesNamesSuffix?: string;
+} & (searchParamsAndSessionStorageIdsOfDeeperStates extends undefined
+    ? object
+    : {
+        [searchParamsAndSessionStorageIdsOfDeeperStatesKey in searchParamsAndSessionStorageIdsOfDeeperStates as string]?: string;
+      });
+export type ISearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization =
+  ISearchParamsAndSessionStorageEntriesNames<
+    usedSearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
+    usedSearchParamsAndSessionStorageIdsOfDeeperStatesForProductsSearchCustomization
+  >;
+export const retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj =
+  <T extends Y, Y extends string>(
+    entryName: Y,
+    searchParamsAndSessionStorageEntriesNames?: ISearchParamsAndSessionStorageEntriesNames<T>,
+    returnTagType: boolean = false
+  ) => {
+    if (!searchParamsAndSessionStorageEntriesNames) return entryName;
+    const searchParamsAndSessionStorageEntriesNamesValue =
+      searchParamsAndSessionStorageEntriesNames[entryName as T];
+    if (returnTagType)
+      return (
+        (
+          searchParamsAndSessionStorageEntriesNamesValue as ISearchParamsAndSessionStorageEntryValueWithSetTagType
+        )?.tagType ?? entryName
+      );
+    if (searchParamsAndSessionStorageEntriesNamesValue !== undefined)
+      return (
+        (
+          searchParamsAndSessionStorageEntriesNamesValue as ISearchParamsAndSessionStorageEntryValueWithSetTagType
+        ).searchParam ??
+        (searchParamsAndSessionStorageEntriesNamesValue as string)
+      );
+    return `${
+      searchParamsAndSessionStorageEntriesNames.defaultSearchParamsAndSessionStorageEntriesNamesPrefix
+        ? searchParamsAndSessionStorageEntriesNames.defaultSearchParamsAndSessionStorageEntriesNamesPrefix
+        : ""
+    }${entryName}${
+      searchParamsAndSessionStorageEntriesNames.defaultSearchParamsAndSessionStorageEntriesNamesSuffix
+        ? searchParamsAndSessionStorageEntriesNames.defaultSearchParamsAndSessionStorageEntriesNamesSuffix
+        : ""
+    }`;
+  };
 
 export const SearchCustomizationContext =
   createContext<ISearchCustomizationContext>({
@@ -72,6 +148,7 @@ export const SearchCustomizationContext =
     selectedDevelopersDispatch: () => {},
     selectedPublishersState: {} as ISelectedTags,
     selectedPublishersDispatch: () => {},
+    searchTerm: "",
   });
 
 export default function SearchCustomizationContextProvider({
@@ -86,28 +163,85 @@ export default function SearchCustomizationContextProvider({
   );
   const navigate = useNavigate();
 
-  const searchTerm = useAppSelector(
+  const {
+    createCustomSearchTermState,
+    customSearchTermStateInCaseOfUsingExternalOne,
+    setCustomSearchTermStateInCaseOfUsingExternalOne,
+    customSearchParamsAndSessionStorageEntriesNames,
+  } = useContext(ProductsSearchCustomizationCustomInformationContext);
+  const defaultSearchTermToUse = useAppSelector(
     (state) => state.mainSearchBarSlice.searchTerm
   );
-  const { handleInputChange, queryDebouncingState: searchTermDebouncingState } =
-    useInput({
-      stateValue: searchTerm,
-      setStateAction: actions.setSearchTerm,
-      searchParamName: "query",
-    });
+  let searchTerm: string =
+    customSearchTermStateInCaseOfUsingExternalOne !== undefined
+      ? customSearchTermStateInCaseOfUsingExternalOne
+      : defaultSearchTermToUse;
+  console.log(
+    retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+      "query",
+      customSearchParamsAndSessionStorageEntriesNames
+    )
+  );
 
+  const querySearchParamAndSessionStorageEntryName =
+    retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+      "query",
+      customSearchParamsAndSessionStorageEntriesNames
+    );
+  const searchTermInCaseOfCreatingCustomOneHereDefaultValue =
+    querySearchParamAndSessionStorageEntryName !== "query"
+      ? (generateInitialStateFromSearchParamsOrSessionStorage(
+          "",
+          searchParams,
+          querySearchParamAndSessionStorageEntryName
+        ) as string)
+      : "";
+  const {
+    handleInputChange,
+    queryDebouncingState: searchTermDebouncingState,
+    inputValueInCaseOfCreatingStateHere:
+      searchTermInCaseOfCreatingCustomOneHere,
+  } = useInput({
+    ...(!createCustomSearchTermState && {
+      stateValue: searchTerm,
+    }),
+    ...(!createCustomSearchTermState
+      ? !setCustomSearchTermStateInCaseOfUsingExternalOne &&
+        customSearchTermStateInCaseOfUsingExternalOne === undefined
+        ? {
+            setStateAction: actions.setSearchTerm,
+          }
+        : { setStateValue: setCustomSearchTermStateInCaseOfUsingExternalOne }
+      : {}),
+    searchParamName: querySearchParamAndSessionStorageEntryName,
+    defaultStateValueInCaseOfCreatingStateHere:
+      searchTermInCaseOfCreatingCustomOneHereDefaultValue,
+  });
+  if (createCustomSearchTermState)
+    searchTerm = searchTermInCaseOfCreatingCustomOneHere!;
+
+  const priceMinRangeSearchParamAndSessionStorageEntryName =
+    retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+      "min",
+      customSearchParamsAndSessionStorageEntriesNames
+    );
+  const priceMaxRangeSearchParamAndSessionStorageEntryName =
+    retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+      "max",
+      customSearchParamsAndSessionStorageEntriesNames
+    );
   const [min, setMin] = useState<number>(
     generateInitialStateFromSearchParamsOrSessionStorage(
       NaN,
       searchParams,
-      "min"
+      priceMinRangeSearchParamAndSessionStorageEntryName
     )
   );
   const [max, setMax] = useState<number>(
     generateInitialStateFromSearchParamsOrSessionStorage(
       NaN,
       searchParams,
-      "max"
+      priceMaxRangeSearchParamAndSessionStorageEntryName
     )
   );
   const {
@@ -116,8 +250,12 @@ export default function SearchCustomizationContextProvider({
   } = useInput({
     stateValue: min,
     setStateValue: setMin,
-    searchParamName: "min",
-    sameTimeOccurrenceChanceId: "priceRange",
+    searchParamName: priceMinRangeSearchParamAndSessionStorageEntryName,
+    sameTimeOccurrenceChanceId:
+      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+        "priceRange",
+        customSearchParamsAndSessionStorageEntriesNames
+      ),
   });
   const {
     handleInputChange: handleMaxChange,
@@ -125,15 +263,22 @@ export default function SearchCustomizationContextProvider({
   } = useInput({
     stateValue: max,
     setStateValue: setMax,
-    searchParamName: "max",
-    sameTimeOccurrenceChanceId: "priceRange",
+    searchParamName: priceMaxRangeSearchParamAndSessionStorageEntryName,
+    sameTimeOccurrenceChanceId:
+      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+        "priceRange",
+        customSearchParamsAndSessionStorageEntriesNames
+      ),
   });
 
   const { orderCustomizationDispatch, orderCustomizationStateStable } =
     useHandleElementsOrderCustomizationState({
       orderCustomizationFieldsNamesStable: searchCustomizationOrderFieldsNames,
       orderCustomizationSearchParamAndSessionStorageEntryName:
-        "searchCustomizationOrder",
+        retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+          "searchCustomizationOrder",
+          customSearchParamsAndSessionStorageEntriesNames
+        ),
     });
 
   const {
@@ -142,7 +287,11 @@ export default function SearchCustomizationContextProvider({
     debouncingState: debouncedDiscountActive,
   } = useStateWithSearchParams({
     initialStateStable: 0,
-    searchParamName: "discount",
+    searchParamName:
+      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+        "discount",
+        customSearchParamsAndSessionStorageEntriesNames
+      ),
     pathName: location.pathname,
   });
 
@@ -150,7 +299,11 @@ export default function SearchCustomizationContextProvider({
     location,
     navigate,
     searchParams,
-    idOfDeeperStateThatIsSentAndDispatchCanChangeIt: "products-search-tags",
+    idOfDeeperStateThatIsSentAndDispatchCanChangeIt:
+      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+        "products-search-tags",
+        customSearchParamsAndSessionStorageEntriesNames
+      ),
   };
 
   const {
@@ -158,7 +311,11 @@ export default function SearchCustomizationContextProvider({
     selectedTagsDispatch: selectedGenresDispatch,
   } = useCreateUseReducerStateForCustomizationComponentWithInputAndTags({
     ...searchCustomizationComponentWithInputAndTagsHookDefaultArguments,
-    searchParamName: "genres",
+    searchParamName:
+      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+        "genres",
+        customSearchParamsAndSessionStorageEntriesNames
+      ),
   });
 
   const {
@@ -166,7 +323,11 @@ export default function SearchCustomizationContextProvider({
     selectedTagsDispatch: selectedPlatformsDispatch,
   } = useCreateUseReducerStateForCustomizationComponentWithInputAndTags({
     ...searchCustomizationComponentWithInputAndTagsHookDefaultArguments,
-    searchParamName: "platforms",
+    searchParamName:
+      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+        "platforms",
+        customSearchParamsAndSessionStorageEntriesNames
+      ),
   });
 
   const {
@@ -174,7 +335,11 @@ export default function SearchCustomizationContextProvider({
     selectedTagsDispatch: selectedDevelopersDispatch,
   } = useCreateUseReducerStateForCustomizationComponentWithInputAndTags({
     ...searchCustomizationComponentWithInputAndTagsHookDefaultArguments,
-    searchParamName: "developers",
+    searchParamName:
+      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+        "developers",
+        customSearchParamsAndSessionStorageEntriesNames
+      ),
   });
 
   const {
@@ -182,7 +347,11 @@ export default function SearchCustomizationContextProvider({
     selectedTagsDispatch: selectedPublishersDispatch,
   } = useCreateUseReducerStateForCustomizationComponentWithInputAndTags({
     ...searchCustomizationComponentWithInputAndTagsHookDefaultArguments,
-    searchParamName: "publishers",
+    searchParamName:
+      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
+        "publishers",
+        customSearchParamsAndSessionStorageEntriesNames
+      ),
   });
 
   return (
@@ -209,6 +378,7 @@ export default function SearchCustomizationContextProvider({
         selectedDevelopersDispatch,
         selectedPublishersState,
         selectedPublishersDispatch,
+        searchTerm,
       }}
     >
       {children}

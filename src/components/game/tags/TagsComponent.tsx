@@ -25,9 +25,13 @@ export default function TagsComponent<T>({
       {tags.length !== 0 && (
         <motion.ul
           className="flex flex-row flex-wrap justify-center items-center gap-x-1 gap-y-2"
-          exit={{ opacity: 0, height: 0 }}
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
+          variants={{
+            hidden: { opacity: 0, height: 0 },
+            visible: { opacity: 1, height: "auto" },
+          }}
+          exit="hidden"
+          initial="hidden"
+          animate="visible"
         >
           <AnimatePresence>
             {tags.map((tag) => (

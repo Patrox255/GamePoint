@@ -50,6 +50,7 @@ export default function OrderFindingMainTab() {
             const { name } = ordersFindingCredentialsEntry;
             const placeholder =
               manageOrdersFindingInputsPlaceholdersFromEntriesNames[name];
+            console.log(name);
             return (
               <OrdersFindingCredentialsAndUsersFindingInputFieldElement
                 {...{
