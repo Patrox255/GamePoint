@@ -197,7 +197,7 @@ export default function SliderProductElementContent({
               )}
               {showSummary && <p className="text-sm">{element.summary}</p>}
             </div>
-            <div className="price-product-page-container w-full flex justify-around">
+            <div className="price-product-page-container w-full flex justify-around flex-wrap gap-4">
               <PriceTag
                 priceFromProps={element.price}
                 discountFromProps={element.discount}

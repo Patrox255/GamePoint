@@ -63,7 +63,7 @@ export default function ContactInformationFormInputFieldsContent({
       exit={{ opacity: 0 }}
     >
       {children && children(inputFieldsObjectsWithDefaultValues)}
-      <InputFieldSingleRow>
+      <InputFieldSingleRow identificator="contact-information-first-last-name">
         <InputFieldElement
           inputFieldObjFromProps={inputFieldsObjectsWithDefaultValues.firstName}
         />
@@ -92,7 +92,7 @@ export default function ContactInformationFormInputFieldsContent({
             }}
           />
         )}
-      <InputFieldSingleRow>
+      <InputFieldSingleRow identificator="contact-information-city-info">
         <InputFieldElement
           inputFieldObjFromProps={inputFieldsObjectsWithDefaultValues.zipCode}
         />
@@ -100,7 +100,7 @@ export default function ContactInformationFormInputFieldsContent({
           inputFieldObjFromProps={inputFieldsObjectsWithDefaultValues.city}
         />
       </InputFieldSingleRow>
-      <InputFieldSingleRow>
+      <InputFieldSingleRow identificator="contact-information-residence">
         <InputFieldElement
           inputFieldObjFromProps={inputFieldsObjectsWithDefaultValues.street}
         />

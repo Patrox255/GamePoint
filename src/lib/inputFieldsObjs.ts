@@ -1,4 +1,8 @@
 import { IFormInputField } from "../components/UI/FormWithErrorHandling";
+import {
+  changeObjectKeysPrefix,
+  changeStrPrefix,
+} from "../helpers/changeStrPrefix";
 
 type inputFieldsNames =
   | "login"
@@ -19,7 +23,11 @@ type inputFieldsNames =
 
 const firstAndLastNamePattern = "^[a-zA-ZÀ-ÿ' -]+$";
 
-export type IInputFieldsObjs = Record<inputFieldsNames, IFormInputField>;
+export type IInputFieldsObjsGenerator<T extends string> = Record<
+  T,
+  IFormInputField
+>;
+export type IInputFieldsObjs = IInputFieldsObjsGenerator<inputFieldsNames>;
 
 const inputFieldsObjs: IInputFieldsObjs = {
   login: {
@@ -146,4 +154,59 @@ const inputFieldsObjs: IInputFieldsObjs = {
   },
 };
 
+export type existingProductManagementInputFieldsNames =
+  | "existingProductTitle"
+  | "existingProductSummary"
+  | "existingProductStoryLine";
+export type IExistingProductManagementInputFieldsObjs =
+  IInputFieldsObjsGenerator<existingProductManagementInputFieldsNames>;
+export const existingProductManagementInputFieldsObjs: IExistingProductManagementInputFieldsObjs =
+  {
+    existingProductTitle: {
+      name: "existingProductTitle",
+      placeholder: "Enter selected product title",
+      otherValidationAttributes: {
+        required: true,
+      },
+    },
+    existingProductStoryLine: {
+      name: "existingProductStoryLine",
+      placeholder: "Enter selected product story",
+      type: "textarea",
+      otherValidationAttributes: { required: true },
+    },
+    existingProductSummary: {
+      name: "existingProductSummary",
+      placeholder: "Enter selected product summary",
+      type: "textarea",
+      otherValidationAttributes: { required: true },
+    },
+  };
+
+type newProductManagementInputFieldsNames = changeStrPrefix<
+  existingProductManagementInputFieldsNames,
+  "existing",
+  "new"
+>;
+export type INewProductManagementInputFieldsObjs =
+  IInputFieldsObjsGenerator<newProductManagementInputFieldsNames>;
+export const newProductManagementInputFieldsObjs: INewProductManagementInputFieldsObjs =
+  changeObjectKeysPrefix(
+    existingProductManagementInputFieldsObjs,
+    "existing",
+    "new",
+    true,
+    (existingProductManagementInputFieldsObjsEntryValue) => ({
+      ...existingProductManagementInputFieldsObjsEntryValue,
+      name: existingProductManagementInputFieldsObjsEntryValue.name.replace(
+        "existing",
+        "new"
+      ),
+      placeholder:
+        existingProductManagementInputFieldsObjsEntryValue.placeholder?.replace(
+          "selected",
+          "new"
+        ),
+    })
+  ) as INewProductManagementInputFieldsObjs;
 export default inputFieldsObjs;

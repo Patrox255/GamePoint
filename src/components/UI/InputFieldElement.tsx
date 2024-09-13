@@ -47,10 +47,16 @@ export const generateValidationErrorsRelatedToAnInput = (
 
 const InputFieldSingleRowCtx = createContext<boolean>(false);
 
-export const InputFieldSingleRow = ({ children }: { children: ReactNode }) => {
+export const InputFieldSingleRow = ({
+  children,
+  identificator,
+}: {
+  children: ReactNode;
+  identificator?: string;
+}) => {
   return (
     <InputFieldSingleRowCtx.Provider value={true}>
-      <div className="contact-information-first-last-name w-full flex gap-6 items-center">
+      <div className="w-full flex gap-6 items-center" id={identificator}>
         {children}
       </div>
     </InputFieldSingleRowCtx.Provider>

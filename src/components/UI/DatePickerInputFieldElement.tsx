@@ -248,7 +248,7 @@ function DatePicker() {
         <AnimatePresence mode="wait">
           <motion.p
             key={key}
-            className="block min-w-36 bg-bodyBg py-3 rounded-xl cursor-pointer"
+            className="block bg-bodyBg py-3 rounded-xl cursor-pointer px-6 max-w-fit text-sm lg:text-base"
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.7 }}
             whileHover={{ opacity: 1 }}
@@ -488,10 +488,12 @@ function DatePicker() {
           findCurrentElementsIndexBasedOnCurrentExternalState={(curYear) =>
             (year: string) =>
               year === curYear}
+          customSliderContainerWidthTailwindClass="w-full"
         >
           <SliderProductElement
             elements={availableYearsToChoose}
             lessInvasiveArrowAnimation
+            smallerArrowSVG
           >
             {sliderProductElementChildrenYearsRelatedFnStable}
           </SliderProductElement>
@@ -567,10 +569,12 @@ function DatePicker() {
                 : curYearIndex - 1
             );
           }}
+          customSliderContainerWidthTailwindClass="w-full"
         >
           <SliderProductElement
             lessInvasiveArrowAnimation
             elements={availableMonthsToChoose}
+            smallerArrowSVG
           >
             {sliderProductElementChildrenMonthsRelatedFnStable}
           </SliderProductElement>
@@ -641,7 +645,7 @@ function DatePicker() {
           forceInputFieldFocus();
         }}
       >
-        <div className="px-24 py-4 flex justify-center items-center flex-col">
+        <div className="px-8 py-4 flex justify-center items-center flex-col">
           {datePickerContent}
         </div>
       </motion.div>

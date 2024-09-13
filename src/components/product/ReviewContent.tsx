@@ -7,7 +7,6 @@ import TextArea from "../UI/TextArea";
 import AnimatedSVG from "../UI/svg/AnimatedSVG";
 import { ReactNode, useCallback, useContext } from "react";
 import { AddReviewContext } from "../../store/product/AddReviewContext";
-import properties from "../../styles/properties";
 import AnimatedAppearance from "../UI/AnimatedAppearance";
 import { isEqual } from "lodash";
 import { IReview } from "../../models/review.model";
@@ -19,6 +18,7 @@ import { generateValidationErrorsRelatedToAnInput } from "../UI/InputFieldElemen
 import LoadingFallback from "../UI/LoadingFallback";
 import { ReviewContext } from "./ReviewsWrapper";
 import ReviewRemoveContentPart from "./ReviewRemoveContentPart";
+import XSign from "../UI/XSign";
 
 const ReviewContentErrorsContainer = ({
   children,
@@ -247,33 +247,15 @@ export default function ReviewContent() {
                       ))}
                     </motion.section>
                     {serveAsAnAddReviewComponent && (
-                      <motion.p
-                        className={`inline ml-3 text-2xl font-bold ${
-                          i !== 0 ? "cursor-pointer" : ""
-                        }`}
-                        {...(i !== 0 && {
-                          initial: {
-                            opacity: 0.7,
-                            color: properties.defaultFont,
-                            scale: 1,
-                          },
-                          whileHover: {
-                            opacity: 1,
-                            color: properties.highlightRed,
-                            scale: 1.5,
-                          },
-                        })}
+                      <XSign
+                        disabled={i === 0}
                         onClick={() =>
-                          i !== 0 &&
                           criteriaDispatch({
                             type: "REMOVE_CRITERION",
                             payload: { criterionId: i },
                           })
                         }
-                        layout
-                      >
-                        X
-                      </motion.p>
+                      />
                     )}
                   </motion.section>
                 ))}

@@ -29,6 +29,7 @@ export default function DataSlider<ElementInterface, Y>({
   findCurrentElementsIndexBasedOnCurrentExternalState,
   additionalActionUponReachingTheBeginningByGoingForwardInTheEnd,
   additionalActionUponReachingTheEndByGoingBackwardsInTheBeginning,
+  customSliderContainerWidthTailwindClass = "w-4/5",
 }: {
   elements: ElementInterface[];
   children: ReactNode;
@@ -40,6 +41,7 @@ export default function DataSlider<ElementInterface, Y>({
   ) => (element: ElementInterface, index?: number) => boolean;
   additionalActionUponReachingTheBeginningByGoingForwardInTheEnd?: () => void;
   additionalActionUponReachingTheEndByGoingBackwardsInTheBeginning?: () => void;
+  customSliderContainerWidthTailwindClass?: string;
 }) {
   const stableElements = useRef<ElementInterface[]>();
   if (!stableElements.current) stableElements.current = elements;
@@ -65,7 +67,9 @@ export default function DataSlider<ElementInterface, Y>({
 
   return (
     <AnimatedAppearance>
-      <div className="data-slider-container flex justify-center items-center text-center w-4/5 gap-2">
+      <div
+        className={`data-slider-container flex justify-center items-center text-center gap-8 ${customSliderContainerWidthTailwindClass}`}
+      >
         <SliderContext.Provider
           value={{
             activeElementIndex,

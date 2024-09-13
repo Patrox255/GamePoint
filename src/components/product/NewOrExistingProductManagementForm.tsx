@@ -1,25 +1,36 @@
 import { Reducer, useCallback, useMemo, useReducer } from "react";
 import { useMutation } from "@tanstack/react-query";
 
+import { IExtendedGamePreviewGameArg } from "../products/ExtendedGamePreview";
 import FormWithErrorHandling, {
   FormActionBackendErrorResponse,
   FormActionBackendResponse,
+  IFormInputField,
 } from "../UI/FormWithErrorHandling";
 import { productManagement } from "../../lib/fetch";
 import TabsComponent, { ITagsObjDefault } from "../structure/TabsComponent";
 import Button from "../UI/Button";
+import InputFieldElement from "../UI/InputFieldElement";
+import { changeObjectKeysPrefix } from "../../helpers/changeStrPrefix";
+import {
+  existingProductManagementInputFieldsObjs,
+  IInputFieldsObjsGenerator,
+  newProductManagementInputFieldsObjs,
+} from "../../lib/inputFieldsObjs";
+import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
+import filterOrOnlyIncludeCertainPropertiesFromObj from "../../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
+import XSign from "../UI/XSign";
 
 interface INewOrExistingProductManagementStateEntryValue {
   adminChoseToEdit: boolean;
   newValue?: unknown;
 }
-const newOrExistingProductManagementStatePossiblePropertiesToEditAsInputs = [
-  "title",
-] as const;
-type newOrExistingProductManagementStatePossiblePropertiesToEditAsInputs =
-  (typeof newOrExistingProductManagementStatePossiblePropertiesToEditAsInputs)[number];
+const newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields =
+  ["title", "storyLine", "summary"] as const;
+type newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields =
+  (typeof newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields)[number];
 const newOrExistingProductManagementStatePossiblePropertiesToEdit = [
-  ...newOrExistingProductManagementStatePossiblePropertiesToEditAsInputs,
+  ...newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields,
 ] as const;
 type newOrExistingProductManagementStatePossiblePropertiesToEdit =
   (typeof newOrExistingProductManagementStatePossiblePropertiesToEdit)[number];
@@ -70,13 +81,56 @@ const newOrExistingProductManagementInitialState =
     {}
   ) as INewOrExistingProductManagementState;
 
-export default function NewOrExistingProductManagementForm() {
+const changeProductManagementInputFieldsObjsSoThatTheySuitStateNames = <
+  T extends string,
+  Y extends IInputFieldsObjsGenerator<T>
+>(
+  inputFieldsObjs: Y,
+  curPrefix: string
+) =>
+  changeObjectKeysPrefix(
+    inputFieldsObjs,
+    curPrefix + "Product",
+    "",
+    true,
+    (productManagementInputFieldsObjsEntryValue, newKeyName) => ({
+      ...productManagementInputFieldsObjsEntryValue,
+      name: newKeyName,
+      omitMovingTheInputFieldUponSelecting: true,
+    })
+  ) as Record<
+    newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields,
+    Y
+  >;
+const existingProductManagementInputFieldsObjsTransformed =
+  changeProductManagementInputFieldsObjsSoThatTheySuitStateNames(
+    existingProductManagementInputFieldsObjs,
+    "existing"
+  );
+const newProductManagementInputFieldsObjsTransformed =
+  changeProductManagementInputFieldsObjsSoThatTheySuitStateNames(
+    newProductManagementInputFieldsObjs,
+    "new"
+  );
+
+const customPossibleProductManagementTabsToChooseFromHeadersMap: {
+  [key in newOrExistingProductManagementStatePossiblePropertiesToEdit]?: string;
+} = { storyLine: "Story line" };
+
+export default function NewOrExistingProductManagementForm({
+  gameStable,
+}: {
+  gameStable?: IExtendedGamePreviewGameArg;
+}) {
   const [
     newOrExistingProductManagementState,
     newOrExistingProductManagementDispatch,
   ] = useReducer(
     newOrExistingProductManagementReducer,
     newOrExistingProductManagementInitialState
+  );
+  const newOrExistingProductManagementStateStable = useCompareComplexForUseMemo(
+    newOrExistingProductManagementState
   );
 
   const productManagementQueryRes = useMutation<
@@ -87,12 +141,22 @@ export default function NewOrExistingProductManagementForm() {
   const { mutate: productManagementMutate } = productManagementQueryRes;
   const handleSubmitProductManagement = useCallback(
     (formDataObj: {
-      [entryName in newOrExistingProductManagementStatePossiblePropertiesToEditAsInputs]: unknown;
+      [entryName in newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields]: unknown;
     }) => productManagementMutate(formDataObj),
     [productManagementMutate]
   );
   //   const editExistingProduct = gameStable !== undefined;
 
+  const handleChangeProductManagementStatePropertyActiveStatus = useCallback(
+    (
+      propertyName: newOrExistingProductManagementStatePossiblePropertiesToEdit
+    ) =>
+      newOrExistingProductManagementDispatch({
+        type: "CHANGE_CHOSE_TO_EDIT",
+        payload: propertyName,
+      }),
+    []
+  );
   const possibleTabsToChooseFromInOrderToEditIndividualProperties: ITagsObjDefault<newOrExistingProductManagementStatePossiblePropertiesToEdit>[] =
     useMemo(
       () =>
@@ -100,27 +164,53 @@ export default function NewOrExistingProductManagementForm() {
           (newOrExistingProductManagementStatePossiblePropertyToEdit) => ({
             ComponentToRender: (
               <Button
-                onClick={() =>
-                  newOrExistingProductManagementDispatch({
-                    type: "CHANGE_CHOSE_TO_EDIT",
-                    payload:
-                      newOrExistingProductManagementStatePossiblePropertyToEdit,
-                  })
-                }
+                onClick={handleChangeProductManagementStatePropertyActiveStatus.bind(
+                  null,
+                  newOrExistingProductManagementStatePossiblePropertyToEdit
+                )}
               >
-                Add to editable
+                Add to editable properties
               </Button>
             ),
             tagName: newOrExistingProductManagementStatePossiblePropertyToEdit,
             header:
-              newOrExistingProductManagementStatePossiblePropertyToEdit.replace(
-                newOrExistingProductManagementStatePossiblePropertyToEdit[0],
-                newOrExistingProductManagementStatePossiblePropertyToEdit[0].toUpperCase()
-              ),
+              newOrExistingProductManagementStatePossiblePropertyToEdit in
+              customPossibleProductManagementTabsToChooseFromHeadersMap
+                ? customPossibleProductManagementTabsToChooseFromHeadersMap[
+                    newOrExistingProductManagementStatePossiblePropertyToEdit
+                  ]
+                : newOrExistingProductManagementStatePossiblePropertyToEdit.replace(
+                    newOrExistingProductManagementStatePossiblePropertyToEdit[0],
+                    newOrExistingProductManagementStatePossiblePropertyToEdit[0].toUpperCase()
+                  ),
           })
         ) as ITagsObjDefault<newOrExistingProductManagementStatePossiblePropertiesToEdit>[],
-      []
+      [handleChangeProductManagementStatePropertyActiveStatus]
     );
+
+  const availableProductManagementFields = useMemo(() => {
+    const curActivatedProductManagementProperties = Object.entries(
+      newOrExistingProductManagementStateStable
+    )
+      .filter(
+        (newOrExistingProductManagementStateEntry) =>
+          newOrExistingProductManagementStateEntry[1].adminChoseToEdit
+      )
+      .map(
+        (newOrExistingProductManagementStateEntry) =>
+          newOrExistingProductManagementStateEntry[0]
+      );
+    console.log(curActivatedProductManagementProperties);
+    return filterOrOnlyIncludeCertainPropertiesFromObj(
+      gameStable
+        ? existingProductManagementInputFieldsObjsTransformed
+        : newProductManagementInputFieldsObjsTransformed,
+      curActivatedProductManagementProperties,
+      true
+    ) as
+      | typeof existingProductManagementInputFieldsObjsTransformed
+      | typeof newProductManagementInputFieldsObjsTransformed;
+  }, [gameStable, newOrExistingProductManagementStateStable]);
   return (
     <>
       <TabsComponent
@@ -141,7 +231,25 @@ export default function NewOrExistingProductManagementForm() {
       <FormWithErrorHandling
         queryRelatedToActionState={productManagementQueryRes}
         onSubmit={handleSubmitProductManagement}
-      ></FormWithErrorHandling>
+      >
+        {Object.values(availableProductManagementFields).map(
+          (availableProductManagementFieldObj: IFormInputField) => (
+            <InputFieldElement
+              inputFieldObjFromProps={availableProductManagementFieldObj}
+              key={availableProductManagementFieldObj.name}
+            >
+              <XSign
+                disabled={productManagementQueryRes.isPending}
+                onClick={handleChangeProductManagementStatePropertyActiveStatus.bind(
+                  null,
+                  availableProductManagementFieldObj.name as newOrExistingProductManagementStatePossiblePropertiesToEdit
+                )}
+              />
+            </InputFieldElement>
+          )
+        )}
+        {/* <InputFieldSingleRow /> */}
+      </FormWithErrorHandling>
     </>
   );
 }

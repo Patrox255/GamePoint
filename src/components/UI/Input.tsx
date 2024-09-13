@@ -136,6 +136,11 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       onBlur,
     };
 
+    const defaultValueInCaseOfCheckboxOrTextArea =
+      defaultValue && typeof defaultValue === "string"
+        ? defaultValue
+        : undefined;
+
     let content = (
       <motion.input
         {...{
@@ -194,11 +199,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       content = (
         <motion.select
           {...sharedPropsAcrossInputAndSelect}
-          defaultValue={
-            defaultValue && typeof defaultValue === "string"
-              ? defaultValue
-              : undefined
-          }
+          defaultValue={defaultValueInCaseOfCheckboxOrTextArea}
           {...(onChange && {
             onChange: (e) =>
               (onChange as inputOnChangeTypeText)(e.currentTarget.value),
@@ -210,6 +211,14 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
             </option>
           ))}
         </motion.select>
+      );
+
+    if (type === "textarea")
+      content = (
+        <motion.textarea
+          {...sharedPropsAcrossInputAndSelect}
+          defaultValue={defaultValueInCaseOfCheckboxOrTextArea}
+        ></motion.textarea>
       );
 
     return content;

@@ -176,12 +176,6 @@ export default function SearchCustomizationContextProvider({
     customSearchTermStateInCaseOfUsingExternalOne !== undefined
       ? customSearchTermStateInCaseOfUsingExternalOne
       : defaultSearchTermToUse;
-  console.log(
-    retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
-      "query",
-      customSearchParamsAndSessionStorageEntriesNames
-    )
-  );
 
   const querySearchParamAndSessionStorageEntryName =
     retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(

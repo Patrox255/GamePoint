@@ -1,5 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, ReactNode, useCallback, useMemo } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { useStateWithSearchParams } from "../../hooks/useStateWithSearchParams";
@@ -71,6 +78,7 @@ export default function TabsComponent<
       sessionStorageAndSearchParamEntryNameIfYouWantToUseThem || "",
     storeEvenInitialValue: storeEvenInitialValueInSessionStorageAndSearchParams,
   });
+  const lastKnownValidTabIndex = useRef<number | undefined>();
 
   const availableTabs = useMemo(
     () =>
@@ -81,14 +89,33 @@ export default function TabsComponent<
   );
   const curActiveTabEntry = availableTabs.find(
     (availableTab) => availableTab.tagName === tabsState
-  )!;
+  );
   const CurTabComponent = useCallback(
-    () => curActiveTabEntry.ComponentToRender,
+    () => curActiveTabEntry?.ComponentToRender,
     [curActiveTabEntry]
   );
   const curTabIndex = availableTabs.findIndex(
     (availableTab) => availableTab.tagName === tabsState
   );
+  useEffect(() => {
+    // if (curTabIndex === -1 || lastKnownValidTabIndex.current === curTabIndex)
+    //   return;
+    // lastKnownValidTabIndex.current = curTabIndex;
+    return () => {
+      if (tabsState !== debouncingTabsState) return;
+      lastKnownValidTabIndex.current = curTabIndex;
+      console.log(lastKnownValidTabIndex.current);
+    };
+  }, [curTabIndex, tabsState, debouncingTabsState]);
+  console.log(lastKnownValidTabIndex.current);
+  useEffect(() => {
+    if (availableTabs.length === 0 || curTabIndex !== -1) return;
+    console.log(
+      lastKnownValidTabIndex.current ?? 0,
+      availableTabs[lastKnownValidTabIndex.current ?? 0]?.tagName
+    );
+    setTabsState(availableTabs[lastKnownValidTabIndex.current ?? 0].tagName);
+  }, [curTabIndex, availableTabs, setTabsState]);
   const handleModifyTabsStateUsingAlternativeLookSliderControls = useCallback(
     (indexAddition: number) => {
       let newTabIndex = curTabIndex + indexAddition;
@@ -132,11 +159,13 @@ export default function TabsComponent<
         {availableTabs.map((availableTab, availableTabIndex) => (
           <motion.div
             className="w-full flex-shrink-0 absolute top-0 left-0 h-full flex justify-center items-center"
+            initial={{ opacity: 0 }}
             animate={{
               translateX: `${(availableTabIndex - curTabIndex) * 100}%`,
+              opacity: 1,
             }}
             key={availableTab.header}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.5, opacity: { duration: 2 } }}
           >
             <Header>{availableTab.header}</Header>
           </motion.div>
