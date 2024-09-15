@@ -972,20 +972,6 @@ const startServer = async () => {
                       ...sampleReviewCriteria,
                     ]).slice(0, random(1, 10));
                     const currentDate = new Date();
-                    // const [currentDateYear, currentDateMonth, currentDateDay] =
-                    //   [
-                    //     currentDate.getFullYear(),
-                    //     currentDate.getMonth(),
-                    //     currentDate.getDate(),
-                    //   ];
-                    // const [releaseDateYear, releaseDateMonth, releaseDateDay] =
-                    //   releaseDate
-                    //     ? [
-                    //         releaseDate.getFullYear(),
-                    //         releaseDate.getMonth(),
-                    //         releaseDate.getDate(),
-                    //       ]
-                    //     : new Array(3).fill(undefined);
                     const timeToDays = 1000 * 60 * 60 * 24;
                     const sampleReviewDate = !releaseDate
                       ? currentDate
@@ -1000,11 +986,6 @@ const startServer = async () => {
                               ) * timeToDays
                             )
                         );
-                    // do {} while (
-                    //   releaseDate &&
-                    //   sampleReviewDate &&
-                    //   sampleReviewDate < releaseDate
-                    // );
                     return {
                       userId: sampleUser._id!,
                       content: loremIpsumGenerator.generateParagraphs(

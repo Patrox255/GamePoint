@@ -6,7 +6,6 @@ import { useInput } from "../../../hooks/useInput";
 import LoadingFallback from "../../UI/LoadingFallback";
 import Error from "../../UI/Error";
 import {
-  ISearchCustomizationContext,
   retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj,
   SearchCustomizationContext,
 } from "../../../store/products/SearchCustomizationContext";
@@ -18,28 +17,27 @@ import {
 import useQueryGetTagsAccordingToQuery from "../../../hooks/searchCustomizationRelated/useQueryGetTagsAccordingToQuery";
 import useQueryGetTheMostPopularTags from "../../../hooks/searchCustomizationRelated/useQueryGetTheMostPopularTags";
 import { useQueryGetTagsAvailableTagsNames } from "../../../hooks/searchCustomizationRelated/useQueryGetTagsTypes";
-import { ProductsSearchCustomizationCustomInformationContext } from "../../../store/products/ProductsSearchCustomizationCustomInformationContext";
+import { CustomSearchParamsAndSessionStorageEntriesNamesContext } from "../../../store/stateManagement/CustomSearchParamsAndSessionStorageEntriesNamesContext";
+import { MainCustomizationComponentsWithInputsAndTagsConfigurationContext } from "./MainCustomizationComponentsWithInputsAndTags";
 
 export default function CustomizationComponentWithInputAndTags({
   tagType,
-  searchCustomizationCtxStateName,
-  searchCustomizationCtxDispatchName,
   propertyNameToRetrieveTagFromDataObj,
   headerText,
   inputPlaceholder,
   customGameDocumentPropertyNameForTag,
 }: {
   tagType: useQueryGetTagsAvailableTagsNames;
-  searchCustomizationCtxStateName: keyof ISearchCustomizationContext;
-  searchCustomizationCtxDispatchName: keyof ISearchCustomizationContext;
   propertyNameToRetrieveTagFromDataObj: string;
   headerText: string;
   inputPlaceholder: string;
   customGameDocumentPropertyNameForTag?: string;
 }) {
-  const { customSearchParamsAndSessionStorageEntriesNames } = useContext(
-    ProductsSearchCustomizationCustomInformationContext
-  );
+  const {
+    searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
+  } = useContext(CustomSearchParamsAndSessionStorageEntriesNamesContext);
+  const customSearchParamsAndSessionStorageEntriesNames =
+    searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization;
 
   const relatedSearchParamName =
     retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
@@ -81,14 +79,39 @@ export default function CustomizationComponentWithInputAndTags({
   );
 
   const typedCustomQuery = queryDebouncingState !== "";
+  let selectedTagsState: ISelectedTags;
+  let selectedTagsDispatch: Dispatch<ISelectedTagsReducer>;
 
-  const ctx = useContext(SearchCustomizationContext);
-  const selectedTagsState = ctx[
-    searchCustomizationCtxStateName
-  ] as ISelectedTags;
-  const selectedTagsDispatch = ctx[
-    searchCustomizationCtxDispatchName
-  ] as Dispatch<ISelectedTagsReducer>;
+  const searchCustomizationContext = useContext(SearchCustomizationContext);
+  const configurationForAllTagTypes = useContext(
+    MainCustomizationComponentsWithInputsAndTagsConfigurationContext
+  );
+  const curTagConfiguration = configurationForAllTagTypes[tagType];
+  const {
+    searchCustomizationCtxDispatchName,
+    searchCustomizationCtxStateName,
+    mainCustomizationComponentsWithInputsAndTagsConfigurationCtxDispatchName,
+    mainCustomizationComponentsWithInputsAndTagsConfigurationCtxStateName,
+  } = curTagConfiguration;
+  if (searchCustomizationCtxStateName && searchCustomizationCtxDispatchName) {
+    selectedTagsState = searchCustomizationContext[
+      searchCustomizationCtxStateName
+    ] as ISelectedTags;
+    selectedTagsDispatch = searchCustomizationContext[
+      searchCustomizationCtxDispatchName
+    ] as Dispatch<ISelectedTagsReducer>;
+  }
+  if (
+    mainCustomizationComponentsWithInputsAndTagsConfigurationCtxDispatchName &&
+    mainCustomizationComponentsWithInputsAndTagsConfigurationCtxStateName
+  ) {
+    selectedTagsState = configurationForAllTagTypes[
+      mainCustomizationComponentsWithInputsAndTagsConfigurationCtxStateName
+    ] as ISelectedTags;
+    selectedTagsDispatch = configurationForAllTagTypes[
+      mainCustomizationComponentsWithInputsAndTagsConfigurationCtxDispatchName
+    ] as Dispatch<ISelectedTagsReducer>;
+  }
 
   let content;
   if (
@@ -156,7 +179,7 @@ export default function CustomizationComponentWithInputAndTags({
     <article className="flex flex-col justify-center items-center gap-3 py-2 w-full">
       <h2 className="text-highlightRed">{headerText}</h2>
       <div className="flex flex-col justify-center items-center gap-3">
-        <TagsComponent tags={selectedTagsState.stateArr}>
+        <TagsComponent tags={selectedTagsState!.stateArr}>
           {(tag) => (
             <Button
               onClick={() =>

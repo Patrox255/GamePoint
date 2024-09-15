@@ -70,11 +70,13 @@ export default function useCreateUseReducerStateForCustomizationComponentWithInp
   navigate,
   searchParams,
   searchParamName,
+  omitChangingSearchParams,
 }: {
   location: Location;
   navigate: NavigateFunction;
   searchParams: URLSearchParams;
   searchParamName: string;
+  omitChangingSearchParams?: boolean;
 }) {
   const initialSelectedTagsState: ISelectedTags = {
     stateArr: generateInitialStateFromSearchParamsOrSessionStorage(
@@ -111,6 +113,7 @@ export default function useCreateUseReducerStateForCustomizationComponentWithInp
     navigate,
     searchParamName: searchParamName,
     dispatchCallbackFn: selectedTagsDispatchCallback,
+    omitChangingSearchParams,
   });
 
   return { selectedTagsState, selectedTagsDispatch };

@@ -1,13 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, ReactNode, useContext, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 import { useInput } from "../../hooks/useInput";
 import { useAppSelector } from "../../hooks/reduxStore";
 import { actions } from "../mainSearchBarSlice";
 import generateInitialStateFromSearchParamsOrSessionStorage from "../../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
 import { useStateWithSearchParams } from "../../hooks/useStateWithSearchParams";
-import useCreateUseReducerStateForCustomizationComponentWithInputAndTags, {
+import {
   ISelectedTags,
   ISelectedTagsReducer,
 } from "../../hooks/searchCustomizationRelated/useCreateUseReducerStateForCustomizationComponentWithInputAndTags";
@@ -17,6 +17,8 @@ import useHandleElementsOrderCustomizationState, {
 } from "../../hooks/useHandleElementsOrderCustomizationState";
 import { ProductsSearchCustomizationCustomInformationContext } from "./ProductsSearchCustomizationCustomInformationContext";
 import { useQueryGetTagsAvailableTagsNames } from "../../hooks/searchCustomizationRelated/useQueryGetTagsTypes";
+import { CustomSearchParamsAndSessionStorageEntriesNamesContext } from "../stateManagement/CustomSearchParamsAndSessionStorageEntriesNamesContext";
+import usePrepareSearchCustomizationTagsState from "../../hooks/searchCustomizationRelated/usePrepareSearchCustomizationTagsState";
 
 type IOrderCustomization = IOrderCustomizationStateObjWithDebouncedFields<
   (typeof searchCustomizationOrderFieldsNames)[number]
@@ -28,7 +30,18 @@ const searchCustomizationOrderFieldsNames = [
   "price",
 ] as const;
 
-export interface ISearchCustomizationContext {
+export type IProductTagsContextBody = {
+  selectedGenresState?: ISelectedTags;
+  selectedGenresDispatch?: React.Dispatch<ISelectedTagsReducer>;
+  selectedPlatformsState?: ISelectedTags;
+  selectedPlatformsDispatch?: React.Dispatch<ISelectedTagsReducer>;
+  selectedDevelopersState?: ISelectedTags;
+  selectedDevelopersDispatch?: React.Dispatch<ISelectedTagsReducer>;
+  selectedPublishersState?: ISelectedTags;
+  selectedPublishersDispatch?: React.Dispatch<ISelectedTagsReducer>;
+};
+
+export type ISearchCustomizationContext = {
   minPrice: number;
   maxPrice: number;
   handleMinChange: (newMinPrice: number) => void;
@@ -42,16 +55,8 @@ export interface ISearchCustomizationContext {
   discountActive: number;
   debouncedDiscountActive: number;
   setDiscountActive: (newDiscount: number) => void;
-  selectedGenresState: ISelectedTags;
-  selectedGenresDispatch: React.Dispatch<ISelectedTagsReducer>;
-  selectedPlatformsState: ISelectedTags;
-  selectedPlatformsDispatch: React.Dispatch<ISelectedTagsReducer>;
-  selectedDevelopersState: ISelectedTags;
-  selectedDevelopersDispatch: React.Dispatch<ISelectedTagsReducer>;
-  selectedPublishersState: ISelectedTags;
-  selectedPublishersDispatch: React.Dispatch<ISelectedTagsReducer>;
   searchTerm: string;
-}
+} & IProductTagsContextBody;
 
 export type usedSearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization =
 
@@ -161,14 +166,17 @@ export default function SearchCustomizationContextProvider({
     () => new URLSearchParams(location.search),
     [location.search]
   );
-  const navigate = useNavigate();
 
+  const {
+    searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
+  } = useContext(CustomSearchParamsAndSessionStorageEntriesNamesContext);
   const {
     createCustomSearchTermState,
     customSearchTermStateInCaseOfUsingExternalOne,
     setCustomSearchTermStateInCaseOfUsingExternalOne,
-    customSearchParamsAndSessionStorageEntriesNames,
   } = useContext(ProductsSearchCustomizationCustomInformationContext);
+  const customSearchParamsAndSessionStorageEntriesNames =
+    searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization;
   const defaultSearchTermToUse = useAppSelector(
     (state) => state.mainSearchBarSlice.searchTerm
   );
@@ -289,64 +297,18 @@ export default function SearchCustomizationContextProvider({
     pathName: location.pathname,
   });
 
-  const searchCustomizationComponentWithInputAndTagsHookDefaultArguments = {
-    location,
-    navigate,
-    searchParams,
-    idOfDeeperStateThatIsSentAndDispatchCanChangeIt:
-      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
-        "products-search-tags",
-        customSearchParamsAndSessionStorageEntriesNames
-      ),
-  };
-
   const {
-    selectedTagsState: selectedGenresState,
-    selectedTagsDispatch: selectedGenresDispatch,
-  } = useCreateUseReducerStateForCustomizationComponentWithInputAndTags({
-    ...searchCustomizationComponentWithInputAndTagsHookDefaultArguments,
-    searchParamName:
-      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
-        "genres",
-        customSearchParamsAndSessionStorageEntriesNames
-      ),
-  });
-
-  const {
-    selectedTagsState: selectedPlatformsState,
-    selectedTagsDispatch: selectedPlatformsDispatch,
-  } = useCreateUseReducerStateForCustomizationComponentWithInputAndTags({
-    ...searchCustomizationComponentWithInputAndTagsHookDefaultArguments,
-    searchParamName:
-      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
-        "platforms",
-        customSearchParamsAndSessionStorageEntriesNames
-      ),
-  });
-
-  const {
-    selectedTagsState: selectedDevelopersState,
-    selectedTagsDispatch: selectedDevelopersDispatch,
-  } = useCreateUseReducerStateForCustomizationComponentWithInputAndTags({
-    ...searchCustomizationComponentWithInputAndTagsHookDefaultArguments,
-    searchParamName:
-      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
-        "developers",
-        customSearchParamsAndSessionStorageEntriesNames
-      ),
-  });
-
-  const {
-    selectedTagsState: selectedPublishersState,
-    selectedTagsDispatch: selectedPublishersDispatch,
-  } = useCreateUseReducerStateForCustomizationComponentWithInputAndTags({
-    ...searchCustomizationComponentWithInputAndTagsHookDefaultArguments,
-    searchParamName:
-      retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj(
-        "publishers",
-        customSearchParamsAndSessionStorageEntriesNames
-      ),
-  });
+    selectedDevelopersDispatch,
+    selectedDevelopersState,
+    selectedGenresDispatch,
+    selectedGenresState,
+    selectedPlatformsDispatch,
+    selectedPlatformsState,
+    selectedPublishersDispatch,
+    selectedPublishersState,
+  } = usePrepareSearchCustomizationTagsState(
+    customSearchParamsAndSessionStorageEntriesNames
+  );
 
   return (
     <SearchCustomizationContext.Provider

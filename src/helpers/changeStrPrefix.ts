@@ -1,8 +1,15 @@
 export type changeStrPrefix<
   str extends string,
   curPrefix extends string,
-  newPrefix extends string
-> = str extends `${curPrefix}${infer Rest}` ? `${newPrefix}${Rest}` : str;
+  newPrefix extends string,
+  changeFirstCharacterToSuitCamelCase extends boolean = false
+> = str extends `${curPrefix}${infer Rest}`
+  ? `${newPrefix}${changeFirstCharacterToSuitCamelCase extends false
+      ? Rest
+      : Rest extends `${infer First}${infer Remaining}`
+      ? `${Lowercase<First>}${Remaining}`
+      : Rest}`
+  : str;
 
 export const changeObjectKeysPrefix = <T extends string, Y>(
   obj: Record<T, Y>,

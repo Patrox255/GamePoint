@@ -91,14 +91,25 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
     const handleInputChange: ChangeEventHandler<HTMLInputElement> = (e) => {
       const value = e.currentTarget.value.replace(",", ".");
       const numberRegex = /\d*(\.\d{1,2})?/;
+      console.log(
+        value,
+        value === "" ||
+          (value &&
+            numberRegex.test(value) &&
+            (min === undefined || parseFloat(value) >= min) &&
+            (max === undefined || parseFloat(value) <= max)),
+        name,
+        min === undefined || parseFloat(value) >= min,
+        max === undefined || parseFloat(value) <= max
+      );
       const isValidNumberIfTypeNumber =
         type !== "number"
           ? true
           : value === "" ||
             (value &&
               numberRegex.test(value) &&
-              (!min || parseFloat(value) >= min) &&
-              (!max || parseFloat(value) <= max));
+              (min === undefined || parseFloat(value) >= min) &&
+              (max === undefined || parseFloat(value) <= max));
       isValidNumberIfTypeNumber && onChange
         ? type === "number"
           ? (onChange as inputOnChangeTypeNumber)(parseFloat(value))
@@ -218,8 +229,11 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
         <motion.textarea
           {...sharedPropsAcrossInputAndSelect}
           defaultValue={defaultValueInCaseOfCheckboxOrTextArea}
+          rows={5}
         ></motion.textarea>
       );
+
+    console.log(type);
 
     return content;
   }

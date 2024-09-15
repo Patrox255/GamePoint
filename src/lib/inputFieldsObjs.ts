@@ -157,7 +157,9 @@ const inputFieldsObjs: IInputFieldsObjs = {
 export type existingProductManagementInputFieldsNames =
   | "existingProductTitle"
   | "existingProductSummary"
-  | "existingProductStoryLine";
+  | "existingProductStoryLine"
+  | "existingProductPrice"
+  | "existingProductDiscount";
 export type IExistingProductManagementInputFieldsObjs =
   IInputFieldsObjsGenerator<existingProductManagementInputFieldsNames>;
 export const existingProductManagementInputFieldsObjs: IExistingProductManagementInputFieldsObjs =
@@ -180,6 +182,25 @@ export const existingProductManagementInputFieldsObjs: IExistingProductManagemen
       placeholder: "Enter selected product summary",
       type: "textarea",
       otherValidationAttributes: { required: true },
+    },
+    existingProductPrice: {
+      name: "existingProductPrice",
+      placeholder: "Base price",
+      otherValidationAttributes: { required: true },
+      type: "number",
+      step: 0.01,
+      min: 0,
+    },
+    existingProductDiscount: {
+      name: "existingProductDiscount",
+      placeholder: "Discount",
+      otherValidationAttributes: { required: true },
+      type: "number",
+      instructionStr: "percent(0-100%)",
+      min: 0,
+      max: 100,
+      defaultValue: 0,
+      step: 1,
     },
   };
 

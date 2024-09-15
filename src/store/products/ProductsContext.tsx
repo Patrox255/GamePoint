@@ -41,11 +41,17 @@ export default function ProductsContextProvider({
     searchTermDebouncingState,
     orderCustomizationState,
     debouncedDiscountActive,
-    selectedGenresState: { debouncedStateArr: debouncedGenres },
-    selectedPlatformsState: { debouncedStateArr: debouncedPlatforms },
-    selectedPublishersState: { debouncedStateArr: debouncedPublishers },
-    selectedDevelopersState: { debouncedStateArr: debouncedDevelopers },
+    ...searchCustomizationContextBody
   } = useContext(SearchCustomizationContext);
+  const { debouncedStateArr: debouncedGenres } =
+    searchCustomizationContextBody.selectedGenresState!;
+  const { debouncedStateArr: debouncedPlatforms } =
+    searchCustomizationContextBody.selectedPlatformsState!;
+  const { debouncedStateArr: debouncedPublishers } =
+    searchCustomizationContextBody.selectedPublishersState!;
+  const { debouncedStateArr: debouncedDevelopers } =
+    searchCustomizationContextBody.selectedDevelopersState!;
+
   const { state: pageNr, setStateWithSearchParams: setPageNr } =
     useStateWithSearchParams({
       initialStateStable: 0,

@@ -6,6 +6,7 @@ import { ManageProductsContext } from "../../../../store/userPanel/admin/product
 import { TabsComponentContext } from "../../../structure/TabsComponent";
 import { IGame } from "../../../../models/game.model";
 import { ISearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization } from "../../../../store/products/SearchCustomizationContext";
+import CustomSearchParamsAndSessionStorageEntriesNamesContextProvider from "../../../../store/stateManagement/CustomSearchParamsAndSessionStorageEntriesNamesContext";
 
 const manageProductsCustomSearchParamsAndSessionStorageEntriesNames: ISearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization =
   {
@@ -26,14 +27,17 @@ export default function ManageProductsProductsList() {
   );
 
   return (
-    <ProductsSearchCustomizationCustomInformationContextProvider
-      createCustomSearchTermState={true}
-      customSearchParamsAndSessionStorageEntriesNames={
+    <CustomSearchParamsAndSessionStorageEntriesNamesContextProvider
+      searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization={
         manageProductsCustomSearchParamsAndSessionStorageEntriesNames
       }
-      productEntryOnClickStableFn={handleProductEntryClick}
     >
-      <ExtendedProductsList />
-    </ProductsSearchCustomizationCustomInformationContextProvider>
+      <ProductsSearchCustomizationCustomInformationContextProvider
+        createCustomSearchTermState={true}
+        productEntryOnClickStableFn={handleProductEntryClick}
+      >
+        <ExtendedProductsList />
+      </ProductsSearchCustomizationCustomInformationContextProvider>
+    </CustomSearchParamsAndSessionStorageEntriesNamesContextProvider>
   );
 }

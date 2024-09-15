@@ -140,6 +140,7 @@ const InputFieldElement = forwardRef<
     children?: ReactNode;
     value?: inputValue;
     onChange?: inputOnChange;
+    customAlignSelfTailwindClass?: string;
   }
 >(
   (
@@ -151,6 +152,7 @@ const InputFieldElement = forwardRef<
       children,
       value,
       onChange,
+      customAlignSelfTailwindClass,
     },
     inputRef
   ) => {
@@ -214,6 +216,9 @@ const InputFieldElement = forwardRef<
             manuallyManageValueInsideForm={value !== undefined}
             onChange={onChange}
             defaultValue={inputFieldObj.defaultValue}
+            min={inputFieldObj.min}
+            max={inputFieldObj.max}
+            step={inputFieldObj.step}
           />
           {children && (
             <InputFieldElementChildrenCtx.Provider
@@ -235,7 +240,11 @@ const InputFieldElement = forwardRef<
         className={`w-${
           inputFieldObj.type === "checkbox" ? "auto" : "full"
         } flex flex-col gap-3 opacity-1 ${
-          insideSingleRowCtx ? "self-end" : ""
+          customAlignSelfTailwindClass
+            ? customAlignSelfTailwindClass
+            : insideSingleRowCtx
+            ? "self-end"
+            : ""
         } ${inputFieldObj.type === "date" ? "relative z-10" : ""}`}
         variants={{
           initial: { opacity: 0 },

@@ -78,7 +78,7 @@ export default function TabsComponent<
       sessionStorageAndSearchParamEntryNameIfYouWantToUseThem || "",
     storeEvenInitialValue: storeEvenInitialValueInSessionStorageAndSearchParams,
   });
-  const lastKnownValidTabIndex = useRef<number | undefined>();
+  const lastKnownValidTagName = useRef<tagName | undefined>();
 
   const availableTabs = useMemo(
     () =>
@@ -87,35 +87,33 @@ export default function TabsComponent<
         : possibleTabsStable,
     [generateAvailableTabsFromAllFnStable, possibleTabsStable]
   );
-  const curActiveTabEntry = availableTabs.find(
+  const curTabIndex = availableTabs.findIndex(
     (availableTab) => availableTab.tagName === tabsState
   );
+  const curActiveTabEntry =
+    curTabIndex !== -1 ? availableTabs[curTabIndex] : undefined;
   const CurTabComponent = useCallback(
     () => curActiveTabEntry?.ComponentToRender,
     [curActiveTabEntry]
   );
-  const curTabIndex = availableTabs.findIndex(
-    (availableTab) => availableTab.tagName === tabsState
-  );
   useEffect(() => {
-    // if (curTabIndex === -1 || lastKnownValidTabIndex.current === curTabIndex)
-    //   return;
-    // lastKnownValidTabIndex.current = curTabIndex;
     return () => {
       if (tabsState !== debouncingTabsState) return;
-      lastKnownValidTabIndex.current = curTabIndex;
-      console.log(lastKnownValidTabIndex.current);
+      lastKnownValidTagName.current = debouncingTabsState;
     };
-  }, [curTabIndex, tabsState, debouncingTabsState]);
-  console.log(lastKnownValidTabIndex.current);
+  }, [tabsState, debouncingTabsState]);
   useEffect(() => {
     if (availableTabs.length === 0 || curTabIndex !== -1) return;
-    console.log(
-      lastKnownValidTabIndex.current ?? 0,
-      availableTabs[lastKnownValidTabIndex.current ?? 0]?.tagName
+    setTabsState(
+      lastKnownValidTagName.current &&
+        availableTabs.find(
+          (availableTab) =>
+            availableTab.tagName === lastKnownValidTagName.current
+        )
+        ? lastKnownValidTagName.current
+        : availableTabs[0].tagName
     );
-    setTabsState(availableTabs[lastKnownValidTabIndex.current ?? 0].tagName);
-  }, [curTabIndex, availableTabs, setTabsState]);
+  }, [curTabIndex, availableTabs, setTabsState, defaultTabsStateValue]);
   const handleModifyTabsStateUsingAlternativeLookSliderControls = useCallback(
     (indexAddition: number) => {
       let newTabIndex = curTabIndex + indexAddition;

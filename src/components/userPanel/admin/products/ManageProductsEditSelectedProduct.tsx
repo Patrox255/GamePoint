@@ -19,6 +19,7 @@ export default function ManageProductsEditSelectedProduct() {
     content = (
       <LoadingFallback customText="Retrieving current data of the selected product... " />
     );
-  if (gameStable) content = <NewOrExistingProductManagementForm />;
+  if (gameStable)
+    content = <NewOrExistingProductManagementForm gameStable={gameStable} />;
   return content;
 }

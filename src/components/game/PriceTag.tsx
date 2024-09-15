@@ -20,6 +20,14 @@ export const priceFormat = new Intl.NumberFormat(navigator.language, {
   maximumFractionDigits: 2,
 });
 
+export function FreeToPlayTag() {
+  return (
+    <p className="price font-bold bg-highlightGreen py-2 px-3 rounded-xl">
+      Free To Play
+    </p>
+  );
+}
+
 const hiddenInitialElementMotionPropFn = (
   useInitialDefaultFontColor: boolean = false
 ) =>
@@ -193,11 +201,7 @@ export default function PriceTag({
           {priceFormat.format(price)}
         </motion.p>
       )}
-      {isFree && (
-        <p className="price font-bold bg-highlightGreen py-2 px-3 rounded-xl">
-          Free To Play
-        </p>
-      )}
+      {isFree && <FreeToPlayTag />}
       {!isFree && hasDiscount && (
         <>
           <motion.p

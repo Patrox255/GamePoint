@@ -1,5 +1,4 @@
 import { createContext, ReactNode } from "react";
-import { ISearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization } from "./SearchCustomizationContext";
 import { IGame } from "../../models/game.model";
 
 interface IProductsSearchCustomizationCustomInformationContext {
@@ -8,7 +7,6 @@ interface IProductsSearchCustomizationCustomInformationContext {
   setCustomSearchTermStateInCaseOfUsingExternalOne?: (
     newSearchTerm: string
   ) => void;
-  customSearchParamsAndSessionStorageEntriesNames?: ISearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization;
   productEntryOnClickStableFn?: (game: IGame) => void;
 }
 export const ProductsSearchCustomizationCustomInformationContext =
@@ -16,7 +14,6 @@ export const ProductsSearchCustomizationCustomInformationContext =
     createCustomSearchTermState: undefined,
     customSearchTermStateInCaseOfUsingExternalOne: undefined,
     setCustomSearchTermStateInCaseOfUsingExternalOne: undefined,
-    customSearchParamsAndSessionStorageEntriesNames: undefined,
     productEntryOnClickStableFn: undefined,
   });
 
@@ -24,7 +21,6 @@ export default function ProductsSearchCustomizationCustomInformationContextProvi
   createCustomSearchTermState,
   customSearchTermStateInCaseOfUsingExternalOne,
   setCustomSearchTermStateInCaseOfUsingExternalOne,
-  customSearchParamsAndSessionStorageEntriesNames,
   productEntryOnClickStableFn,
   children,
 }: IProductsSearchCustomizationCustomInformationContext & {
@@ -36,7 +32,6 @@ export default function ProductsSearchCustomizationCustomInformationContextProvi
         createCustomSearchTermState,
         customSearchTermStateInCaseOfUsingExternalOne,
         setCustomSearchTermStateInCaseOfUsingExternalOne,
-        customSearchParamsAndSessionStorageEntriesNames,
         productEntryOnClickStableFn,
       }}
     >

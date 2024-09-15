@@ -1,12 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import Button from "../../UI/Button";
-import CustomizationComponentWithInputAndTags from "./CustomizationComponentWithInputAndTags";
 import DiscountCustomization from "./DiscountCustomization";
 import PriceCustomization from "./PriceCustomization";
 import { useContext } from "react";
 import { SearchCustomizationContext } from "../../../store/products/SearchCustomizationContext";
 import { useAppDispatch } from "../../../hooks/reduxStore";
 import { actions as searchBarActions } from "../../../store/mainSearchBarSlice";
+import MainCustomizationComponentsWithInputsAndTags, {
+  MainCustomizationComponentsWithInputsAndTagsConfigurationContextProvider,
+} from "./MainCustomizationComponentsWithInputsAndTags";
 
 export default function SearchCustomization() {
   const navigate = useNavigate();
@@ -31,40 +33,26 @@ export default function SearchCustomization() {
         <div className="flex w-full gap-5 items-center justify-center flex-col">
           <PriceCustomization />
           <DiscountCustomization />
-          <CustomizationComponentWithInputAndTags
-            tagType="genres"
-            propertyNameToRetrieveTagFromDataObj="name"
-            searchCustomizationCtxStateName="selectedGenresState"
-            searchCustomizationCtxDispatchName="selectedGenresDispatch"
-            headerText="Genres"
-            inputPlaceholder="Type in a genre name"
-          />
-          <CustomizationComponentWithInputAndTags
-            tagType="platforms"
-            propertyNameToRetrieveTagFromDataObj="name"
-            searchCustomizationCtxStateName="selectedPlatformsState"
-            searchCustomizationCtxDispatchName="selectedPlatformsDispatch"
-            headerText="Platforms"
-            inputPlaceholder="Type in a platform name"
-          />
-          <CustomizationComponentWithInputAndTags
-            tagType="developers"
-            propertyNameToRetrieveTagFromDataObj="name"
-            searchCustomizationCtxStateName="selectedDevelopersState"
-            searchCustomizationCtxDispatchName="selectedDevelopersDispatch"
-            headerText="Developers"
-            inputPlaceholder="Type in a developer name"
-            customGameDocumentPropertyNameForTag="developer"
-          />
-          <CustomizationComponentWithInputAndTags
-            tagType="publishers"
-            propertyNameToRetrieveTagFromDataObj="name"
-            searchCustomizationCtxStateName="selectedPublishersState"
-            searchCustomizationCtxDispatchName="selectedPublishersDispatch"
-            headerText="Publishers"
-            inputPlaceholder="Type in a publisher name"
-            customGameDocumentPropertyNameForTag="publisher"
-          />
+          <MainCustomizationComponentsWithInputsAndTagsConfigurationContextProvider
+            genres={{
+              searchCustomizationCtxStateName: "selectedGenresState",
+              searchCustomizationCtxDispatchName: "selectedGenresDispatch",
+            }}
+            developers={{
+              searchCustomizationCtxStateName: "selectedDevelopersState",
+              searchCustomizationCtxDispatchName: "selectedDevelopersDispatch",
+            }}
+            platforms={{
+              searchCustomizationCtxStateName: "selectedPlatformsState",
+              searchCustomizationCtxDispatchName: "selectedPlatformsDispatch",
+            }}
+            publishers={{
+              searchCustomizationCtxStateName: "selectedPublishersState",
+              searchCustomizationCtxDispatchName: "selectedPublishersDispatch",
+            }}
+          >
+            <MainCustomizationComponentsWithInputsAndTags />
+          </MainCustomizationComponentsWithInputsAndTagsConfigurationContextProvider>
           <Button
             onClick={() => {
               [
@@ -86,7 +74,7 @@ export default function SearchCustomization() {
                 selectedPlatformsDispatch,
                 selectedPublishersDispatch,
               ].forEach((tagDispatch) =>
-                tagDispatch({
+                tagDispatch?.({
                   type: "RESET",
                 })
               );

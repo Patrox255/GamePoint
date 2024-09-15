@@ -1,4 +1,4 @@
-import { Reducer, useCallback, useMemo, useReducer } from "react";
+import { Reducer, useCallback, useContext, useMemo, useReducer } from "react";
 import { useMutation } from "@tanstack/react-query";
 
 import { IExtendedGamePreviewGameArg } from "../products/ExtendedGamePreview";
@@ -10,9 +10,15 @@ import FormWithErrorHandling, {
 import { productManagement } from "../../lib/fetch";
 import TabsComponent, { ITagsObjDefault } from "../structure/TabsComponent";
 import Button from "../UI/Button";
-import InputFieldElement from "../UI/InputFieldElement";
-import { changeObjectKeysPrefix } from "../../helpers/changeStrPrefix";
+import InputFieldElement, {
+  InputFieldSingleRow,
+} from "../UI/InputFieldElement";
 import {
+  changeObjectKeysPrefix,
+  changeStrPrefix,
+} from "../../helpers/changeStrPrefix";
+import {
+  existingProductManagementInputFieldsNames,
   existingProductManagementInputFieldsObjs,
   IInputFieldsObjsGenerator,
   newProductManagementInputFieldsObjs,
@@ -20,6 +26,17 @@ import {
 import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
 import filterOrOnlyIncludeCertainPropertiesFromObj from "../../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
 import XSign from "../UI/XSign";
+import Header from "../UI/headers/Header";
+import { useInput } from "../../hooks/useInput";
+import { FreeToPlayTag, priceFormat } from "../game/PriceTag";
+import calcShopPrice from "../../helpers/calcShopPrice";
+import usePrepareSearchCustomizationTagsState from "../../hooks/searchCustomizationRelated/usePrepareSearchCustomizationTagsState";
+import { CustomSearchParamsAndSessionStorageEntriesNamesContext } from "../../store/stateManagement/CustomSearchParamsAndSessionStorageEntriesNamesContext";
+import MainCustomizationComponentsWithInputsAndTags, {
+  componentsWithInputsAndTagsConfigurationContextInformationDefault,
+  MainCustomizationComponentsWithInputsAndTagsConfigurationContextProvider,
+} from "../products/SearchCustomization/MainCustomizationComponentsWithInputsAndTags";
+import { useQueryGetTagsAvailableTagsNames } from "../../hooks/searchCustomizationRelated/useQueryGetTagsTypes";
 
 interface INewOrExistingProductManagementStateEntryValue {
   adminChoseToEdit: boolean;
@@ -29,7 +46,15 @@ const newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields =
   ["title", "storyLine", "summary"] as const;
 type newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields =
   (typeof newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields)[number];
+const productManagementStateTagsProperties = [
+  "genres",
+  "platforms",
+  "developers",
+  "publishers",
+];
 const newOrExistingProductManagementStatePossiblePropertiesToEdit = [
+  "priceManagement",
+  ...productManagementStateTagsProperties,
   ...newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields,
 ] as const;
 type newOrExistingProductManagementStatePossiblePropertiesToEdit =
@@ -39,6 +64,24 @@ type INewOrExistingProductManagementState = {
 };
 export type INewOrExistingProductManagementStateToSend = {
   [entryName in newOrExistingProductManagementStatePossiblePropertiesToEdit]?: unknown;
+};
+type IProductManagementPriceManagementPropertyValue = {
+  discount: number;
+  price: number;
+};
+// type productManagementTagsPropertyValue = string[];
+const customInitialProductManagementPossiblePropertiesValues: {
+  [key in newOrExistingProductManagementStatePossiblePropertiesToEdit]?: unknown;
+} = {
+  priceManagement: { discount: 0, price: 0 },
+  ...Object.fromEntries(
+    productManagementStateTagsProperties.map(
+      (productManagementStateTagsProperty) => [
+        productManagementStateTagsProperty,
+        [],
+      ]
+    )
+  ),
 };
 const newOrExistingProductManagementReducer: Reducer<
   INewOrExistingProductManagementState,
@@ -75,7 +118,13 @@ const newOrExistingProductManagementInitialState =
       ...acc,
       [newOrExistingProductManagementStatePossiblePropertyToEdit]: {
         adminChoseToEdit: false,
-        newValue: undefined,
+        newValue:
+          newOrExistingProductManagementStatePossiblePropertyToEdit in
+          customInitialProductManagementPossiblePropertiesValues
+            ? customInitialProductManagementPossiblePropertiesValues[
+                newOrExistingProductManagementStatePossiblePropertyToEdit
+              ]
+            : undefined,
       },
     }),
     {}
@@ -98,9 +147,13 @@ const changeProductManagementInputFieldsObjsSoThatTheySuitStateNames = <
       name: newKeyName,
       omitMovingTheInputFieldUponSelecting: true,
     })
-  ) as Record<
-    newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields,
-    Y
+  ) as IInputFieldsObjsGenerator<
+    changeStrPrefix<
+      existingProductManagementInputFieldsNames,
+      "existingProduct",
+      "",
+      true
+    >
   >;
 const existingProductManagementInputFieldsObjsTransformed =
   changeProductManagementInputFieldsObjsSoThatTheySuitStateNames(
@@ -115,7 +168,11 @@ const newProductManagementInputFieldsObjsTransformed =
 
 const customPossibleProductManagementTabsToChooseFromHeadersMap: {
   [key in newOrExistingProductManagementStatePossiblePropertiesToEdit]?: string;
-} = { storyLine: "Story line" };
+} = { storyLine: "Story line", priceManagement: "Price Management" };
+
+const inputFieldsNamesFromPriceManagement = ["price", "discount"] as const;
+type inputFieldsNamesFromPriceManagement =
+  (typeof inputFieldsNamesFromPriceManagement)[number];
 
 export default function NewOrExistingProductManagementForm({
   gameStable,
@@ -133,19 +190,57 @@ export default function NewOrExistingProductManagementForm({
     newOrExistingProductManagementState
   );
 
+  const priceManagementObjValue = newOrExistingProductManagementStateStable
+    .priceManagement.newValue as IProductManagementPriceManagementPropertyValue;
+  const { price: inputPrice, discount: inputDiscount } =
+    priceManagementObjValue;
+  let { discount: setDiscount, price: setPrice } =
+    newOrExistingProductManagementStateStable.priceManagement
+      .newValue as IProductManagementPriceManagementPropertyValue;
+  setDiscount ||= 0;
+  setPrice ||= 0;
+  const { handleInputChange: productPriceHandleInputChange } = useInput({
+    stateValue: inputPrice,
+    setStateValue: (newDiscount: number) =>
+      newOrExistingProductManagementDispatch({
+        type: "CHANGE_NEW_VALUE",
+        payload: {
+          propertyName: "priceManagement",
+          newValue: {
+            ...priceManagementObjValue,
+            price: newDiscount,
+          },
+        },
+      }),
+    searchParamName: "admin-product-management-price",
+    saveDebouncedStateInSearchParams: false,
+    saveDebouncedStateInSessionStorage: false,
+  });
+  const { handleInputChange: productDiscountHandleInputChange } = useInput({
+    stateValue: inputDiscount,
+    setStateValue: (newDiscount: number) =>
+      newOrExistingProductManagementDispatch({
+        type: "CHANGE_NEW_VALUE",
+        payload: {
+          propertyName: "priceManagement",
+          newValue: {
+            ...priceManagementObjValue,
+            discount: newDiscount,
+          },
+        },
+      }),
+    searchParamName: "admin-product-management-discount",
+    saveDebouncedStateInSearchParams: false,
+    saveDebouncedStateInSessionStorage: false,
+  });
+
   const productManagementQueryRes = useMutation<
     FormActionBackendResponse,
     FormActionBackendErrorResponse,
     INewOrExistingProductManagementStateToSend
   >({ mutationFn: productManagement });
   const { mutate: productManagementMutate } = productManagementQueryRes;
-  const handleSubmitProductManagement = useCallback(
-    (formDataObj: {
-      [entryName in newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields]: unknown;
-    }) => productManagementMutate(formDataObj),
-    [productManagementMutate]
-  );
-  //   const editExistingProduct = gameStable !== undefined;
+  const editExistingProduct = gameStable !== undefined;
 
   const handleChangeProductManagementStatePropertyActiveStatus = useCallback(
     (
@@ -188,7 +283,15 @@ export default function NewOrExistingProductManagementForm({
       [handleChangeProductManagementStatePropertyActiveStatus]
     );
 
-  const availableProductManagementFields = useMemo(() => {
+  const inputFieldsObjsInUse = useMemo(
+    () =>
+      gameStable
+        ? existingProductManagementInputFieldsObjsTransformed
+        : newProductManagementInputFieldsObjsTransformed,
+    [gameStable]
+  );
+  inputFieldsObjsInUse.discount;
+  const availableProductManagementInputFields = useMemo(() => {
     const curActivatedProductManagementProperties = Object.entries(
       newOrExistingProductManagementStateStable
     )
@@ -200,17 +303,93 @@ export default function NewOrExistingProductManagementForm({
         (newOrExistingProductManagementStateEntry) =>
           newOrExistingProductManagementStateEntry[0]
       );
-    console.log(curActivatedProductManagementProperties);
     return filterOrOnlyIncludeCertainPropertiesFromObj(
-      gameStable
-        ? existingProductManagementInputFieldsObjsTransformed
-        : newProductManagementInputFieldsObjsTransformed,
+      inputFieldsObjsInUse,
       curActivatedProductManagementProperties,
       true
     ) as
       | typeof existingProductManagementInputFieldsObjsTransformed
       | typeof newProductManagementInputFieldsObjsTransformed;
-  }, [gameStable, newOrExistingProductManagementStateStable]);
+  }, [inputFieldsObjsInUse, newOrExistingProductManagementStateStable]);
+
+  const ProductManagementPropertyXSign = useCallback(
+    ({
+      productManagementPropertyName,
+    }: {
+      productManagementPropertyName: newOrExistingProductManagementStatePossiblePropertiesToEdit;
+    }) => (
+      <XSign
+        disabled={productManagementQueryRes.isPending}
+        onClick={handleChangeProductManagementStatePropertyActiveStatus.bind(
+          null,
+          productManagementPropertyName
+        )}
+      />
+    ),
+    [
+      handleChangeProductManagementStatePropertyActiveStatus,
+      productManagementQueryRes.isPending,
+    ]
+  );
+
+  const finalPrice = calcShopPrice(setPrice, setDiscount);
+  const finalPriceFormatted = priceFormat.format(finalPrice);
+
+  const handleSubmitProductManagement = useCallback(
+    (formDataObj: {
+      [entryName in
+        | newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields
+        | inputFieldsNamesFromPriceManagement]: unknown;
+    }) =>
+      productManagementMutate({
+        ...filterOrOnlyIncludeCertainPropertiesFromObj(
+          formDataObj,
+          inputFieldsNamesFromPriceManagement as unknown as string[]
+        ),
+        price: setPrice,
+        discount: setDiscount,
+      }),
+    [productManagementMutate, setDiscount, setPrice]
+  );
+
+  const {
+    searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
+  } = useContext(CustomSearchParamsAndSessionStorageEntriesNamesContext);
+  const {
+    selectedDevelopersDispatch,
+    selectedDevelopersState,
+    selectedGenresDispatch,
+    selectedGenresState,
+    selectedPlatformsDispatch,
+    selectedPlatformsState,
+    selectedPublishersDispatch,
+    selectedPublishersState,
+  } = usePrepareSearchCustomizationTagsState(
+    searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
+    true
+  );
+  const tagTypesToShowStable = useMemo(
+    () =>
+      Object.entries(newOrExistingProductManagementStateStable)
+        .filter(
+          (newOrExistingProductManagementStateStableEntry) =>
+            productManagementStateTagsProperties.includes(
+              newOrExistingProductManagementStateStableEntry[0]
+            ) &&
+            newOrExistingProductManagementStateStableEntry[1].adminChoseToEdit
+        )
+        .map(
+          (newOrExistingProductManagementStateStableEntry) =>
+            newOrExistingProductManagementStateStableEntry[0]
+        ),
+    [newOrExistingProductManagementStateStable]
+  );
+  const tagsComponentsXSign = useCallback(
+    (tagName: useQueryGetTagsAvailableTagsNames) => (
+      <ProductManagementPropertyXSign productManagementPropertyName={tagName} />
+    ),
+    [ProductManagementPropertyXSign]
+  );
   return (
     <>
       <TabsComponent
@@ -228,27 +407,97 @@ export default function NewOrExistingProductManagementForm({
           )
         }
       />
+      <section id="product-tags-management">
+        <MainCustomizationComponentsWithInputsAndTagsConfigurationContextProvider
+          selectedDevelopersState={selectedDevelopersState}
+          selectedDevelopersDispatch={selectedDevelopersDispatch}
+          selectedGenresDispatch={selectedGenresDispatch}
+          selectedGenresState={selectedGenresState}
+          selectedPlatformsDispatch={selectedPlatformsDispatch}
+          selectedPlatformsState={selectedPlatformsState}
+          selectedPublishersState={selectedPublishersState}
+          selectedPublishersDispatch={selectedPublishersDispatch}
+          {...componentsWithInputsAndTagsConfigurationContextInformationDefault}
+        >
+          <MainCustomizationComponentsWithInputsAndTags
+            tagTypesToShowStable={
+              tagTypesToShowStable as useQueryGetTagsAvailableTagsNames[]
+            }
+            additionalContentAtTheBeginningOfEachComponent={tagsComponentsXSign}
+          />
+        </MainCustomizationComponentsWithInputsAndTagsConfigurationContextProvider>
+      </section>
       <FormWithErrorHandling
         queryRelatedToActionState={productManagementQueryRes}
         onSubmit={handleSubmitProductManagement}
       >
-        {Object.values(availableProductManagementFields).map(
+        {Object.values(availableProductManagementInputFields).map(
           (availableProductManagementFieldObj: IFormInputField) => (
             <InputFieldElement
               inputFieldObjFromProps={availableProductManagementFieldObj}
               key={availableProductManagementFieldObj.name}
             >
-              <XSign
-                disabled={productManagementQueryRes.isPending}
-                onClick={handleChangeProductManagementStatePropertyActiveStatus.bind(
-                  null,
+              <ProductManagementPropertyXSign
+                productManagementPropertyName={
                   availableProductManagementFieldObj.name as newOrExistingProductManagementStatePossiblePropertiesToEdit
-                )}
+                }
               />
             </InputFieldElement>
           )
         )}
-        {/* <InputFieldSingleRow /> */}
+        {newOrExistingProductManagementStateStable.priceManagement
+          .adminChoseToEdit && (
+          <section
+            id="product-price-management"
+            className="flex flex-col gap-4 justify-center items-center"
+          >
+            <section
+              id="product-price-management-header"
+              className="flex gap-4"
+            >
+              <Header>Price Management</Header>
+              <ProductManagementPropertyXSign productManagementPropertyName="priceManagement" />
+            </section>
+            <InputFieldSingleRow>
+              <InputFieldElement
+                inputFieldObjFromProps={inputFieldsObjsInUse.price}
+                customAlignSelfTailwindClass="self-stretch"
+                onChange={productPriceHandleInputChange}
+                value={inputPrice}
+              />
+              <InputFieldElement
+                inputFieldObjFromProps={inputFieldsObjsInUse.discount}
+                onChange={productDiscountHandleInputChange}
+                value={inputDiscount}
+              />
+            </InputFieldSingleRow>
+            <span className="flex justify-center items-center gap-4">
+              Final price:{" "}
+              {finalPrice === 0 ? (
+                <FreeToPlayTag />
+              ) : (
+                <Header usePaddingBottom={false}>{finalPriceFormatted}</Header>
+              )}
+            </span>
+          </section>
+        )}
+        <Button
+          disabled={
+            productManagementQueryRes.isPending ||
+            !Object.entries(newOrExistingProductManagementStateStable).some(
+              (productManagementStateEntry) =>
+                productManagementStateEntry[1].adminChoseToEdit
+            )
+          }
+        >
+          {productManagementQueryRes.isPending
+            ? editExistingProduct
+              ? "Editing..."
+              : "Adding..."
+            : editExistingProduct
+            ? "Edit the selected product"
+            : "Add the described product"}
+        </Button>
       </FormWithErrorHandling>
     </>
   );
