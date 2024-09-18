@@ -37,6 +37,13 @@ import MainCustomizationComponentsWithInputsAndTags, {
   MainCustomizationComponentsWithInputsAndTagsConfigurationContextProvider,
 } from "../products/SearchCustomization/MainCustomizationComponentsWithInputsAndTags";
 import { useQueryGetTagsAvailableTagsNames } from "../../hooks/searchCustomizationRelated/useQueryGetTagsTypes";
+import { IMaxAmountOfSelectedTagsObj } from "../../store/products/SearchCustomizationContext";
+
+const newOrExistingProductManagementMaxAmountOfSelectedTabs: IMaxAmountOfSelectedTagsObj =
+  {
+    maxDevelopers: 1,
+    maxPublishers: 1,
+  };
 
 interface INewOrExistingProductManagementStateEntryValue {
   adminChoseToEdit: boolean;
@@ -51,7 +58,9 @@ const productManagementStateTagsProperties = [
   "platforms",
   "developers",
   "publishers",
-];
+] as const;
+type productManagementStateTagsProperties =
+  (typeof productManagementStateTagsProperties)[number];
 const newOrExistingProductManagementStatePossiblePropertiesToEdit = [
   "priceManagement",
   ...productManagementStateTagsProperties,
@@ -64,7 +73,7 @@ type INewOrExistingProductManagementState = {
 };
 export type INewOrExistingProductManagementStateToSend = {
   [entryName in newOrExistingProductManagementStatePossiblePropertiesToEdit]?: unknown;
-};
+} & { productId?: string };
 type IProductManagementPriceManagementPropertyValue = {
   discount: number;
   price: number;
@@ -335,23 +344,6 @@ export default function NewOrExistingProductManagementForm({
   const finalPrice = calcShopPrice(setPrice, setDiscount);
   const finalPriceFormatted = priceFormat.format(finalPrice);
 
-  const handleSubmitProductManagement = useCallback(
-    (formDataObj: {
-      [entryName in
-        | newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields
-        | inputFieldsNamesFromPriceManagement]: unknown;
-    }) =>
-      productManagementMutate({
-        ...filterOrOnlyIncludeCertainPropertiesFromObj(
-          formDataObj,
-          inputFieldsNamesFromPriceManagement as unknown as string[]
-        ),
-        price: setPrice,
-        discount: setDiscount,
-      }),
-    [productManagementMutate, setDiscount, setPrice]
-  );
-
   const {
     searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
   } = useContext(CustomSearchParamsAndSessionStorageEntriesNamesContext);
@@ -366,15 +358,48 @@ export default function NewOrExistingProductManagementForm({
     selectedPublishersState,
   } = usePrepareSearchCustomizationTagsState(
     searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
+    newOrExistingProductManagementMaxAmountOfSelectedTabs,
     true
   );
+
+  const handleSubmitProductManagement = useCallback(
+    (formDataObj: {
+      [entryName in
+        | newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields
+        | inputFieldsNamesFromPriceManagement]: unknown;
+    }) =>
+      productManagementMutate({
+        ...filterOrOnlyIncludeCertainPropertiesFromObj(
+          formDataObj,
+          inputFieldsNamesFromPriceManagement as unknown as string[]
+        ),
+        priceManagement: { price: setPrice, discount: setDiscount, finalPrice },
+        developers: selectedDevelopersState,
+        genres: selectedGenresState,
+        platforms: selectedPlatformsState,
+        publishers: selectedPublishersState,
+        productId: gameStable?._id,
+      }),
+    [
+      productManagementMutate,
+      selectedDevelopersState,
+      selectedGenresState,
+      selectedPlatformsState,
+      selectedPublishersState,
+      setDiscount,
+      setPrice,
+      finalPrice,
+      gameStable,
+    ]
+  );
+
   const tagTypesToShowStable = useMemo(
     () =>
       Object.entries(newOrExistingProductManagementStateStable)
         .filter(
           (newOrExistingProductManagementStateStableEntry) =>
             productManagementStateTagsProperties.includes(
-              newOrExistingProductManagementStateStableEntry[0]
+              newOrExistingProductManagementStateStableEntry[0] as productManagementStateTagsProperties
             ) &&
             newOrExistingProductManagementStateStableEntry[1].adminChoseToEdit
         )
@@ -417,6 +442,7 @@ export default function NewOrExistingProductManagementForm({
           selectedPlatformsState={selectedPlatformsState}
           selectedPublishersState={selectedPublishersState}
           selectedPublishersDispatch={selectedPublishersDispatch}
+          allowToAddNonExistentTags
           {...componentsWithInputsAndTagsConfigurationContextInformationDefault}
         >
           <MainCustomizationComponentsWithInputsAndTags

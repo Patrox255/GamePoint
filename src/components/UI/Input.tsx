@@ -49,6 +49,7 @@ interface IInputProps {
   customInputNumber?: boolean;
   lightThemeFromProps?: boolean;
   defaultValue?: inputValue;
+  disabled?: boolean;
 }
 
 const Input = forwardRef<HTMLInputElement, IInputProps>(
@@ -79,6 +80,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       customInputNumber = false,
       lightThemeFromProps,
       defaultValue,
+      disabled = false,
     },
     ref
   ) => {
@@ -91,17 +93,6 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
     const handleInputChange: ChangeEventHandler<HTMLInputElement> = (e) => {
       const value = e.currentTarget.value.replace(",", ".");
       const numberRegex = /\d*(\.\d{1,2})?/;
-      console.log(
-        value,
-        value === "" ||
-          (value &&
-            numberRegex.test(value) &&
-            (min === undefined || parseFloat(value) >= min) &&
-            (max === undefined || parseFloat(value) <= max)),
-        name,
-        min === undefined || parseFloat(value) >= min,
-        max === undefined || parseFloat(value) <= max
-      );
       const isValidNumberIfTypeNumber =
         type !== "number"
           ? true
@@ -145,6 +136,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       layout: true,
       onFocus,
       onBlur,
+      disabled,
     };
 
     const defaultValueInCaseOfCheckboxOrTextArea =
@@ -232,8 +224,6 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
           rows={5}
         ></motion.textarea>
       );
-
-    console.log(type);
 
     return content;
   }

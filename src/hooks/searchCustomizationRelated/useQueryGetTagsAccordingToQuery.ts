@@ -1,17 +1,38 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+
 import { loadTags } from "../../lib/fetch";
 import {
   receivedTagInterface,
   useQueryGetTagsAvailableTagsNames,
 } from "./useQueryGetTagsTypes";
+import { MAX_DISPLAYED_TAGS } from "../../lib/config";
 
-export default function useQueryGetTagsAccordingToQuery<
-  gameDocumentTagPropertyNameType extends useQueryGetTagsAvailableTagsNames
->(
+export const useGetTagsAccordingToQueryGenerateQueryKey = function (
   queryDebouncingState: string,
-  gameDocumentTagPropertyName: gameDocumentTagPropertyNameType,
+  gameDocumentTagPropertyName: useQueryGetTagsAvailableTagsNames
+) {
+  const stableQueryKey = useMemo(
+    () => [
+      "games",
+      gameDocumentTagPropertyName,
+      MAX_DISPLAYED_TAGS,
+      queryDebouncingState,
+    ],
+    [gameDocumentTagPropertyName, queryDebouncingState]
+  );
+  return stableQueryKey;
+};
+
+export default function useQueryGetTagsAccordingToQuery(
+  queryDebouncingState: string,
+  gameDocumentTagPropertyName: useQueryGetTagsAvailableTagsNames,
   customGameDocumentPropertyNameForTag?: string
 ) {
+  const queryKey = useGetTagsAccordingToQueryGenerateQueryKey(
+    queryDebouncingState,
+    gameDocumentTagPropertyName
+  );
   const { data, isLoading, error, isError } = useQuery({
     queryFn: ({ signal, queryKey }) => {
       const [, , limit, query] = queryKey;
@@ -26,7 +47,7 @@ export default function useQueryGetTagsAccordingToQuery<
         }
       );
     },
-    queryKey: ["games", gameDocumentTagPropertyName, 10, queryDebouncingState],
+    queryKey,
   });
 
   return { data, isLoading, error, isError };

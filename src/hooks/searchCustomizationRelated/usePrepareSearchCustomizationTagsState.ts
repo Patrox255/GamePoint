@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useMemo } from "react";
 
 import {
+  IMaxAmountOfSelectedTagsObj,
   ISearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
   retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj,
 } from "../../store/products/SearchCustomizationContext";
@@ -9,6 +10,7 @@ import useCreateUseReducerStateForCustomizationComponentWithInputAndTags from ".
 
 export default function usePrepareSearchCustomizationTagsState(
   customSearchParamsAndSessionStorageEntriesNames?: ISearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
+  maxAmountOfSelectedTagsObj?: IMaxAmountOfSelectedTagsObj,
   omitChangingSearchParams?: boolean
 ) {
   const location = useLocation();
@@ -38,6 +40,7 @@ export default function usePrepareSearchCustomizationTagsState(
         "genres",
         customSearchParamsAndSessionStorageEntriesNames
       ),
+    maxAmountOfSelectedTags: maxAmountOfSelectedTagsObj?.maxGenres,
   });
 
   const {
@@ -50,6 +53,7 @@ export default function usePrepareSearchCustomizationTagsState(
         "platforms",
         customSearchParamsAndSessionStorageEntriesNames
       ),
+    maxAmountOfSelectedTags: maxAmountOfSelectedTagsObj?.maxPlatforms,
   });
 
   const {
@@ -62,6 +66,7 @@ export default function usePrepareSearchCustomizationTagsState(
         "developers",
         customSearchParamsAndSessionStorageEntriesNames
       ),
+    maxAmountOfSelectedTags: maxAmountOfSelectedTagsObj?.maxDevelopers,
   });
 
   const {
@@ -74,6 +79,7 @@ export default function usePrepareSearchCustomizationTagsState(
         "publishers",
         customSearchParamsAndSessionStorageEntriesNames
       ),
+    maxAmountOfSelectedTags: maxAmountOfSelectedTagsObj?.maxPublishers,
   });
 
   return {

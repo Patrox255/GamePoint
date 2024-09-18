@@ -2,26 +2,32 @@ import mongoose, { Schema, Types } from "mongoose";
 import slugify from "slugify";
 import { calcShopPrice } from "../helpers";
 
-export interface IProductPriceInformation {
+export type IProductPriceInformation = {
   price: number;
   discount: number;
   finalPrice?: number;
-}
+};
 
-export interface IGame extends IProductPriceInformation {
+export type IGameInformationBasicPart<
+  T extends Types.ObjectId | string = Types.ObjectId
+> = {
   title: string;
-  releaseDate: Date;
-  genres: Types.ObjectId[];
-  platforms: Types.ObjectId[];
-  developer?: Types.ObjectId;
-  publisher?: Types.ObjectId;
-  popularity?: number;
-  artworks?: string[];
+  genres: T[];
+  platforms: T[];
   summary: string;
-  slug?: string;
   storyLine?: string;
-  reviews?: Types.ObjectId[];
-}
+};
+
+export type IGame = IProductPriceInformation &
+  IGameInformationBasicPart & {
+    developer?: Types.ObjectId;
+    publisher?: Types.ObjectId;
+    releaseDate: Date;
+    popularity?: number;
+    artworks?: string[];
+    slug?: string;
+    reviews?: Types.ObjectId[];
+  };
 
 const GameSchema = new Schema<IGame>({
   title: { type: String, required: true },

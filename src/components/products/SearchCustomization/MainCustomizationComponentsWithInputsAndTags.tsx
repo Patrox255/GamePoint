@@ -15,7 +15,9 @@ export type IMainCustomizationComponentsWithInputsAndTagsConfigurationContextInf
   };
 type IMainCustomizationComponentsWithInputsAndTagsConfigurationContextBody =
   IMainCustomizationComponentsWithInputsAndTagsConfigurationContextInformation &
-    IProductTagsContextBody;
+    IProductTagsContextBody & {
+      allowToAddNonExistentTags?: boolean;
+    };
 export const MainCustomizationComponentsWithInputsAndTagsConfigurationContext =
   createContext<IMainCustomizationComponentsWithInputsAndTagsConfigurationContextBody>(
     {
@@ -151,8 +153,6 @@ export default function MainCustomizationComponentsWithInputsAndTags({
       </section>
     )
   );
-
-  console.log(content);
 
   return content;
 }

@@ -1,4 +1,4 @@
-import { Dispatch, useContext, useState } from "react";
+import { Dispatch, useCallback, useContext, useState } from "react";
 
 import TagsComponent from "../../game/tags/TagsComponent";
 import Input from "../../UI/Input";
@@ -14,11 +14,26 @@ import {
   ISelectedTags,
   ISelectedTagsReducer,
 } from "../../../hooks/searchCustomizationRelated/useCreateUseReducerStateForCustomizationComponentWithInputAndTags";
-import useQueryGetTagsAccordingToQuery from "../../../hooks/searchCustomizationRelated/useQueryGetTagsAccordingToQuery";
+import useQueryGetTagsAccordingToQuery, {
+  useGetTagsAccordingToQueryGenerateQueryKey,
+} from "../../../hooks/searchCustomizationRelated/useQueryGetTagsAccordingToQuery";
 import useQueryGetTheMostPopularTags from "../../../hooks/searchCustomizationRelated/useQueryGetTheMostPopularTags";
 import { useQueryGetTagsAvailableTagsNames } from "../../../hooks/searchCustomizationRelated/useQueryGetTagsTypes";
 import { CustomSearchParamsAndSessionStorageEntriesNamesContext } from "../../../store/stateManagement/CustomSearchParamsAndSessionStorageEntriesNamesContext";
 import { MainCustomizationComponentsWithInputsAndTagsConfigurationContext } from "./MainCustomizationComponentsWithInputsAndTags";
+import { useMutation } from "@tanstack/react-query";
+import {
+  addProductTag,
+  IAddProductTagFnArg,
+  queryClient,
+} from "../../../lib/fetch";
+import {
+  FormActionBackendErrorResponse,
+  FormActionBackendResponse,
+  ValidationErrorsArr,
+} from "../../UI/FormWithErrorHandling";
+import useExtractStableDataOrErrorsFromMyBackendUseQueryResponse from "../../../hooks/queryRelated/useExtractStableDataOrErrorsFromMyBackendUseQueryResponse";
+import Header from "../../UI/headers/Header";
 
 export default function CustomizationComponentWithInputAndTags({
   tagType,
@@ -113,10 +128,88 @@ export default function CustomizationComponentWithInputAndTags({
     ] as Dispatch<ISelectedTagsReducer>;
   }
 
+  const { allowToAddNonExistentTags } = configurationForAllTagTypes;
+  const [addProductTagShowSuccessMessage, setAddProductTagShowSuccessMessage] =
+    useState(false);
+  const queryTagsQueryKeyStable = useGetTagsAccordingToQueryGenerateQueryKey(
+    queryDebouncingState,
+    relatedTagType
+  );
+  const handleAddProductTagMutationOptimisticUpdateError = (
+    ctx: unknown,
+    queryArg: IAddProductTagFnArg
+  ) => {
+    queryClient.setQueryData(queryTagsQueryKeyStable, { data: ctx });
+    selectedTagsDispatch({
+      type: "REMOVE_VALUE_FROM_ARR",
+      payload: { value: queryArg.tagName },
+    });
+  };
+  const {
+    mutate: addProductTagMutate,
+    data: addProductTagQueryData,
+    error: addProductTagQueryError,
+    isPending: addProductTagIsPending,
+  } = useMutation<
+    FormActionBackendResponse,
+    FormActionBackendErrorResponse,
+    IAddProductTagFnArg
+  >({
+    mutationFn: addProductTag,
+    onMutate: (queryArg) => {
+      const curQueryTagsData = queryClient.getQueryData<{ data: unknown[] }>(
+        queryTagsQueryKeyStable
+      )?.data;
+      queryClient.setQueryData(queryTagsQueryKeyStable, {
+        data: [
+          ...(curQueryTagsData ? curQueryTagsData : []),
+          {
+            name: queryArg.tagName,
+          },
+        ],
+      });
+      selectedTagsDispatch({
+        type: "ADD_VALUE_TO_ARR",
+        payload: { value: queryArg.tagName },
+      });
+
+      return curQueryTagsData;
+    },
+    onError: (_, queryArg, ctx) =>
+      handleAddProductTagMutationOptimisticUpdateError(ctx, queryArg),
+    onSuccess: (queryData, queryArg, ctx) =>
+      typeof queryData.data === "object"
+        ? handleAddProductTagMutationOptimisticUpdateError(ctx, queryArg)
+        : setAddProductTagShowSuccessMessage(true),
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: queryTagsQueryKeyStable }),
+  });
+  const {
+    stableData: addProductTagData,
+    stableOtherErrors: addProductTagOtherErrors,
+    stableValidationErrors: addProductTagValidationErrors,
+  } = useExtractStableDataOrErrorsFromMyBackendUseQueryResponse(
+    addProductTagQueryData,
+    addProductTagQueryError
+  );
+
+  const addProductTagSuccessMessage = addProductTagShowSuccessMessage &&
+    addProductTagData && (
+      <Header>{`${addProductTagData} has been added to the ${headerText.toLowerCase()} list!`}</Header>
+    );
+  const handleTagsInputChangeWithSuccessReset = useCallback(
+    (newValue: string) => {
+      addProductTagShowSuccessMessage &&
+        setAddProductTagShowSuccessMessage(false);
+      handleInputChange(newValue);
+    },
+    [addProductTagShowSuccessMessage, handleInputChange]
+  );
+
   let content;
   if (
-    (typedCustomQuery && mostPopularTagsIsLoading) ||
-    (!typedCustomQuery && queryTagsIsLoading)
+    (typedCustomQuery && queryTagsIsLoading) ||
+    (!typedCustomQuery && mostPopularTagsIsLoading)
   )
     content = <LoadingFallback />;
   else if (typedCustomQuery && queryTagsError)
@@ -124,7 +217,49 @@ export default function CustomizationComponentWithInputAndTags({
   else if (!typedCustomQuery && mostPopularTagsError)
     content = <Error message={mostPopularTagsError.message} />;
   else if (typedCustomQuery && queryTagsData && queryTagsData.data.length === 0)
-    content = <p>No genres similar to the provided query have been found</p>;
+    content = (
+      <section className="flex flex-col gap-4">
+        <p>No tags related to the provided query have been found!</p>
+        {allowToAddNonExistentTags && (
+          <>
+            <Button
+              disabled={
+                addProductTagIsPending || addProductTagData !== undefined
+              }
+              onClick={
+                addProductTagIsPending
+                  ? undefined
+                  : () =>
+                      addProductTagMutate({
+                        tagName: queryDebouncingState,
+                        tagId: relatedTagType,
+                      })
+              }
+            >
+              {addProductTagIsPending
+                ? "Adding..."
+                : addProductTagData !== undefined
+                ? "Added!"
+                : `Add ${queryDebouncingState}`}
+            </Button>
+            {addProductTagIsPending && (
+              <LoadingFallback customText="Adding specified tag..." />
+            )}
+            {(addProductTagOtherErrors || addProductTagValidationErrors) && (
+              <Error
+                smallVersion
+                message={
+                  (addProductTagOtherErrors
+                    ? addProductTagOtherErrors
+                    : (addProductTagValidationErrors as ValidationErrorsArr)[0]
+                  ).message
+                }
+              />
+            )}
+          </>
+        )}
+      </section>
+    );
   else if (
     (typedCustomQuery && queryTagsData) ||
     (!typedCustomQuery && mostPopularTagsData)
@@ -203,11 +338,13 @@ export default function CustomizationComponentWithInputAndTags({
           <Input
             placeholder={inputPlaceholder}
             value={tagSearch}
-            onChange={handleInputChange}
+            onChange={handleTagsInputChangeWithSuccessReset}
             width="min-w-1/2"
+            disabled={addProductTagIsPending}
           />
         </div>
         {content}
+        {addProductTagSuccessMessage}
       </div>
     </article>
   );

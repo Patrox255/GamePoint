@@ -1,6 +1,10 @@
 import { isValidObjectId } from "mongoose";
 import { IAdditionalContactInformationWithoutDateOfBirth } from "./models/additionalContactInformation.model";
-import { IGame } from "./models/game.model";
+import {
+  IGame,
+  IGameInformationBasicPart,
+  IProductPriceInformation,
+} from "./models/game.model";
 import {
   emailRegex,
   firstAndLastNameValidateFn,
@@ -12,6 +16,7 @@ import {
   zipCodeRegex,
 } from "./validateBodyFn";
 import {
+  availableTagsIdentificatorsToMongooseModelsMap,
   bodyEntryValidMongooseObjectIdValidateFn,
   tryToTransformOrderUserFriendlyStatusToItsDatabaseVersion,
 } from "./helpers";
@@ -517,3 +522,105 @@ export const modifyUserDataEntries: IValidateBodyEntry<IModifyUserDataBodyFromRe
         },
     },
   ];
+
+export interface IAddProductTagBodyFromRequest
+  extends IBodyFromRequestToValidate {
+  tagId: string;
+  tagName: string;
+}
+
+export const addProductTagEntries: IValidateBodyEntry<IAddProductTagBodyFromRequest>[] =
+  [
+    {
+      name: "Tag identificator",
+      requestBodyName: "tagId",
+      type: "string",
+      validateFn: (tagId) =>
+        (tagId as string) in availableTagsIdentificatorsToMongooseModelsMap || {
+          message: "Unknown tag type provided!",
+        },
+    },
+    { name: "New tag name", requestBodyName: "tagName", type: "string" },
+  ];
+
+export type IGameInformationSentByAdmin = IGameInformationBasicPart<string> & {
+  productId?: string;
+  priceManagement?: IProductPriceInformation;
+  developers?: string[];
+  publishers?: string[];
+  // Only because of the mechanics of tags hook which only stores selected tags in arrays and therefore in order not to
+  // play with data flow that much I will receive these properties also as raw data from front end
+};
+export interface IProductsManagementBodyFromRequest
+  extends IBodyFromRequestToValidate,
+    IGameInformationSentByAdmin {}
+
+type productsManagementEntry =
+  IValidateBodyEntry<IProductsManagementBodyFromRequest>;
+const defaultProductsManagementEntriesValue = {
+  type: "string",
+  optional: true,
+} as unknown as productsManagementEntry;
+export const productsManagementEntries: productsManagementEntry[] = [
+  {
+    ...defaultProductsManagementEntriesValue,
+    name: "Product title",
+    requestBodyName: "title",
+  },
+  {
+    ...defaultProductsManagementEntriesValue,
+    name: "Product summary",
+    requestBodyName: "summary",
+  },
+  {
+    ...defaultProductsManagementEntriesValue,
+    name: "Product story line",
+    requestBodyName: "storyLine",
+  },
+  {
+    ...defaultProductsManagementEntriesValue,
+    name: "Product summary",
+    requestBodyName: "summary",
+  },
+  {
+    ...defaultProductsManagementEntriesValue,
+    name: "Product developer",
+    requestBodyName: "developers",
+    type: "array",
+  },
+  {
+    ...defaultProductsManagementEntriesValue,
+    name: "Product genres",
+    requestBodyName: "genres",
+    type: "array",
+  },
+  {
+    ...defaultProductsManagementEntriesValue,
+    name: "Product platforms",
+    requestBodyName: "platforms",
+    type: "array",
+  },
+  {
+    ...defaultProductsManagementEntriesValue,
+    name: "Product publishers",
+    requestBodyName: "publishers",
+    type: "array",
+  },
+  {
+    ...defaultProductsManagementEntriesValue,
+    name: "Product price management",
+    requestBodyName: "priceManagement",
+    type: "object",
+    validateFn: (priceManagement) =>
+      ("price" in (priceManagement as object) &&
+        "discount" in (priceManagement as object)) || {
+        message: "You have set the price management information improperly",
+      },
+  },
+  {
+    ...defaultProductsManagementEntriesValue,
+    name: "Product identificator",
+    requestBodyName: "productId",
+    validateFn: bodyEntryValidMongooseObjectIdValidateFn,
+  },
+];

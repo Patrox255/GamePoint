@@ -1,8 +1,10 @@
-import { Reducer, useCallback, useReducer } from "react";
+import { Reducer, useCallback, useMemo, useReducer } from "react";
 import { Location, NavigateFunction } from "react-router-dom";
 
 import generateInitialStateFromSearchParamsOrSessionStorage from "../../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
 import useChangeSearchParamsAndSessionStorageWhenUseReducerChanges from "../useChangeSearchParamsWhenUseReducerChanges";
+import useCompareComplexForUseMemo from "../useCompareComplexForUseMemo";
+import removeRandomElementFromAnArray from "../../helpers/removeRandomElementFromAnArray";
 
 type ISelectedTagsProperty = string[];
 
@@ -28,7 +30,9 @@ export type ISelectedTagsReducer =
       type: "RESET";
     };
 
-const selectedTagsReducer: Reducer<ISelectedTags, ISelectedTagsReducer> =
+const selectedTagsReducerGenerator: (
+  maxAmountOfSelectedTags?: number
+) => Reducer<ISelectedTags, ISelectedTagsReducer> = (maxAmountOfSelectedTags) =>
   function (state: ISelectedTags, action: ISelectedTagsReducer) {
     const { type } = action;
     switch (type) {
@@ -36,9 +40,19 @@ const selectedTagsReducer: Reducer<ISelectedTags, ISelectedTagsReducer> =
         const {
           payload: { value },
         } = action;
+        const { stateArr } = state;
         return state.stateArr.includes(value!)
           ? state
-          : { ...state, stateArr: [...state.stateArr, value] };
+          : {
+              ...state,
+              stateArr: [
+                ...(maxAmountOfSelectedTags &&
+                stateArr.length >= maxAmountOfSelectedTags
+                  ? removeRandomElementFromAnArray(stateArr)
+                  : stateArr),
+                value,
+              ],
+            };
       }
       case "REMOVE_VALUE_FROM_ARR": {
         const {
@@ -71,12 +85,14 @@ export default function useCreateUseReducerStateForCustomizationComponentWithInp
   searchParams,
   searchParamName,
   omitChangingSearchParams,
+  maxAmountOfSelectedTags,
 }: {
   location: Location;
   navigate: NavigateFunction;
   searchParams: URLSearchParams;
   searchParamName: string;
   omitChangingSearchParams?: boolean;
+  maxAmountOfSelectedTags?: number;
 }) {
   const initialSelectedTagsState: ISelectedTags = {
     stateArr: generateInitialStateFromSearchParamsOrSessionStorage(
@@ -91,9 +107,16 @@ export default function useCreateUseReducerStateForCustomizationComponentWithInp
     ),
   };
 
-  const [selectedTagsState, selectedTagsDispatch] = useReducer(
+  const selectedTagsReducer = useMemo(
+    () => selectedTagsReducerGenerator(maxAmountOfSelectedTags),
+    [maxAmountOfSelectedTags]
+  );
+  const [selectedTagsStateUnstable, selectedTagsDispatch] = useReducer(
     selectedTagsReducer,
     initialSelectedTagsState
+  );
+  const selectedTagsState = useCompareComplexForUseMemo(
+    selectedTagsStateUnstable
   );
 
   const selectedTagsDispatchCallback = useCallback(

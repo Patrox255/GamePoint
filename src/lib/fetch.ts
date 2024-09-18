@@ -23,6 +23,7 @@ import {
   transformGeneralInformationModificationUserFriendlyModeToOneStoredInQuery,
 } from "../components/userPanel/admin/users/SelectedUserManagement";
 import { INewOrExistingProductManagementStateToSend } from "../components/product/NewOrExistingProductManagementForm";
+import { useQueryGetTagsAvailableTagsNames } from "../hooks/searchCustomizationRelated/useQueryGetTagsTypes";
 
 export const queryClient = new QueryClient();
 
@@ -712,6 +713,22 @@ export const productManagement = async function (
     url: `${API_URL}/products-management`,
     method: "POST",
     body: productManagementDataToSend,
+  });
+  return data;
+};
+
+export interface IAddProductTagFnArg {
+  tagId: useQueryGetTagsAvailableTagsNames;
+  tagName: string;
+}
+export const addProductTag = async function ({
+  tagId,
+  tagName,
+}: IAddProductTagFnArg) {
+  const data = await getJSON<string>({
+    url: `${API_URL}/add-product-tag`,
+    body: { tagId, tagName },
+    method: "POST",
   });
   return data;
 };

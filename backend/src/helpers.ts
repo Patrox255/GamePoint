@@ -19,6 +19,11 @@ import {
   orderPossibleStatusesUserFriendlyMap,
 } from "./models/order.model";
 import { IProcessEnvVariables } from "../env";
+import Genre, { IGenre } from "./models/genre.model";
+import Platform, { IPlatform } from "./models/platform.model";
+import Developer, { IDeveloper } from "./models/developer.model";
+import Publisher, { IPublisher } from "./models/publisher.model";
+// import { cloneDeep } from "lodash";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -788,3 +793,122 @@ export const retrieveUserWithAllFieldsPopulated = async ({
   const retrievedUser = await retrieveUserMongooseQuery;
   return retrievedUser;
 };
+
+export type availableTagsIdentificators =
+  | "genres"
+  | "platforms"
+  | "developers"
+  | "publishers";
+export const availableTagsIdentificatorsToMongooseModelsMap = {
+  genres: Genre,
+  platforms: Platform,
+  developers: Developer,
+  publishers: Publisher,
+};
+export const availableTagsIdentificatorsToHeadersMap = {
+  genres: "Genre",
+  platforms: "Platform",
+  developers: "Developer",
+  publishers: "Publisher",
+};
+export type IMongooseDocumentBasedOnInterface<T extends object> =
+  mongoose.Document<unknown, object, T> & T & { _id: Types.ObjectId };
+export type availableTagIdentificatorToMongooseDocumentMap<
+  tagIdentificator extends availableTagsIdentificators
+> = tagIdentificator extends "genres"
+  ? IMongooseDocumentBasedOnInterface<IGenre>
+  : tagIdentificator extends "platforms"
+  ? IMongooseDocumentBasedOnInterface<IPlatform>
+  : tagIdentificator extends "developers"
+  ? IMongooseDocumentBasedOnInterface<IDeveloper>
+  : IMongooseDocumentBasedOnInterface<IPublisher>;
+
+export async function checkReceivedTagsNames<
+  tagIdentificator extends availableTagsIdentificators
+>(
+  tagsNames: string,
+  tagIdentificator: availableTagsIdentificators
+): Promise<availableTagIdentificatorToMongooseDocumentMap<tagIdentificator>>;
+export async function checkReceivedTagsNames<
+  tagIdentificator extends availableTagsIdentificators
+>(
+  tagsNames: string[],
+  tagIdentificator: availableTagsIdentificators
+): Promise<availableTagIdentificatorToMongooseDocumentMap<tagIdentificator>[]>;
+export async function checkReceivedTagsNames<
+  tagIdentificator extends availableTagsIdentificators
+>(tagsNames: string[] | string, tagIdentificator: tagIdentificator) {
+  const relatedTagModel =
+    availableTagsIdentificatorsToMongooseModelsMap[tagIdentificator];
+  const checkOneTag = async function (tag: string) {
+    const relatedTagDocument = await relatedTagModel.findOne({ name: tag });
+    if (!relatedTagDocument)
+      throw {
+        message: `${availableTagsIdentificatorsToHeadersMap[tagIdentificator]} of the name: ${tag} seems not to exist in our database!`,
+      };
+    return relatedTagDocument;
+  };
+  if (typeof tagsNames === "string") return await checkOneTag(tagsNames);
+  return await Promise.all(
+    tagsNames.map(async (tagName) => await checkOneTag(tagName))
+  );
+}
+
+export async function verifyProductTagsWhenAddingOrEditingOne<
+  T extends {
+    [tag in availableTagsIdentificators]?: string[];
+  }
+>({
+  developers,
+  genres: genresReceived,
+  platforms: platformsReceived,
+  publishers,
+}: T) {
+  let developer: IMongooseDocumentBasedOnInterface<IDeveloper>,
+    publisher: IMongooseDocumentBasedOnInterface<IPublisher>,
+    genres: IMongooseDocumentBasedOnInterface<IGenre>[],
+    platforms: IMongooseDocumentBasedOnInterface<IPlatform>[];
+  if (developers)
+    developer = (
+      (await checkReceivedTagsNames(
+        developers,
+        "developers"
+      )) as unknown as IMongooseDocumentBasedOnInterface<IDeveloper>[]
+    )[0];
+  if (publishers)
+    publisher = (
+      (await checkReceivedTagsNames(
+        publishers,
+        "publishers"
+      )) as unknown as IMongooseDocumentBasedOnInterface<IPublisher>[]
+    )[0];
+  if (genresReceived)
+    genres = (await checkReceivedTagsNames(
+      genresReceived,
+      "genres"
+    )) as unknown as IMongooseDocumentBasedOnInterface<IGenre>[];
+  if (platformsReceived)
+    platforms = (await checkReceivedTagsNames(
+      platformsReceived,
+      "platforms"
+    )) as unknown as IMongooseDocumentBasedOnInterface<IPlatform>[];
+
+  return {
+    developer: developer!,
+    platforms: platforms!,
+    genres: genres!,
+    publisher: publisher!,
+  };
+}
+
+// export const overrideTruePropertiesIntoObj = function <
+//   T extends string,
+//   Y extends object
+// >(obj: Y, propertiesObj: { [key in T]?: unknown }) {
+//   const objCopy = cloneDeep(obj);
+//   Object.entries(propertiesObj).forEach((propertyEntry) => {
+//     if (propertyEntry[1] && propertyEntry[0] in objCopy)
+//       objCopy[propertyEntry[0] as keyof typeof objCopy] = propertyEntry[1];
+//   });
+//   return objCopy;
+// };

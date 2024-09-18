@@ -53,6 +53,9 @@ import {
   retrieveUserWithAllFieldsPopulated,
   getRelatedUserBasedOnHisLoginOrId,
   validateWhetherRequestedContactInformationCanBeDoneInCaseItTriesToDoAdminOperation,
+  availableTagsIdentificatorsToMongooseModelsMap,
+  // verifyProductTagsWhenAddingOrEditingOne,
+  // overrideTruePropertiesIntoObj,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -62,12 +65,14 @@ import { IProcessEnvVariables } from "../env";
 import AdditionalContactInformation from "./models/additionalContactInformation.model";
 import sanitizeHtml from "sanitize-html";
 import {
+  addProductTagEntries,
   addReviewEntries,
   cartDataEntries,
   changeActiveContactInformationEntries,
   checkOrderIdEntries,
   contactInformationEntries,
   contactInformationForGuestsEntries,
+  IAddProductTagBodyFromRequest,
   IAddReviewEntriesFromRequest,
   ICartDataEntriesFromRequest,
   IChangeActiveContactInformationEntriesFromRequest,
@@ -80,6 +85,7 @@ import {
   IOrderDataFromRequest,
   IOrderDataFromRequestContactInformationForGuests,
   IOrderDataFromRequestOrderedGamesDetails,
+  IProductsManagementBodyFromRequest,
   IRegisterBodyFromRequest,
   IRemoveReviewEntriesFromRequest,
   IRetrieveOrdersInAdminPanelBodyFromRequest,
@@ -92,6 +98,7 @@ import {
   modifyOrderEntries,
   modifyUserDataEntries,
   orderedGamesEntries,
+  productsManagementEntries,
   registerBodyEntries,
   removeReviewEntries,
   retrieveOrdersInAdminPanelEntries,
@@ -2303,6 +2310,61 @@ const startServer = async () => {
         }
       }
     );
+
+    app.post(
+      "/add-product-tag",
+      verifyJwtWithAdminGuard,
+      async (req, res, next) => {
+        try {
+          if (!validateBodyEntries({ req, res, entries: addProductTagEntries }))
+            return;
+          const { tagId, tagName } = req.body as IAddProductTagBodyFromRequest;
+          const relatedMongooseModel =
+            availableTagsIdentificatorsToMongooseModelsMap[
+              tagId as keyof typeof availableTagsIdentificatorsToMongooseModelsMap
+            ];
+          await createDocumentsOfObjsAndInsert(
+            [{ name: tagName }],
+            relatedMongooseModel
+          );
+          return res.status(200).send(tagName);
+        } catch (e) {
+          next(e);
+        }
+      }
+    );
+
+    app.post("/products-management", async (req, res, next) => {
+      try {
+        if (
+          !validateBodyEntries({ req, res, entries: productsManagementEntries })
+        )
+          return;
+        const productsManagementBody =
+          req.body as IProductsManagementBodyFromRequest;
+        const { productId } = productsManagementBody;
+        const relatedProduct = productId
+          ? await Game.findById(productId).lean()
+          : undefined;
+        if (relatedProduct === undefined)
+          return res.status(200).json({
+            message: "Selected product does not seem to exist anymore!",
+          });
+        // const { developer, genres, platforms, publisher } =
+        //   await verifyProductTagsWhenAddingOrEditingOne(productsManagementBody);
+
+        // if (relatedProduct)
+        //   relatedProduct = overrideTruePropertiesIntoObj(relatedProduct, {
+        //     developer,
+        //     genres,
+        //     platforms,
+        //     publisher,
+        //   });
+        return res.status(200).json(relatedProduct);
+      } catch (e) {
+        next(e);
+      }
+    });
 
     const server = app.listen(port);
 

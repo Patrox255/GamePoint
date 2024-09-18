@@ -19,6 +19,7 @@ import { ProductsSearchCustomizationCustomInformationContext } from "./ProductsS
 import { useQueryGetTagsAvailableTagsNames } from "../../hooks/searchCustomizationRelated/useQueryGetTagsTypes";
 import { CustomSearchParamsAndSessionStorageEntriesNamesContext } from "../stateManagement/CustomSearchParamsAndSessionStorageEntriesNamesContext";
 import usePrepareSearchCustomizationTagsState from "../../hooks/searchCustomizationRelated/usePrepareSearchCustomizationTagsState";
+import { changeStrPrefix } from "../../helpers/changeStrPrefix";
 
 type IOrderCustomization = IOrderCustomizationStateObjWithDebouncedFields<
   (typeof searchCustomizationOrderFieldsNames)[number]
@@ -58,6 +59,11 @@ export type ISearchCustomizationContext = {
   searchTerm: string;
 } & IProductTagsContextBody;
 
+type productsSearchCustomizationTagTypes =
+  | "genres"
+  | "platforms"
+  | "developers"
+  | "publishers";
 export type usedSearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization =
 
     | "query"
@@ -65,10 +71,7 @@ export type usedSearchParamsAndSessionStorageEntriesNamesForProductsSearchCustom
     | "max"
     | "searchCustomizationOrder"
     | "discount"
-    | "genres"
-    | "platforms"
-    | "developers"
-    | "publishers";
+    | productsSearchCustomizationTagTypes;
 export type usedSearchParamsAndSessionStorageIdsOfDeeperStatesForProductsSearchCustomization =
   "products-search-tags" | "priceRange";
 export type ISearchParamsAndSessionStorageEntryValueWithSetTagType = {
@@ -92,6 +95,14 @@ export type ISearchParamsAndSessionStorageEntriesNames<
     : {
         [searchParamsAndSessionStorageIdsOfDeeperStatesKey in searchParamsAndSessionStorageIdsOfDeeperStates as string]?: string;
       });
+type productsSearchCustomizationMaxSelectedTagsKeys = changeStrPrefix<
+  Capitalize<productsSearchCustomizationTagTypes>,
+  "",
+  "max"
+>;
+export type IMaxAmountOfSelectedTagsObj = {
+  [tagKey in productsSearchCustomizationMaxSelectedTagsKeys]?: number;
+};
 export type ISearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization =
   ISearchParamsAndSessionStorageEntriesNames<
     usedSearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
