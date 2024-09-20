@@ -13,7 +13,6 @@ import {
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { IFormInputField } from "./FormWithErrorHandling";
 import InputFieldElement, {
   InputFieldElementChildrenCtx,
 } from "./InputFieldElement";
@@ -29,6 +28,10 @@ import createDateNoTakingTimezoneIntoAccount from "../../helpers/createDateNoTak
 import { useInput } from "../../hooks/useInput";
 import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
 import Table, { tableCellIsDisabledFn, tableOnCellClickFn } from "./Table";
+import DatePickerInputFieldElementConfigurationContextProvider, {
+  DatePickerInputFieldElementConfigurationContext,
+  IDatePickerInputFieldElementConfigurationContextProps,
+} from "../../store/UI/DatePickerInputFieldElementConfigurationContext";
 
 export const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -73,7 +76,6 @@ export const DatePickerInputFieldElementCtx = createContext<{
   selectedDateObj: nowDate,
 });
 
-const oldestPossibleYear = nowDate.getFullYear() - 150;
 const generateMonthsToChoose = (
   monthFormat: "numeric" | "2-digit" | "long" | "short" | "narrow"
 ) =>
@@ -86,23 +88,6 @@ const generateMonthsToChoose = (
   });
 
 const availableMonthsToChoose = generateMonthsToChoose("long");
-const availableYearsToChoose = Array.from(
-  { length: nowDate.getFullYear() - oldestPossibleYear + 1 },
-  (_, i) => oldestPossibleYear + i + ""
-);
-
-const dateInPossibleRange = (date: Date) => {
-  const oldestPossibleDate = createDateNoTakingTimezoneIntoAccount({
-    year: +availableYearsToChoose[0],
-    month: 0,
-    day: 1,
-  });
-  const latestPossibleDate = createDateNoTakingTimezoneIntoAccount({});
-  return date >= oldestPossibleDate && date <= latestPossibleDate;
-};
-
-const changeDateYear = (curSelectedDateObj: Date, yearsArrIndex: number) =>
-  curSelectedDateObj.setUTCFullYear(+availableYearsToChoose[yearsArrIndex]);
 const changeDateMonth = (curSelectedDateObj: Date, monthsArrIndex: number) =>
   curSelectedDateObj.setUTCMonth(monthsArrIndex);
 
@@ -216,6 +201,13 @@ function DatePicker() {
     selectedDateObj,
     setSelectedDateImmediately,
   } = useContext(DatePickerInputFieldElementCtx);
+  const {
+    changeDateYearStable,
+    dateInPossibleRangeStable,
+    availableYearsToChoose,
+  } = useContext(DatePickerInputFieldElementConfigurationContext);
+  const changeDateYear = changeDateYearStable!;
+  const dateInPossibleRange = dateInPossibleRangeStable!;
   const { forceInputFieldBlur, forceInputFieldFocus, inputFieldObj } =
     useContext(InputFieldElementChildrenCtx);
 
@@ -300,7 +292,7 @@ function DatePicker() {
         return curSelectedDateCopy;
       });
     },
-    [setSelectedDateImmediately]
+    [dateInPossibleRange, setSelectedDateImmediately]
   );
 
   const changeYearAfterPlayingWithYearsSliderStable = useCallback(
@@ -310,7 +302,7 @@ function DatePicker() {
         changeDateYear,
         "year"
       ),
-    [changeDatePropertyAfterPlayingWithIndividualSliderStable]
+    [changeDatePropertyAfterPlayingWithIndividualSliderStable, changeDateYear]
   );
 
   const changeMonthAfterPlayingWithMonthsSliderStable = useCallback(
@@ -352,6 +344,7 @@ function DatePicker() {
       return fn;
     },
     [
+      availableYearsToChoose,
       changeMonthAfterPlayingWithMonthsSliderStable,
       changeYearAfterPlayingWithYearsSliderStable,
     ]
@@ -400,7 +393,11 @@ function DatePicker() {
             );
       };
     },
-    [manageMonthStateInDataSliderFnStable, manageYearStateInDataSliderFnStable]
+    [
+      availableYearsToChoose,
+      manageMonthStateInDataSliderFnStable,
+      manageYearStateInDataSliderFnStable,
+    ]
   );
 
   const monthsTableOnCellClickFnStable = useCallback<
@@ -453,7 +450,7 @@ function DatePicker() {
       );
       return !dateInPossibleRange(dateToChangeCurDateToAfterClick);
     },
-    [selectedDateObj]
+    [availableYearsToChoose, dateInPossibleRange, selectedDateObj]
   );
 
   const monthsListIsDisabled = useCallback<tableCellIsDisabledFn<string>>(
@@ -653,14 +650,14 @@ function DatePicker() {
   );
 }
 
-export default function DatePickerInputFieldElement({
-  inputFieldObjFromProps,
-}: {
-  inputFieldObjFromProps: IFormInputField;
-}) {
+export function DatePickerInputFieldElementContent() {
+  const { dateInPossibleRangeStable, inputFieldObjFromProps } = useContext(
+    DatePickerInputFieldElementConfigurationContext
+  );
+  console.log(inputFieldObjFromProps);
   const [datePickerState, setDatePickerState] = useState<datePickerState>("");
   const [selectedDate, setSelectedDate] = useState<Date | string>(
-    inputFieldObjFromProps.defaultValue &&
+    inputFieldObjFromProps?.defaultValue &&
       typeof inputFieldObjFromProps.defaultValue === "object"
       ? inputFieldObjFromProps.defaultValue
       : ""
@@ -691,9 +688,9 @@ export default function DatePickerInputFieldElement({
     const dateToCheck = createDateObjBasedOnDatePickerInputValue(
       selectedDateDebouncedStable
     );
-    if (!dateInPossibleRange(dateToCheck)) return nowDate;
+    if (!dateInPossibleRangeStable?.(dateToCheck)) return nowDate;
     return dateToCheck;
-  }, [selectedDateDebouncedStable]);
+  }, [selectedDateDebouncedStable, dateInPossibleRangeStable]);
 
   const setSelectedDateImmediatelyStable =
     useCallback<setSelectedDateImmediatelyFn>(
@@ -725,5 +722,17 @@ export default function DatePickerInputFieldElement({
         <DatePicker />
       </DatePickerInputFieldElementCtx.Provider>
     </InputFieldElement>
+  );
+}
+
+export default function DatePickerInputFieldElement(
+  datePickerConfigurationProps: IDatePickerInputFieldElementConfigurationContextProps
+) {
+  return (
+    <DatePickerInputFieldElementConfigurationContextProvider
+      {...datePickerConfigurationProps}
+    >
+      <DatePickerInputFieldElementContent />
+    </DatePickerInputFieldElementConfigurationContextProvider>
   );
 }

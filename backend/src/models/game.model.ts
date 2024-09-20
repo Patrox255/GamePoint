@@ -16,13 +16,13 @@ export type IGameInformationBasicPart<
   platforms: T[];
   summary: string;
   storyLine?: string;
+  releaseDate: Date;
 };
 
 export type IGame = IProductPriceInformation &
   IGameInformationBasicPart & {
     developer?: Types.ObjectId;
     publisher?: Types.ObjectId;
-    releaseDate: Date;
     popularity?: number;
     artworks?: string[];
     slug?: string;

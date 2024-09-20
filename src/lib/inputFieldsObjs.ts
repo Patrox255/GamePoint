@@ -159,7 +159,8 @@ export type existingProductManagementInputFieldsNames =
   | "existingProductSummary"
   | "existingProductStoryLine"
   | "existingProductPrice"
-  | "existingProductDiscount";
+  | "existingProductDiscount"
+  | "existingProductReleaseDate";
 export type IExistingProductManagementInputFieldsObjs =
   IInputFieldsObjsGenerator<existingProductManagementInputFieldsNames>;
 export const existingProductManagementInputFieldsObjs: IExistingProductManagementInputFieldsObjs =
@@ -201,6 +202,12 @@ export const existingProductManagementInputFieldsObjs: IExistingProductManagemen
       max: 100,
       defaultValue: 0,
       step: 1,
+    },
+    existingProductReleaseDate: {
+      name: "existingProductReleaseDate",
+      type: "date",
+      otherValidationAttributes: { required: true },
+      placeholder: "Release Date",
     },
   };
 

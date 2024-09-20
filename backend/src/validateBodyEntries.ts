@@ -623,4 +623,15 @@ export const productsManagementEntries: productsManagementEntry[] = [
     requestBodyName: "productId",
     validateFn: bodyEntryValidMongooseObjectIdValidateFn,
   },
+  {
+    ...defaultProductsManagementEntriesValue,
+    name: "Product release date",
+    requestBodyName: "releaseDate",
+    validateFn: (val, name) =>
+      stringFollowsRegex({
+        regex: properDateFromInputTypeDateRegex,
+        val: val as string,
+        strNameForErrorGeneration: name,
+      }),
+  },
 ];

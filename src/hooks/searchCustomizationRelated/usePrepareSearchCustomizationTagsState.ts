@@ -7,11 +7,18 @@ import {
   retrieveSearchParamAndSessionStorageEntryNameOrIdOfDeeperStateBasedOnAppropriateCustomizationObj,
 } from "../../store/products/SearchCustomizationContext";
 import useCreateUseReducerStateForCustomizationComponentWithInputAndTags from "./useCreateUseReducerStateForCustomizationComponentWithInputAndTags";
+import { useQueryGetTagsAvailableTagsNames } from "./useQueryGetTagsTypes";
 
+export type IInitialTagsState =
+  | {
+      [key in useQueryGetTagsAvailableTagsNames]?: string[];
+    }
+  | undefined;
 export default function usePrepareSearchCustomizationTagsState(
   customSearchParamsAndSessionStorageEntriesNames?: ISearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
   maxAmountOfSelectedTagsObj?: IMaxAmountOfSelectedTagsObj,
-  omitChangingSearchParams?: boolean
+  omitChangingSearchParams?: boolean,
+  initialTagsState?: IInitialTagsState
 ) {
   const location = useLocation();
   const { search } = location;
@@ -41,6 +48,7 @@ export default function usePrepareSearchCustomizationTagsState(
         customSearchParamsAndSessionStorageEntriesNames
       ),
     maxAmountOfSelectedTags: maxAmountOfSelectedTagsObj?.maxGenres,
+    initalTagsState: initialTagsState?.genres,
   });
 
   const {
@@ -54,6 +62,7 @@ export default function usePrepareSearchCustomizationTagsState(
         customSearchParamsAndSessionStorageEntriesNames
       ),
     maxAmountOfSelectedTags: maxAmountOfSelectedTagsObj?.maxPlatforms,
+    initalTagsState: initialTagsState?.platforms,
   });
 
   const {
@@ -67,6 +76,7 @@ export default function usePrepareSearchCustomizationTagsState(
         customSearchParamsAndSessionStorageEntriesNames
       ),
     maxAmountOfSelectedTags: maxAmountOfSelectedTagsObj?.maxDevelopers,
+    initalTagsState: initialTagsState?.developers,
   });
 
   const {
@@ -80,6 +90,7 @@ export default function usePrepareSearchCustomizationTagsState(
         customSearchParamsAndSessionStorageEntriesNames
       ),
     maxAmountOfSelectedTags: maxAmountOfSelectedTagsObj?.maxPublishers,
+    initalTagsState: initialTagsState?.publishers,
   });
 
   return {

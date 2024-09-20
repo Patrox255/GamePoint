@@ -86,6 +86,7 @@ export default function useCreateUseReducerStateForCustomizationComponentWithInp
   searchParamName,
   omitChangingSearchParams,
   maxAmountOfSelectedTags,
+  initalTagsState,
 }: {
   location: Location;
   navigate: NavigateFunction;
@@ -93,18 +94,18 @@ export default function useCreateUseReducerStateForCustomizationComponentWithInp
   searchParamName: string;
   omitChangingSearchParams?: boolean;
   maxAmountOfSelectedTags?: number;
+  initalTagsState?: ISelectedTagsProperty;
 }) {
+  const initialSelectedTagsStateValue = initalTagsState
+    ? initalTagsState
+    : generateInitialStateFromSearchParamsOrSessionStorage(
+        [],
+        searchParams,
+        searchParamName
+      );
   const initialSelectedTagsState: ISelectedTags = {
-    stateArr: generateInitialStateFromSearchParamsOrSessionStorage(
-      [],
-      searchParams,
-      searchParamName
-    ),
-    debouncedStateArr: generateInitialStateFromSearchParamsOrSessionStorage(
-      [],
-      searchParams,
-      searchParamName
-    ),
+    stateArr: initialSelectedTagsStateValue,
+    debouncedStateArr: initialSelectedTagsStateValue,
   };
 
   const selectedTagsReducer = useMemo(

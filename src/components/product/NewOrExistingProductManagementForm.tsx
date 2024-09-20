@@ -7,8 +7,11 @@ import FormWithErrorHandling, {
   FormActionBackendResponse,
   IFormInputField,
 } from "../UI/FormWithErrorHandling";
-import { productManagement } from "../../lib/fetch";
-import TabsComponent, { ITagsObjDefault } from "../structure/TabsComponent";
+import { productManagement, queryClient } from "../../lib/fetch";
+import TabsComponent, {
+  ITagsObjDefault,
+  TabsComponentContext,
+} from "../structure/TabsComponent";
 import Button from "../UI/Button";
 import InputFieldElement, {
   InputFieldSingleRow,
@@ -30,7 +33,9 @@ import Header from "../UI/headers/Header";
 import { useInput } from "../../hooks/useInput";
 import { FreeToPlayTag, priceFormat } from "../game/PriceTag";
 import calcShopPrice from "../../helpers/calcShopPrice";
-import usePrepareSearchCustomizationTagsState from "../../hooks/searchCustomizationRelated/usePrepareSearchCustomizationTagsState";
+import usePrepareSearchCustomizationTagsState, {
+  IInitialTagsState,
+} from "../../hooks/searchCustomizationRelated/usePrepareSearchCustomizationTagsState";
 import { CustomSearchParamsAndSessionStorageEntriesNamesContext } from "../../store/stateManagement/CustomSearchParamsAndSessionStorageEntriesNamesContext";
 import MainCustomizationComponentsWithInputsAndTags, {
   componentsWithInputsAndTagsConfigurationContextInformationDefault,
@@ -38,6 +43,10 @@ import MainCustomizationComponentsWithInputsAndTags, {
 } from "../products/SearchCustomization/MainCustomizationComponentsWithInputsAndTags";
 import { useQueryGetTagsAvailableTagsNames } from "../../hooks/searchCustomizationRelated/useQueryGetTagsTypes";
 import { IMaxAmountOfSelectedTagsObj } from "../../store/products/SearchCustomizationContext";
+import { cloneDeep } from "lodash";
+import { inputValue } from "../UI/Input";
+import DatePickerInputFieldElement from "../UI/DatePickerInputFieldElement";
+import createDateNoTakingTimezoneIntoAccount from "../../helpers/createDateNoTakingTimezoneIntoAccount";
 
 const newOrExistingProductManagementMaxAmountOfSelectedTabs: IMaxAmountOfSelectedTagsObj =
   {
@@ -50,7 +59,7 @@ interface INewOrExistingProductManagementStateEntryValue {
   newValue?: unknown;
 }
 const newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields =
-  ["title", "storyLine", "summary"] as const;
+  ["title", "storyLine", "summary", "releaseDate"] as const;
 type newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields =
   (typeof newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields)[number];
 const productManagementStateTagsProperties = [
@@ -59,6 +68,13 @@ const productManagementStateTagsProperties = [
   "developers",
   "publishers",
 ] as const;
+const receivedGameTagsProperties = [
+  "genres",
+  "publisher",
+  "developer",
+  "platforms",
+] as const;
+type receivedGameTagsProperties = (typeof receivedGameTagsProperties)[number];
 type productManagementStateTagsProperties =
   (typeof productManagementStateTagsProperties)[number];
 const newOrExistingProductManagementStatePossiblePropertiesToEdit = [
@@ -78,20 +94,21 @@ type IProductManagementPriceManagementPropertyValue = {
   discount: number;
   price: number;
 };
-// type productManagementTagsPropertyValue = string[];
-const customInitialProductManagementPossiblePropertiesValues: {
+type ICustomInitialProductManagementPossiblePropertiesValues = {
   [key in newOrExistingProductManagementStatePossiblePropertiesToEdit]?: unknown;
-} = {
-  priceManagement: { discount: 0, price: 0 },
-  ...Object.fromEntries(
-    productManagementStateTagsProperties.map(
-      (productManagementStateTagsProperty) => [
-        productManagementStateTagsProperty,
-        [],
-      ]
-    )
-  ),
 };
+const customInitialProductManagementPossiblePropertiesValues: ICustomInitialProductManagementPossiblePropertiesValues =
+  {
+    priceManagement: { discount: 0, price: 0 },
+    ...Object.fromEntries(
+      productManagementStateTagsProperties.map(
+        (productManagementStateTagsProperty) => [
+          productManagementStateTagsProperty,
+          [],
+        ]
+      )
+    ),
+  };
 const newOrExistingProductManagementReducer: Reducer<
   INewOrExistingProductManagementState,
   | {
@@ -121,15 +138,23 @@ const newOrExistingProductManagementReducer: Reducer<
   }
   return state;
 };
-const newOrExistingProductManagementInitialState =
+const newOrExistingProductManagementInitialStateGenerator = (
+  sentCustomInitialProductManagementPossiblePropertiesValues?: ICustomInitialProductManagementPossiblePropertiesValues
+) =>
   newOrExistingProductManagementStatePossiblePropertiesToEdit.reduce(
     (acc, newOrExistingProductManagementStatePossiblePropertyToEdit) => ({
       ...acc,
       [newOrExistingProductManagementStatePossiblePropertyToEdit]: {
         adminChoseToEdit: false,
         newValue:
+          sentCustomInitialProductManagementPossiblePropertiesValues &&
           newOrExistingProductManagementStatePossiblePropertyToEdit in
-          customInitialProductManagementPossiblePropertiesValues
+            sentCustomInitialProductManagementPossiblePropertiesValues
+            ? sentCustomInitialProductManagementPossiblePropertiesValues[
+                newOrExistingProductManagementStatePossiblePropertyToEdit
+              ]
+            : newOrExistingProductManagementStatePossiblePropertyToEdit in
+              customInitialProductManagementPossiblePropertiesValues
             ? customInitialProductManagementPossiblePropertiesValues[
                 newOrExistingProductManagementStatePossiblePropertyToEdit
               ]
@@ -174,26 +199,60 @@ const newProductManagementInputFieldsObjsTransformed =
     newProductManagementInputFieldsObjs,
     "new"
   );
+const applyDefaultValuesToInputFieldsObjsBasedOnObjWithRelatedInputFieldsNamesAsProperties =
+  function <
+    inputFieldsNames extends string,
+    T extends { [defaultInputFieldValue in inputFieldsNames]?: unknown }
+  >(inputFields: IInputFieldsObjsGenerator<inputFieldsNames>, obj?: T) {
+    if (!obj) return inputFields;
+    const inputFieldsCopy = cloneDeep(inputFields);
+    Object.entries(obj).forEach(([key, value]) => {
+      if (key in inputFieldsCopy)
+        inputFieldsCopy[key as keyof typeof inputFieldsCopy].defaultValue =
+          value as inputValue;
+    });
+    return inputFieldsCopy;
+  };
 
 const customPossibleProductManagementTabsToChooseFromHeadersMap: {
   [key in newOrExistingProductManagementStatePossiblePropertiesToEdit]?: string;
-} = { storyLine: "Story line", priceManagement: "Price Management" };
+} = {
+  storyLine: "Story Line",
+  priceManagement: "Price Management",
+  releaseDate: "Release Date",
+};
 
 const inputFieldsNamesFromPriceManagement = ["price", "discount"] as const;
 type inputFieldsNamesFromPriceManagement =
   (typeof inputFieldsNamesFromPriceManagement)[number];
+
+const curDate = createDateNoTakingTimezoneIntoAccount({});
 
 export default function NewOrExistingProductManagementForm({
   gameStable,
 }: {
   gameStable?: IExtendedGamePreviewGameArg;
 }) {
+  const newOrExistingProductManagementInitialStateGenerated = useMemo(
+    () =>
+      newOrExistingProductManagementInitialStateGenerator(
+        gameStable
+          ? {
+              priceManagement: {
+                discount: gameStable.discount,
+                price: gameStable.price,
+              },
+            }
+          : undefined
+      ),
+    [gameStable]
+  );
   const [
     newOrExistingProductManagementState,
     newOrExistingProductManagementDispatch,
   ] = useReducer(
     newOrExistingProductManagementReducer,
-    newOrExistingProductManagementInitialState
+    newOrExistingProductManagementInitialStateGenerated
   );
   const newOrExistingProductManagementStateStable = useCompareComplexForUseMemo(
     newOrExistingProductManagementState
@@ -243,11 +302,25 @@ export default function NewOrExistingProductManagementForm({
     saveDebouncedStateInSessionStorage: false,
   });
 
+  const {
+    setNormalAndDebouncingTabsState:
+      setNormalAndDebouncingManageProductsTagState,
+  } = useContext(TabsComponentContext);
   const productManagementQueryRes = useMutation<
     FormActionBackendResponse,
     FormActionBackendErrorResponse,
     INewOrExistingProductManagementStateToSend
-  >({ mutationFn: productManagement });
+  >({
+    mutationFn: productManagement,
+    onSuccess: async (queryRes) => {
+      if (!(queryRes.data as { message?: string })?.message) {
+        await queryClient.invalidateQueries({
+          queryKey: ["games", gameStable?._id],
+        });
+        setNormalAndDebouncingManageProductsTagState("overview");
+      }
+    },
+  });
   const { mutate: productManagementMutate } = productManagementQueryRes;
   const editExistingProduct = gameStable !== undefined;
 
@@ -294,9 +367,17 @@ export default function NewOrExistingProductManagementForm({
 
   const inputFieldsObjsInUse = useMemo(
     () =>
-      gameStable
-        ? existingProductManagementInputFieldsObjsTransformed
-        : newProductManagementInputFieldsObjsTransformed,
+      applyDefaultValuesToInputFieldsObjsBasedOnObjWithRelatedInputFieldsNamesAsProperties(
+        gameStable
+          ? existingProductManagementInputFieldsObjsTransformed
+          : newProductManagementInputFieldsObjsTransformed,
+        gameStable
+          ? filterOrOnlyIncludeCertainPropertiesFromObj(gameStable, [
+              "price",
+              "discount",
+            ])
+          : undefined
+      ),
     [gameStable]
   );
   inputFieldsObjsInUse.discount;
@@ -347,6 +428,30 @@ export default function NewOrExistingProductManagementForm({
   const {
     searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
   } = useContext(CustomSearchParamsAndSessionStorageEntriesNamesContext);
+  const initialProductTagsState = useMemo(
+    () =>
+      gameStable
+        ? receivedGameTagsProperties.reduce<IInitialTagsState>(
+            (acc, gameTagProperty) => {
+              if (gameTagProperty in gameStable && gameStable[gameTagProperty])
+                acc![
+                  gameTagProperty === "publisher"
+                    ? "publishers"
+                    : gameTagProperty === "developer"
+                    ? "developers"
+                    : gameTagProperty
+                ] = Array.isArray(gameStable[gameTagProperty])
+                  ? gameStable[gameTagProperty].map(
+                      (gameTagObj) => (gameTagObj as { name: string }).name
+                    )
+                  : [(gameStable[gameTagProperty] as { name: string }).name];
+              return acc;
+            },
+            {}
+          )
+        : undefined,
+    [gameStable]
+  );
   const {
     selectedDevelopersDispatch,
     selectedDevelopersState,
@@ -359,7 +464,8 @@ export default function NewOrExistingProductManagementForm({
   } = usePrepareSearchCustomizationTagsState(
     searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization,
     newOrExistingProductManagementMaxAmountOfSelectedTabs,
-    true
+    true,
+    initialProductTagsState
   );
 
   const handleSubmitProductManagement = useCallback(
@@ -374,10 +480,10 @@ export default function NewOrExistingProductManagementForm({
           inputFieldsNamesFromPriceManagement as unknown as string[]
         ),
         priceManagement: { price: setPrice, discount: setDiscount, finalPrice },
-        developers: selectedDevelopersState,
-        genres: selectedGenresState,
-        platforms: selectedPlatformsState,
-        publishers: selectedPublishersState,
+        developers: selectedDevelopersState.debouncedStateArr,
+        genres: selectedGenresState.debouncedStateArr,
+        platforms: selectedPlatformsState.debouncedStateArr,
+        publishers: selectedPublishersState.debouncedStateArr,
         productId: gameStable?._id,
       }),
     [
@@ -458,18 +564,29 @@ export default function NewOrExistingProductManagementForm({
         onSubmit={handleSubmitProductManagement}
       >
         {Object.values(availableProductManagementInputFields).map(
-          (availableProductManagementFieldObj: IFormInputField) => (
-            <InputFieldElement
-              inputFieldObjFromProps={availableProductManagementFieldObj}
-              key={availableProductManagementFieldObj.name}
-            >
-              <ProductManagementPropertyXSign
-                productManagementPropertyName={
-                  availableProductManagementFieldObj.name as newOrExistingProductManagementStatePossiblePropertiesToEdit
-                }
+          (availableProductManagementFieldObj: IFormInputField) =>
+            availableProductManagementFieldObj.type !== "date" ? (
+              <InputFieldElement
+                inputFieldObjFromProps={availableProductManagementFieldObj}
+                key={availableProductManagementFieldObj.name}
+              >
+                <ProductManagementPropertyXSign
+                  productManagementPropertyName={
+                    availableProductManagementFieldObj.name as newOrExistingProductManagementStatePossiblePropertiesToEdit
+                  }
+                />
+              </InputFieldElement>
+            ) : (
+              <DatePickerInputFieldElement
+                inputFieldObjFromProps={availableProductManagementFieldObj}
+                key={availableProductManagementFieldObj.name}
+                latestPossibleDate={createDateNoTakingTimezoneIntoAccount({
+                  year: curDate.getFullYear() + 10,
+                  month: curDate.getMonth(),
+                  day: curDate.getDate(),
+                })}
               />
-            </InputFieldElement>
-          )
+            )
         )}
         {newOrExistingProductManagementStateStable.priceManagement
           .adminChoseToEdit && (

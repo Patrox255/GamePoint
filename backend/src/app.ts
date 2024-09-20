@@ -54,8 +54,8 @@ import {
   getRelatedUserBasedOnHisLoginOrId,
   validateWhetherRequestedContactInformationCanBeDoneInCaseItTriesToDoAdminOperation,
   availableTagsIdentificatorsToMongooseModelsMap,
-  // verifyProductTagsWhenAddingOrEditingOne,
-  // overrideTruePropertiesIntoObj,
+  verifyProductTagsWhenAddingOrEditingOne,
+  overrideTruePropertiesIntoObj,
 } from "./helpers";
 import Review, { IReview } from "./models/review.model";
 import { LoremIpsum } from "lorem-ipsum";
@@ -2343,24 +2343,66 @@ const startServer = async () => {
         const productsManagementBody =
           req.body as IProductsManagementBodyFromRequest;
         const { productId } = productsManagementBody;
-        const relatedProduct = productId
+        let creatingNewProduct = false;
+        type IRelatedProductObj =
+          | mongoose.FlattenMaps<IGame> & {
+              _id: Types.ObjectId;
+            };
+        let relatedProduct = productId
           ? await Game.findById(productId).lean()
           : undefined;
-        if (relatedProduct === undefined)
+        if (relatedProduct === null)
           return res.status(200).json({
             message: "Selected product does not seem to exist anymore!",
           });
-        // const { developer, genres, platforms, publisher } =
-        //   await verifyProductTagsWhenAddingOrEditingOne(productsManagementBody);
+        if (relatedProduct === undefined) {
+          relatedProduct = {} as IRelatedProductObj;
+          creatingNewProduct = true;
+        }
+        const { developer, genres, platforms, publisher } =
+          await verifyProductTagsWhenAddingOrEditingOne(productsManagementBody);
 
-        // if (relatedProduct)
-        //   relatedProduct = overrideTruePropertiesIntoObj(relatedProduct, {
-        //     developer,
-        //     genres,
-        //     platforms,
-        //     publisher,
-        //   });
-        return res.status(200).json(relatedProduct);
+        relatedProduct = overrideTruePropertiesIntoObj(relatedProduct, {
+          developer,
+          genres,
+          platforms,
+          publisher,
+        });
+        const relatedProductObjToSave = {
+          ...relatedProduct,
+          ...filterPropertiesFromObj(productsManagementBody, [
+            "genres",
+            "platforms",
+            "publishers",
+            "developers",
+            "priceManagement",
+          ]),
+        };
+        let productToSave = creatingNewProduct
+          ? new Game(relatedProductObjToSave)
+          : relatedProductObjToSave;
+        console.log(productToSave);
+        if (!creatingNewProduct) {
+          await Game.findOneAndUpdate(
+            new Types.ObjectId(productId),
+            productToSave
+          );
+          productToSave = (await Game.findById(productId).lean()) as IGame & {
+            _id: Types.ObjectId;
+          };
+        } else {
+          await (
+            productToSave as unknown as mongoose.Document<
+              unknown,
+              object,
+              IGame
+            >
+          ).save();
+          productToSave = await Game.find({
+            title: productToSave.title,
+          }).lean();
+        }
+        return res.status(200).json(productToSave);
       } catch (e) {
         next(e);
       }

@@ -23,7 +23,7 @@ import Genre, { IGenre } from "./models/genre.model";
 import Platform, { IPlatform } from "./models/platform.model";
 import Developer, { IDeveloper } from "./models/developer.model";
 import Publisher, { IPublisher } from "./models/publisher.model";
-// import { cloneDeep } from "lodash";
+import { cloneDeep } from "lodash";
 
 export const getJSON = async (url: string, options: RequestInit = {}) => {
   const result = await fetch(url, options);
@@ -901,14 +901,14 @@ export async function verifyProductTagsWhenAddingOrEditingOne<
   };
 }
 
-// export const overrideTruePropertiesIntoObj = function <
-//   T extends string,
-//   Y extends object
-// >(obj: Y, propertiesObj: { [key in T]?: unknown }) {
-//   const objCopy = cloneDeep(obj);
-//   Object.entries(propertiesObj).forEach((propertyEntry) => {
-//     if (propertyEntry[1] && propertyEntry[0] in objCopy)
-//       objCopy[propertyEntry[0] as keyof typeof objCopy] = propertyEntry[1];
-//   });
-//   return objCopy;
-// };
+export const overrideTruePropertiesIntoObj = function <
+  T extends string,
+  Y extends object
+>(obj: Y, propertiesObj: { [key in T]?: unknown }) {
+  const objCopy = cloneDeep(obj);
+  Object.entries(propertiesObj).forEach((propertyEntry) => {
+    if (propertyEntry[1])
+      objCopy[propertyEntry[0] as keyof Y] = propertyEntry[1] as Y[keyof Y];
+  });
+  return objCopy;
+};
