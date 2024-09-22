@@ -553,7 +553,9 @@ export type IGameInformationSentByAdmin = IGameInformationBasicPart<string> & {
 };
 export interface IProductsManagementBodyFromRequest
   extends IBodyFromRequestToValidate,
-    IGameInformationSentByAdmin {}
+    IGameInformationSentByAdmin {
+  artworks?: { url: string; custom: boolean; fileName?: string }[];
+}
 
 type productsManagementEntry =
   IValidateBodyEntry<IProductsManagementBodyFromRequest>;
@@ -633,5 +635,11 @@ export const productsManagementEntries: productsManagementEntry[] = [
         val: val as string,
         strNameForErrorGeneration: name,
       }),
+  },
+  {
+    ...defaultProductsManagementEntriesValue,
+    type: "array",
+    name: "Product artworks",
+    requestBodyName: "artworks",
   },
 ];

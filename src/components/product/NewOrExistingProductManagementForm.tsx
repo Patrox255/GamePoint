@@ -47,6 +47,10 @@ import { cloneDeep } from "lodash";
 import { inputValue } from "../UI/Input";
 import DatePickerInputFieldElement from "../UI/DatePickerInputFieldElement";
 import createDateNoTakingTimezoneIntoAccount from "../../helpers/createDateNoTakingTimezoneIntoAccount";
+import ArtworksManagement, {
+  ArtworksManagementContextProvider,
+  useGenerateBasicArtworksManagementState,
+} from "./ArtworksManagement";
 
 const newOrExistingProductManagementMaxAmountOfSelectedTabs: IMaxAmountOfSelectedTagsObj =
   {
@@ -79,6 +83,7 @@ type productManagementStateTagsProperties =
   (typeof productManagementStateTagsProperties)[number];
 const newOrExistingProductManagementStatePossiblePropertiesToEdit = [
   "priceManagement",
+  "artworks",
   ...productManagementStateTagsProperties,
   ...newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields,
 ] as const;
@@ -160,6 +165,9 @@ const newOrExistingProductManagementInitialStateGenerator = (
               ]
             : undefined,
       },
+      // artworks: {
+      //   adminChoseToEdit: true,
+      // },
     }),
     {}
   ) as INewOrExistingProductManagementState;
@@ -468,6 +476,16 @@ export default function NewOrExistingProductManagementForm({
     initialProductTagsState
   );
 
+  const choseToEditArtworks =
+    newOrExistingProductManagementStateStable.artworks.adminChoseToEdit;
+  const selectedGameArtworksStable = useMemo(
+    () => gameStable?.artworks,
+    [gameStable]
+  );
+  const artworksManagementState = useGenerateBasicArtworksManagementState(
+    selectedGameArtworksStable
+  );
+
   const handleSubmitProductManagement = useCallback(
     (formDataObj: {
       [entryName in
@@ -485,17 +503,22 @@ export default function NewOrExistingProductManagementForm({
         platforms: selectedPlatformsState.debouncedStateArr,
         publishers: selectedPublishersState.debouncedStateArr,
         productId: gameStable?._id,
+        ...(choseToEditArtworks && {
+          artworks: artworksManagementState.currentArtworksStable,
+        }),
       }),
     [
       productManagementMutate,
-      selectedDevelopersState,
-      selectedGenresState,
-      selectedPlatformsState,
-      selectedPublishersState,
-      setDiscount,
       setPrice,
+      setDiscount,
       finalPrice,
-      gameStable,
+      selectedDevelopersState.debouncedStateArr,
+      selectedGenresState.debouncedStateArr,
+      selectedPlatformsState.debouncedStateArr,
+      selectedPublishersState.debouncedStateArr,
+      gameStable?._id,
+      choseToEditArtworks,
+      artworksManagementState.currentArtworksStable,
     ]
   );
 
@@ -521,6 +544,7 @@ export default function NewOrExistingProductManagementForm({
     ),
     [ProductManagementPropertyXSign]
   );
+
   return (
     <>
       <TabsComponent
@@ -623,6 +647,11 @@ export default function NewOrExistingProductManagementForm({
               )}
             </span>
           </section>
+        )}
+        {choseToEditArtworks && (
+          <ArtworksManagementContextProvider {...artworksManagementState}>
+            <ArtworksManagement />
+          </ArtworksManagementContextProvider>
         )}
         <Button
           disabled={

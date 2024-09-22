@@ -119,6 +119,8 @@ import Order, {
   orderPossibleStatus,
   orderPossibleStatusesUserFriendlyMap,
 } from "./models/order.model";
+import { del, list, put } from "@vercel/blob";
+import slugify from "slugify";
 
 const app = express();
 const port = 3000;
@@ -169,7 +171,7 @@ const startServer = async () => {
   try {
     app.use(cors(corsOptions));
 
-    app.use(express.json());
+    app.use(express.json({ limit: "50mb" }));
     app.use(cookieParser());
 
     await connectDB();
@@ -2337,12 +2339,18 @@ const startServer = async () => {
     app.post("/products-management", async (req, res, next) => {
       try {
         if (
-          !validateBodyEntries({ req, res, entries: productsManagementEntries })
+          !validateBodyEntries({
+            req,
+            res,
+            entries: productsManagementEntries,
+          })
         )
           return;
         const productsManagementBody =
           req.body as IProductsManagementBodyFromRequest;
-        const { productId } = productsManagementBody;
+        const { productId, artworks } = productsManagementBody;
+        let artworksToSet: string[] | undefined;
+
         let creatingNewProduct = false;
         type IRelatedProductObj =
           | mongoose.FlattenMaps<IGame> & {
@@ -2351,6 +2359,7 @@ const startServer = async () => {
         let relatedProduct = productId
           ? await Game.findById(productId).lean()
           : undefined;
+        const relatedProductCurArtworks = relatedProduct?.artworks;
         if (relatedProduct === null)
           return res.status(200).json({
             message: "Selected product does not seem to exist anymore!",
@@ -2362,47 +2371,107 @@ const startServer = async () => {
         const { developer, genres, platforms, publisher } =
           await verifyProductTagsWhenAddingOrEditingOne(productsManagementBody);
 
-        relatedProduct = overrideTruePropertiesIntoObj(relatedProduct, {
-          developer,
-          genres,
-          platforms,
-          publisher,
-        });
-        const relatedProductObjToSave = {
-          ...relatedProduct,
-          ...filterPropertiesFromObj(productsManagementBody, [
-            "genres",
-            "platforms",
-            "publishers",
-            "developers",
-            "priceManagement",
-          ]),
-        };
-        let productToSave = creatingNewProduct
-          ? new Game(relatedProductObjToSave)
-          : relatedProductObjToSave;
-        console.log(productToSave);
-        if (!creatingNewProduct) {
-          await Game.findOneAndUpdate(
-            new Types.ObjectId(productId),
-            productToSave
-          );
-          productToSave = (await Game.findById(productId).lean()) as IGame & {
-            _id: Types.ObjectId;
+        const addedBlobsURLs: string[] = [];
+        if (artworks)
+          try {
+            artworksToSet = await Promise.all(
+              artworks.map(async (artworkObj) => {
+                if (!artworkObj.custom) return artworkObj.url;
+                const uploadedBlob = await put(
+                  `${
+                    creatingNewProduct
+                      ? slugify(productsManagementBody.title, { lower: true })
+                      : relatedProduct!.slug
+                  }-${(new Date(0).getTime() + "").slice(
+                    -4
+                  )}-${artworkObj.fileName!}`,
+                  Buffer.from(artworkObj.url.split(",")[1], "base64"),
+                  {
+                    access: "public",
+                    token: accessEnvironmentVariable("BLOB_READ_WRITE_TOKEN"),
+                  }
+                );
+                addedBlobsURLs.push(uploadedBlob.url);
+                return uploadedBlob.url;
+              })
+            );
+          } catch (e) {
+            await del(addedBlobsURLs, {
+              token: accessEnvironmentVariable("BLOB_READ_WRITE_TOKEN"),
+            });
+            throw e;
+          }
+        try {
+          relatedProduct = overrideTruePropertiesIntoObj(relatedProduct, {
+            developer,
+            genres,
+            platforms,
+            publisher,
+            artworks: artworksToSet,
+          });
+          const relatedProductObjToSave = {
+            ...relatedProduct,
+            ...filterPropertiesFromObj(productsManagementBody, [
+              "genres",
+              "platforms",
+              "publishers",
+              "developers",
+              "priceManagement",
+              "artworks",
+            ]),
           };
-        } else {
-          await (
-            productToSave as unknown as mongoose.Document<
-              unknown,
-              object,
-              IGame
-            >
-          ).save();
-          productToSave = await Game.find({
-            title: productToSave.title,
-          }).lean();
+          let productToSave = creatingNewProduct
+            ? new Game(relatedProductObjToSave)
+            : relatedProductObjToSave;
+          if (!creatingNewProduct) {
+            if (artworksToSet && relatedProductCurArtworks) {
+              const deletedArtworks = relatedProductCurArtworks.filter(
+                (productArtwork) =>
+                  !artworksToSet.some(
+                    (artworkToSet) => artworkToSet === productArtwork
+                  )
+              );
+              const allArtworks = await list({
+                token: accessEnvironmentVariable("BLOB_READ_WRITE_TOKEN"),
+              });
+              const blobsToDelete = allArtworks.blobs
+                .filter((artworkBlob) =>
+                  deletedArtworks.some(
+                    (deletedArtwork) => deletedArtwork === artworkBlob.url
+                  )
+                )
+                .map((artworkBlob) => artworkBlob.url);
+              if (blobsToDelete.length > 0)
+                await del(blobsToDelete, {
+                  token: accessEnvironmentVariable("BLOB_READ_WRITE_TOKEN"),
+                });
+            }
+            await Game.findOneAndUpdate(
+              new Types.ObjectId(productId),
+              productToSave
+            );
+            productToSave = (await Game.findById(productId).lean()) as IGame & {
+              _id: Types.ObjectId;
+            };
+          } else {
+            await (
+              productToSave as unknown as mongoose.Document<
+                unknown,
+                object,
+                IGame
+              >
+            ).save();
+            productToSave = await Game.find({
+              title: productToSave.title,
+            }).lean();
+          }
+          return res.status(200).json(productToSave);
+        } catch (e) {
+          await del(addedBlobsURLs, {
+            token: accessEnvironmentVariable("BLOB_READ_WRITE_TOKEN"),
+          });
+          throw e;
         }
-        return res.status(200).json(productToSave);
       } catch (e) {
         next(e);
       }

@@ -9,6 +9,7 @@ export interface IProcessEnvVariables {
   MAX_USERS_PER_PAGE: string;
   FRONTEND_URL_FOR_COOKIES: string;
   BACKEND_URL_FOR_COOKIES: string;
+  BLOB_READ_WRITE_TOKEN: string;
 }
 
 declare namespace NodeJS {

@@ -24,9 +24,9 @@ export type IGame = IProductPriceInformation &
     developer?: Types.ObjectId;
     publisher?: Types.ObjectId;
     popularity?: number;
-    artworks?: string[];
     slug?: string;
     reviews?: Types.ObjectId[];
+    artworks?: string[];
   };
 
 const GameSchema = new Schema<IGame>({

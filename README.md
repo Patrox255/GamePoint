@@ -93,6 +93,7 @@ Create a file called '.env' inside the root directory of the back-end side of th
  FRONTEND_URL_FOR_COOKIES=domain_to_set_app_cookies_to_be_able_to_be_read_by_backend_from_frontend
  BACKEND_URL_FOR_COOKIES=normally_you_only_have_to_set_the_above_one_but_in_case_your_backend_and_frontend_are_on_different_
  domains_then_set_them_correctly
+ BLOB_READ_WRITE_TOKEN=read_and_write_vercel_blob_token_in_order_to_save_artworks_uploaded_while_editing_or_adding_products
 ```
 
 10. Run back-end server

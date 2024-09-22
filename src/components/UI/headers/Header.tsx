@@ -19,6 +19,13 @@ const headerSizesProperties = {
   },
 };
 
+export type IHeaderPropsSharedWithHighlightCounter = {
+  usePaddingBottom?: boolean;
+  size?: "small" | "medium" | "large";
+  additionalTailwindClasses?: string;
+  colorTailwindClass?: string;
+};
+
 export default function Header({
   children,
   motionAnimationProperties,
@@ -29,11 +36,7 @@ export default function Header({
 }: {
   children: ReactNode;
   motionAnimationProperties?: AnimationProps;
-  usePaddingBottom?: boolean;
-  size?: "small" | "medium" | "large";
-  additionalTailwindClasses?: string;
-  colorTailwindClass?: string;
-}) {
+} & IHeaderPropsSharedWithHighlightCounter) {
   const { headerAnimationProps, disabled } = useContext(HeaderLinkContext);
   const usesHeaderLinkContext = Object.keys(headerAnimationProps).length !== 0;
 
