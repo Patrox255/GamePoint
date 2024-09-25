@@ -1,4 +1,4 @@
-import { useContext, useMemo } from "react";
+import { useContext } from "react";
 import { AnimatePresence } from "framer-motion";
 
 import TabsComponent, {
@@ -11,6 +11,8 @@ import ManageProductsProductsList from "./ManageProductsProductsList";
 import ManageProductsEditSelectedProduct from "./ManageProductsEditSelectedProduct";
 import CustomSearchParamsAndSessionStorageEntriesNamesContextProvider from "../../../../store/stateManagement/CustomSearchParamsAndSessionStorageEntriesNamesContext";
 import { ISearchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization } from "../../../../store/products/SearchCustomizationContext";
+import ManageProductsAddANewProduct from "./ManageProductsAddANewProduct";
+import { AddReviewContextCreatingGameDataQueryKeyBasedOnSlugContextProvider } from "../../../../store/product/AddReviewContext";
 
 type manageProductsSections = "overview" | "new" | "edit" | "list";
 
@@ -25,11 +27,7 @@ const searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomizationInC
       "AdminProductsManagementNew",
   };
 
-const manageProductsAllSectionsGenerator: (
-  selectedProductId: string
-) => ITagsObjDefault<manageProductsSections>[] = (
-  selectedProductId: string
-) => [
+const manageProductsAllSections: ITagsObjDefault<manageProductsSections>[] = [
   {
     tagName: "list",
     ComponentToRender: <ManageProductsProductsList />,
@@ -37,9 +35,13 @@ const manageProductsAllSectionsGenerator: (
   },
   {
     ComponentToRender: (
-      <ProductContextProvider>
-        <Product />
-      </ProductContextProvider>
+      <AddReviewContextCreatingGameDataQueryKeyBasedOnSlugContextProvider
+        creatingGameDataQueryKeyBasedOnSlug={false}
+      >
+        <ProductContextProvider>
+          <Product />
+        </ProductContextProvider>
+      </AddReviewContextCreatingGameDataQueryKeyBasedOnSlugContextProvider>
     ),
     header: "Overview",
     tagName: "overview",
@@ -50,12 +52,23 @@ const manageProductsAllSectionsGenerator: (
     ComponentToRender: (
       <CustomSearchParamsAndSessionStorageEntriesNamesContextProvider
         searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization={
-          selectedProductId
-            ? searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomizationInCaseOfExistingProductManagement
-            : searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomizationInCaseOfNewProductManagement
+          searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomizationInCaseOfExistingProductManagement
         }
       >
         <ManageProductsEditSelectedProduct />
+      </CustomSearchParamsAndSessionStorageEntriesNamesContextProvider>
+    ),
+  },
+  {
+    tagName: "new",
+    header: "Add a new product",
+    ComponentToRender: (
+      <CustomSearchParamsAndSessionStorageEntriesNamesContextProvider
+        searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomization={
+          searchParamsAndSessionStorageEntriesNamesForProductsSearchCustomizationInCaseOfNewProductManagement
+        }
+      >
+        <ManageProductsAddANewProduct />
       </CustomSearchParamsAndSessionStorageEntriesNamesContextProvider>
     ),
   },
@@ -64,11 +77,6 @@ const manageProductsAllSectionsGenerator: (
 export default function ManageProducts() {
   const { selectedProductId, restrictManageProductsSectionsNavigation } =
     useContext(ManageProductsContext);
-
-  const manageProductsAllSections = useMemo(
-    () => manageProductsAllSectionsGenerator(selectedProductId),
-    [selectedProductId]
-  );
 
   return (
     <AnimatePresence mode="wait">

@@ -30,6 +30,23 @@ export const ProductsContext = createContext<{
   totalGamesAmountForQuery: null,
 });
 
+export const ProductsContextCustomPathNameToRefreshToUponPageNumberChangeContext =
+  createContext<string | undefined>(undefined);
+export const ProductsContextCustomPathNameToRefreshToUponPageNumberChangeContextProvider =
+  ({
+    children,
+    customPathName,
+  }: {
+    children: ReactNode;
+    customPathName?: string;
+  }) => (
+    <ProductsContextCustomPathNameToRefreshToUponPageNumberChangeContext.Provider
+      value={customPathName}
+    >
+      {children}
+    </ProductsContextCustomPathNameToRefreshToUponPageNumberChangeContext.Provider>
+  );
+
 export default function ProductsContextProvider({
   children,
 }: {
@@ -52,11 +69,14 @@ export default function ProductsContextProvider({
   const { debouncedStateArr: debouncedDevelopers } =
     searchCustomizationContextBody.selectedDevelopersState!;
 
+  const customPathName = useContext(
+    ProductsContextCustomPathNameToRefreshToUponPageNumberChangeContext
+  );
   const { state: pageNr, setStateWithSearchParams: setPageNr } =
     useStateWithSearchParams({
       initialStateStable: 0,
       searchParamName: "page",
-      pathName: "/products",
+      pathName: customPathName,
     });
 
   const {
@@ -112,7 +132,12 @@ export default function ProductsContextProvider({
     ? calcMaxPossiblePageNr(countGamesData.data, MAX_GAMES_PER_PAGE)
     : undefined;
 
-  if (pageNr && maxPageNr && pageNr !== 0 && pageNr > maxPageNr) {
+  if (
+    pageNr !== null &&
+    maxPageNr !== undefined &&
+    pageNr !== 0 &&
+    pageNr > maxPageNr
+  ) {
     hasToChangePage = true;
 
     setPageNr(maxPageNr);

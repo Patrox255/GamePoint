@@ -15,7 +15,7 @@ export const useStateWithSearchParams = function <T>({
   storeStateOnlyInSessionStorage = false,
 }: {
   initialStateStable: T;
-  searchParamName: string;
+  searchParamName?: string;
   pathName?: string;
   useDebouncingTimeout?: boolean;
   storeEvenInitialValue?: boolean;
@@ -25,14 +25,16 @@ export const useStateWithSearchParams = function <T>({
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
   const navigate = useNavigate();
 
-  const initialValueForUseState = generateInitialStateFromSearchParams(
-    initialStateStable,
-    searchParams,
-    searchParamName,
-    undefined,
-    undefined,
-    !storeStateOnlyInSessionStorage
-  );
+  const initialValueForUseState = searchParamName
+    ? generateInitialStateFromSearchParams(
+        initialStateStable,
+        searchParams,
+        searchParamName,
+        undefined,
+        undefined,
+        !storeStateOnlyInSessionStorage
+      )
+    : initialStateStable;
 
   const [state, setState] = useState<T>(initialValueForUseState);
   const [debouncingState, setDebouncingState] = useState<T>(
@@ -56,6 +58,7 @@ export const useStateWithSearchParams = function <T>({
 
   const updateSearchParamsAndSessionStorageStoredState = useCallback(
     (newState: T) => {
+      if (!searchParamName) return;
       if (!storeEvenInitialValue && isEqual(newState, initialStateStable)) {
         sessionStorage.removeItem(searchParamName);
         if (storeStateOnlyInSessionStorage) return;

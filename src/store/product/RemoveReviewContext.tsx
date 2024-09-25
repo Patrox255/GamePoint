@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useCallback } from "react";
+import { createContext, ReactNode, useCallback, useContext } from "react";
 import { IReview } from "../../models/review.model";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient, removeReview } from "../../lib/fetch";
@@ -9,6 +9,7 @@ import {
   IAddReviewMutationCtx,
   optimisticUpdateForReview,
 } from "./AddReviewContext";
+import { ProductContext } from "./ProductContext";
 
 export const RemoveReviewContext = createContext<{
   review: IReview | undefined;
@@ -31,7 +32,9 @@ export default function RemoveReviewContextProvider({
   children: ReactNode;
   review: IReview;
 }) {
-  const { gameDataKey, reviewsKey } = useGetQueryKeysForOptimisticUpdate();
+  const { productId } = useContext(ProductContext);
+  const { gameDataKey, reviewsKey } =
+    useGetQueryKeysForOptimisticUpdate(productId);
   const handleMutationErrorQueryKeysBound = useCallback(
     (ctx: IAddReviewMutationCtx) =>
       handleMutationError(reviewsKey, gameDataKey, ctx),

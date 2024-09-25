@@ -98,6 +98,7 @@ import {
   modifyOrderEntries,
   modifyUserDataEntries,
   orderedGamesEntries,
+  productManagementRequiredEntriesWhenAddingANewProduct,
   productsManagementEntries,
   registerBodyEntries,
   removeReviewEntries,
@@ -2348,6 +2349,10 @@ const startServer = async () => {
           return;
         const productsManagementBody =
           req.body as IProductsManagementBodyFromRequest;
+        const { priceManagement } = productsManagementBody;
+        type priceAndDiscountType = number | undefined;
+        let price: priceAndDiscountType, discount: priceAndDiscountType;
+        if (priceManagement) ({ price, discount } = priceManagement);
         const { productId, artworks } = productsManagementBody;
         let artworksToSet: string[] | undefined;
 
@@ -2365,6 +2370,14 @@ const startServer = async () => {
             message: "Selected product does not seem to exist anymore!",
           });
         if (relatedProduct === undefined) {
+          if (
+            !validateBodyEntries({
+              req,
+              res,
+              entries: productManagementRequiredEntriesWhenAddingANewProduct,
+            })
+          )
+            return;
           relatedProduct = {} as IRelatedProductObj;
           creatingNewProduct = true;
         }
@@ -2372,7 +2385,7 @@ const startServer = async () => {
           await verifyProductTagsWhenAddingOrEditingOne(productsManagementBody);
 
         const addedBlobsURLs: string[] = [];
-        if (artworks)
+        if (artworks && artworks.length !== 0)
           try {
             artworksToSet = await Promise.all(
               artworks.map(async (artworkObj) => {
@@ -2402,13 +2415,20 @@ const startServer = async () => {
             throw e;
           }
         try {
-          relatedProduct = overrideTruePropertiesIntoObj(relatedProduct, {
-            developer,
-            genres,
-            platforms,
-            publisher,
-            artworks: artworksToSet,
-          });
+          relatedProduct = overrideTruePropertiesIntoObj(
+            {
+              ...relatedProduct,
+              ...(price !== undefined && { price }),
+              ...(discount !== undefined && { discount }),
+            },
+            {
+              developer,
+              genres,
+              platforms,
+              publisher,
+              artworks: artworksToSet,
+            }
+          );
           const relatedProductObjToSave = {
             ...relatedProduct,
             ...filterPropertiesFromObj(productsManagementBody, [
@@ -2461,15 +2481,16 @@ const startServer = async () => {
                 IGame
               >
             ).save();
-            productToSave = await Game.find({
+            productToSave = (await Game.findOne({
               title: productToSave.title,
-            }).lean();
+            }).lean())!;
           }
           return res.status(200).json(productToSave);
         } catch (e) {
-          await del(addedBlobsURLs, {
-            token: accessEnvironmentVariable("BLOB_READ_WRITE_TOKEN"),
-          });
+          if (addedBlobsURLs.length > 0)
+            await del(addedBlobsURLs, {
+              token: accessEnvironmentVariable("BLOB_READ_WRITE_TOKEN"),
+            });
           throw e;
         }
       } catch (e) {

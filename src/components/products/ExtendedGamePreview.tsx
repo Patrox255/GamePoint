@@ -90,7 +90,7 @@ const ExtendedGamePreview = memo(
         </motion.article>
         <PagesManagerContextProvider>
           <motion.article
-            className="product-details flex flex-col text-center bg-darkerBg p-8 rounded-xl gap-4"
+            className="product-details flex flex-col text-center bg-darkerBg p-8 rounded-xl gap-4 w-full"
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.7 }}
             whileHover={{ opacity: 1 }}

@@ -1,4 +1,11 @@
-import { Dispatch, useCallback, useContext, useState } from "react";
+import {
+  createContext,
+  Dispatch,
+  ReactNode,
+  useCallback,
+  useContext,
+  useState,
+} from "react";
 
 import TagsComponent from "../../game/tags/TagsComponent";
 import Input from "../../UI/Input";
@@ -34,6 +41,29 @@ import {
 } from "../../UI/FormWithErrorHandling";
 import useExtractStableDataOrErrorsFromMyBackendUseQueryResponse from "../../../hooks/queryRelated/useExtractStableDataOrErrorsFromMyBackendUseQueryResponse";
 import Header from "../../UI/headers/Header";
+
+type ICustomizationComponentWithInputAndTagsConfigurationContextBody = {
+  requiredTagsArr?: useQueryGetTagsAvailableTagsNames[];
+  tagsValidationErrors?: ValidationErrorsArr;
+};
+export const CustomizationComponentWithInputAndTagsConfigurationContext =
+  createContext<ICustomizationComponentWithInputAndTagsConfigurationContextBody>(
+    {}
+  );
+
+export const CustomizationComponentWithInputAndTagsConfigurationContextProvider =
+  ({
+    children,
+    ...ctxBody
+  }: ICustomizationComponentWithInputAndTagsConfigurationContextBody & {
+    children: ReactNode;
+  }) => (
+    <CustomizationComponentWithInputAndTagsConfigurationContext.Provider
+      value={ctxBody}
+    >
+      {children}
+    </CustomizationComponentWithInputAndTagsConfigurationContext.Provider>
+  );
 
 export default function CustomizationComponentWithInputAndTags({
   tagType,
@@ -310,9 +340,18 @@ export default function CustomizationComponentWithInputAndTags({
       </TagsComponent>
     );
 
+  const { requiredTagsArr, tagsValidationErrors } = useContext(
+    CustomizationComponentWithInputAndTagsConfigurationContext
+  );
+  const curTagValidationError = tagsValidationErrors?.find(
+    (tagValidationError) => tagValidationError.errInputName === tagType
+  );
+
   return (
     <article className="flex flex-col justify-center items-center gap-3 py-2 w-full">
-      <h2 className="text-highlightRed">{headerText}</h2>
+      <h2 className="text-highlightRed">{`${headerText}${
+        requiredTagsArr && requiredTagsArr.includes(tagType) ? "*" : ""
+      }`}</h2>
       <div className="flex flex-col justify-center items-center gap-3">
         <TagsComponent tags={selectedTagsState!.stateArr}>
           {(tag) => (
@@ -346,6 +385,9 @@ export default function CustomizationComponentWithInputAndTags({
         {content}
         {addProductTagSuccessMessage}
       </div>
+      {curTagValidationError && (
+        <Error smallVersion message={curTagValidationError.message} />
+      )}
     </article>
   );
 }

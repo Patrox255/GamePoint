@@ -5,11 +5,14 @@ import MainWrapper from "../components/structure/MainWrapper";
 import applySearchParamsSessionStorageEntryUpdateInLoader from "../helpers/applySearchParamsSessionStorageEntryUpdateInLoader";
 import createSearchParamsFromRequestURL from "../helpers/createSearchParamsFromRequestURL";
 import ExtendedProductsList from "../components/products/ExtendedProductsList";
+import { ProductsContextCustomPathNameToRefreshToUponPageNumberChangeContextProvider } from "../store/products/ProductsContext";
 
 export default function ProductsPage() {
   return (
     <MainWrapper>
-      <ExtendedProductsList />
+      <ProductsContextCustomPathNameToRefreshToUponPageNumberChangeContextProvider customPathName="/products">
+        <ExtendedProductsList />
+      </ProductsContextCustomPathNameToRefreshToUponPageNumberChangeContextProvider>
     </MainWrapper>
   );
 }

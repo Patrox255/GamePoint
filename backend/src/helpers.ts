@@ -598,7 +598,7 @@ export const generateOrderObj = (
   return sortProperties;
 };
 
-export const calcShopPrice = (price: number) => Math.trunc(price * 100) / 100;
+export const calcShopPrice = (price: number) => Math.trunc(price * 100) / 10000;
 
 export const calcTotalGamesPrice = <
   T extends { quantity: number; finalPrice: number }

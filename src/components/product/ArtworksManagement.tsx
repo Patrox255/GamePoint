@@ -51,8 +51,6 @@ export const useGenerateBasicArtworksManagementState = function (
     useState(0);
   const currentArtworksStable = useCompareComplexForUseMemo(currentArtworks);
 
-  console.log(currentArtworksStable);
-
   return {
     currentArtworkIndexOverride,
     setCurrentArtworkIndexOverride,
@@ -88,8 +86,14 @@ export const ArtworksManagementContextProvider = function ({
   );
 };
 
-const artworksManagementOverviewContainerInitialAndExitMotionProperties: AnimationProps["initial"] =
+const artworksManagementOverviewContainerExitMotionProperties: AnimationProps["exit"] =
   { opacity: 0, translateX: "3rem" };
+
+const artworksManagementOverviewContainerInitialMotionProperties: AnimationProps["initial"] =
+  {
+    opacity: 1,
+    transform: "translateX(0)",
+  };
 
 export default function ArtworksManagement() {
   const {
@@ -118,7 +122,6 @@ export default function ArtworksManagement() {
           fileName: fileName.current,
         },
       ]);
-      console.log(currentArtworksStable.length);
       setCurrentArtworkIndexOverride(currentArtworksStable.length);
     };
 
@@ -162,138 +165,142 @@ export default function ArtworksManagement() {
   useEffect(() => {
     currentArtwork && setLoadingArtworkToDisplay(true);
   }, [currentArtwork]);
-  const additionalActionOnLoadArtworkLoadFn = useCallback(() => {
-    animate("#artworks-management-overview-container", {
-      opacity: 1,
-      transform: "translateX(0)",
-    });
+  const additionalActionOnLoadArtworkLoadFn = useCallback(async () => {
+    await animate(
+      "#artworks-management-overview-container",
+      artworksManagementOverviewContainerExitMotionProperties,
+      { duration: 0 }
+    );
     setLoadingArtworkToDisplay(false);
+    await animate(
+      "#artworks-management-overview-container",
+      artworksManagementOverviewContainerInitialMotionProperties
+    );
   }, []);
   const blockControlsDuringAnimationProp = {
     disabled: loadingArtwork || loadingArtworkToDisplay,
   };
 
-  console.log(currentArtworkIndexOverride, currentArtworksStable.length);
-
   return (
-    <section
-      id="artworks-management-container"
-      className="w-full flex justify-center gap-4 transition-all"
-    >
+    <>
+      <Header>Artworks Management</Header>
       <section
-        id="artworks-management-overview"
-        className="max-w-[75%] self-stretch flex justify-center items-center flex-col"
+        id="artworks-management-container"
+        className="w-full flex justify-center gap-4 transition-all"
       >
-        <input
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.currentTarget.files?.[0];
-            if (!file || file.size === 0) return setLoadingArtworkError(true);
-            setLoadingArtwork(true);
-            fileName.current = file.name;
-            fileReader.readAsDataURL(file);
-          }}
-          {...blockControlsDuringAnimationProp}
-          ref={fileUploadInput}
-        />
-        <AnimatePresence mode="wait">
-          {currentArtwork ? (
-            <AnimatePresence mode="wait">
-              <motion.section
-                id="artworks-management-overview-container"
-                className="transition-all"
-                key={currentArtwork.url}
-                initial={
-                  artworksManagementOverviewContainerInitialAndExitMotionProperties
-                }
-                exit={
-                  artworksManagementOverviewContainerInitialAndExitMotionProperties as AnimationProps["exit"]
-                }
+        <section
+          id="artworks-management-overview"
+          className="w-[75%] self-stretch flex justify-center items-center flex-col"
+        >
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.currentTarget.files?.[0];
+              if (!file || file.size === 0) return setLoadingArtworkError(true);
+              setLoadingArtwork(true);
+              fileName.current = file.name;
+              fileReader.readAsDataURL(file);
+            }}
+            {...blockControlsDuringAnimationProp}
+            ref={fileUploadInput}
+          />
+          <AnimatePresence mode="wait">
+            {currentArtwork ? (
+              <AnimatePresence mode="wait">
+                <motion.section
+                  id="artworks-management-overview-container"
+                  className="transition-all"
+                  key={currentArtwork.url}
+                  initial={
+                    artworksManagementOverviewContainerInitialMotionProperties
+                  }
+                  exit={artworksManagementOverviewContainerExitMotionProperties}
+                >
+                  <ImageWithLoading
+                    src={currentArtwork.url}
+                    className={`rounded-xl ${
+                      loadingArtworkToDisplay ? "hidden" : ""
+                    }`}
+                    additionalActionOnLoadFn={
+                      additionalActionOnLoadArtworkLoadFn
+                    }
+                  />
+                </motion.section>
+              </AnimatePresence>
+            ) : (
+              <Header
+                key="artworks-management-overview-container-header"
+                motionAnimationProperties={{
+                  ...userOrdersComponentsMotionProperties,
+                }}
               >
-                <ImageWithLoading
-                  src={currentArtwork.url}
-                  className="rounded-xl"
-                  additionalActionOnLoadFn={additionalActionOnLoadArtworkLoadFn}
+                No artwork has been uploaded yet!
+              </Header>
+            )}
+          </AnimatePresence>
+          <AnimatePresence>
+            {currentArtworksStable.length >= 2 && (
+              <motion.section
+                className="flex justify-between items-center self-stretch"
+                id="artworks-management-current-artwork-controls"
+                {...userOrdersComponentsMotionProperties}
+              >
+                <ArrowSVG
+                  arrowSrc={leftArrowSVG}
+                  alt="Arrow pointing to the left"
+                  onClick={() => modifyCurrentArtworkIndexToOverride(-1)}
+                  {...blockControlsDuringAnimationProp}
+                />
+                <ArrowSVG
+                  arrowSrc={rightArrowSVG}
+                  alt="Arrow pointing to the right"
+                  onClick={() => modifyCurrentArtworkIndexToOverride(1)}
+                  translateXVal="2rem"
+                  {...blockControlsDuringAnimationProp}
                 />
               </motion.section>
-            </AnimatePresence>
-          ) : (
-            <Header
-              key="artworks-management-overview-container-header"
-              motionAnimationProperties={{
-                ...userOrdersComponentsMotionProperties,
-              }}
-            >
-              No artwork has been uploaded yet!
-            </Header>
+            )}
+          </AnimatePresence>
+          {loadingArtworkError && (
+            <Error
+              smallVersion
+              message="Failed to upload the selected artwork!"
+            />
           )}
-        </AnimatePresence>
-        <AnimatePresence>
-          {currentArtworksStable.length >= 2 && (
-            <motion.section
-              className="flex justify-between items-center self-stretch"
-              id="artworks-management-current-artwork-controls"
-              {...userOrdersComponentsMotionProperties}
-            >
-              <ArrowSVG
-                arrowSrc={leftArrowSVG}
-                alt="Arrow pointing to the left"
-                onClick={() => modifyCurrentArtworkIndexToOverride(-1)}
-                {...blockControlsDuringAnimationProp}
-              />
-              <ArrowSVG
-                arrowSrc={rightArrowSVG}
-                alt="Arrow pointing to the right"
-                onClick={() => modifyCurrentArtworkIndexToOverride(1)}
-                translateXVal="2rem"
-                {...blockControlsDuringAnimationProp}
-              />
-            </motion.section>
-          )}
-        </AnimatePresence>
-        {loadingArtworkError && (
-          <Error
-            smallVersion
-            message="Failed to upload the selected artwork!"
-          />
-        )}
-      </section>
-      <section
-        id="artworks-management-controls"
-        className="self-stretch w-1/4 flex flex-col items-center justify-center gap-4"
-      >
-        <Button
-          type="button"
-          onClick={() => fileUploadInput.current?.click()}
-          {...blockControlsDuringAnimationProp}
+        </section>
+        <section
+          id="artworks-management-controls"
+          className="self-stretch w-1/4 flex flex-col items-center justify-center gap-4"
         >
-          {loadingArtwork ? "Loading selected artwork..." : "Select an artwork"}
-        </Button>
-        <AnimatePresence>
-          {currentArtworksStable.length > 0 && (
-            <motion.section {...userOrdersComponentsMotionProperties}>
-              <HighlightCounter size="large">
-                {currentArtworkIndex + 1}
-              </HighlightCounter>
-            </motion.section>
-          )}
-        </AnimatePresence>
-        <AnimatePresence>
-          {currentArtwork && (
-            <motion.section {...userOrdersComponentsMotionProperties}>
-              <Button
-                type="button"
-                onClick={removeCurrentArtwork}
-                {...blockControlsDuringAnimationProp}
-              >
-                Remove an artwork
-              </Button>
-            </motion.section>
-          )}
-        </AnimatePresence>
+          <Button
+            type="button"
+            onClick={() => fileUploadInput.current?.click()}
+            {...blockControlsDuringAnimationProp}
+          >
+            {loadingArtwork
+              ? "Loading selected artwork..."
+              : "Select an artwork"}
+          </Button>
+          <HighlightCounter size="large">
+            {currentArtworkIndex + 1}
+          </HighlightCounter>
+          <AnimatePresence>
+            {currentArtwork && (
+              <motion.section {...userOrdersComponentsMotionProperties}>
+                <Button
+                  type="button"
+                  onClick={removeCurrentArtwork}
+                  {...blockControlsDuringAnimationProp}
+                >
+                  Remove an artwork
+                </Button>
+              </motion.section>
+            )}
+          </AnimatePresence>
+        </section>
       </section>
-    </section>
+    </>
   );
 }

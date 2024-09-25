@@ -1,4 +1,11 @@
-import { Reducer, useCallback, useContext, useMemo, useReducer } from "react";
+import {
+  Reducer,
+  useCallback,
+  useContext,
+  useMemo,
+  useReducer,
+  useState,
+} from "react";
 import { useMutation } from "@tanstack/react-query";
 
 import { IExtendedGamePreviewGameArg } from "../products/ExtendedGamePreview";
@@ -6,6 +13,8 @@ import FormWithErrorHandling, {
   FormActionBackendErrorResponse,
   FormActionBackendResponse,
   IFormInputField,
+  IValidationErr,
+  ValidationErrorsArr,
 } from "../UI/FormWithErrorHandling";
 import { productManagement, queryClient } from "../../lib/fetch";
 import TabsComponent, {
@@ -45,12 +54,18 @@ import { useQueryGetTagsAvailableTagsNames } from "../../hooks/searchCustomizati
 import { IMaxAmountOfSelectedTagsObj } from "../../store/products/SearchCustomizationContext";
 import { cloneDeep } from "lodash";
 import { inputValue } from "../UI/Input";
-import DatePickerInputFieldElement from "../UI/DatePickerInputFieldElement";
+import DatePickerInputFieldElement, {
+  dateRegex,
+} from "../UI/DatePickerInputFieldElement";
 import createDateNoTakingTimezoneIntoAccount from "../../helpers/createDateNoTakingTimezoneIntoAccount";
 import ArtworksManagement, {
   ArtworksManagementContextProvider,
   useGenerateBasicArtworksManagementState,
 } from "./ArtworksManagement";
+import { CustomizationComponentWithInputAndTagsConfigurationContextProvider } from "../products/SearchCustomization/CustomizationComponentWithInputAndTags";
+import Error from "../UI/Error";
+import { ManageProductsContext } from "../../store/userPanel/admin/products/ManageProductsContext";
+import { IGame } from "../../models/game.model";
 
 const newOrExistingProductManagementMaxAmountOfSelectedTabs: IMaxAmountOfSelectedTagsObj =
   {
@@ -66,17 +81,16 @@ const newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields =
   ["title", "storyLine", "summary", "releaseDate"] as const;
 type newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields =
   (typeof newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields)[number];
+const necessaryGameTagsWhenAddingANewGame = ["genres", "platforms"] as const;
 const productManagementStateTagsProperties = [
-  "genres",
-  "platforms",
+  ...necessaryGameTagsWhenAddingANewGame,
   "developers",
   "publishers",
 ] as const;
 const receivedGameTagsProperties = [
-  "genres",
+  ...necessaryGameTagsWhenAddingANewGame,
   "publisher",
   "developer",
-  "platforms",
 ] as const;
 type receivedGameTagsProperties = (typeof receivedGameTagsProperties)[number];
 type productManagementStateTagsProperties =
@@ -165,11 +179,21 @@ const newOrExistingProductManagementInitialStateGenerator = (
               ]
             : undefined,
       },
-      // artworks: {
-      //   adminChoseToEdit: true,
-      // },
     }),
     {}
+  ) as INewOrExistingProductManagementState;
+
+const newProductManagementInitialStateGenerator = () =>
+  Object.fromEntries(
+    Object.entries(newOrExistingProductManagementInitialStateGenerator()).map(
+      (newOrExistingProductManagementInitialStateGeneratorEntry) => [
+        newOrExistingProductManagementInitialStateGeneratorEntry[0],
+        {
+          ...newOrExistingProductManagementInitialStateGeneratorEntry[1],
+          adminChoseToEdit: true,
+        },
+      ]
+    )
   ) as INewOrExistingProductManagementState;
 
 const changeProductManagementInputFieldsObjsSoThatTheySuitStateNames = <
@@ -236,6 +260,8 @@ type inputFieldsNamesFromPriceManagement =
 
 const curDate = createDateNoTakingTimezoneIntoAccount({});
 
+const defaultNewGameValidationErrors: ValidationErrorsArr = [];
+
 export default function NewOrExistingProductManagementForm({
   gameStable,
 }: {
@@ -243,16 +269,14 @@ export default function NewOrExistingProductManagementForm({
 }) {
   const newOrExistingProductManagementInitialStateGenerated = useMemo(
     () =>
-      newOrExistingProductManagementInitialStateGenerator(
-        gameStable
-          ? {
-              priceManagement: {
-                discount: gameStable.discount,
-                price: gameStable.price,
-              },
-            }
-          : undefined
-      ),
+      gameStable
+        ? newOrExistingProductManagementInitialStateGenerator({
+            priceManagement: {
+              discount: gameStable.discount,
+              price: gameStable.price,
+            },
+          })
+        : newProductManagementInitialStateGenerator(),
     [gameStable]
   );
   const [
@@ -310,21 +334,30 @@ export default function NewOrExistingProductManagementForm({
     saveDebouncedStateInSessionStorage: false,
   });
 
+  const { setSelectedProductIdAndDebouncedOne } = useContext(
+    ManageProductsContext
+  );
+
   const {
     setNormalAndDebouncingTabsState:
       setNormalAndDebouncingManageProductsTagState,
   } = useContext(TabsComponentContext);
   const productManagementQueryRes = useMutation<
-    FormActionBackendResponse,
+    FormActionBackendResponse<IGame>,
     FormActionBackendErrorResponse,
     INewOrExistingProductManagementStateToSend
   >({
     mutationFn: productManagement,
     onSuccess: async (queryRes) => {
       if (!(queryRes.data as { message?: string })?.message) {
+        const createdOrEditedProductInformation = queryRes.data as IGame;
         await queryClient.invalidateQueries({
-          queryKey: ["games", gameStable?._id],
+          queryKey: ["games", createdOrEditedProductInformation._id],
         });
+        if (!gameStable)
+          setSelectedProductIdAndDebouncedOne(
+            createdOrEditedProductInformation._id
+          );
         setNormalAndDebouncingManageProductsTagState("overview");
       }
     },
@@ -415,18 +448,20 @@ export default function NewOrExistingProductManagementForm({
       productManagementPropertyName,
     }: {
       productManagementPropertyName: newOrExistingProductManagementStatePossiblePropertiesToEdit;
-    }) => (
-      <XSign
-        disabled={productManagementQueryRes.isPending}
-        onClick={handleChangeProductManagementStatePropertyActiveStatus.bind(
-          null,
-          productManagementPropertyName
-        )}
-      />
-    ),
+    }) =>
+      gameStable ? (
+        <XSign
+          disabled={productManagementQueryRes.isPending}
+          onClick={handleChangeProductManagementStatePropertyActiveStatus.bind(
+            null,
+            productManagementPropertyName
+          )}
+        />
+      ) : undefined,
     [
       handleChangeProductManagementStatePropertyActiveStatus,
       productManagementQueryRes.isPending,
+      gameStable,
     ]
   );
 
@@ -485,29 +520,68 @@ export default function NewOrExistingProductManagementForm({
   const artworksManagementState = useGenerateBasicArtworksManagementState(
     selectedGameArtworksStable
   );
+  const [newGameFieldsValidationErrors, setNewGameFieldsValidationErrors] =
+    useState<ValidationErrorsArr>(defaultNewGameValidationErrors);
 
   const handleSubmitProductManagement = useCallback(
     (formDataObj: {
       [entryName in
         | newOrExistingProductManagementStatePossiblePropertiesToEditAsInputFields
         | inputFieldsNamesFromPriceManagement]: unknown;
-    }) =>
-      productManagementMutate({
-        ...filterOrOnlyIncludeCertainPropertiesFromObj(
-          formDataObj,
-          inputFieldsNamesFromPriceManagement as unknown as string[]
-        ),
-        priceManagement: { price: setPrice, discount: setDiscount, finalPrice },
-        developers: selectedDevelopersState.debouncedStateArr,
-        genres: selectedGenresState.debouncedStateArr,
-        platforms: selectedPlatformsState.debouncedStateArr,
-        publishers: selectedPublishersState.debouncedStateArr,
-        productId: gameStable?._id,
-        ...(choseToEditArtworks && {
-          artworks: artworksManagementState.currentArtworksStable,
-        }),
-      }),
+    }) => {
+      const mutate = () =>
+        productManagementMutate({
+          ...filterOrOnlyIncludeCertainPropertiesFromObj(
+            formDataObj,
+            inputFieldsNamesFromPriceManagement as unknown as string[]
+          ),
+          priceManagement: {
+            price: setPrice,
+            discount: setDiscount,
+            finalPrice,
+          },
+          developers: selectedDevelopersState.debouncedStateArr,
+          genres: selectedGenresState.debouncedStateArr,
+          platforms: selectedPlatformsState.debouncedStateArr,
+          publishers: selectedPublishersState.debouncedStateArr,
+          productId: gameStable?._id,
+          ...(choseToEditArtworks && {
+            artworks: artworksManagementState.currentArtworksStable,
+          }),
+        });
+      if (gameStable) return mutate();
+      let encounteredValidationErrors = false;
+      setNewGameFieldsValidationErrors(() => {
+        const newGameFieldsValidationErrorsToSet: ValidationErrorsArr = [];
+        const tagsValidationErrorGenerator = (
+          singleTagName: useQueryGetTagsAvailableTagsNames
+        ): IValidationErr => ({
+          message: `You have to select at least one ${singleTagName} for the game you would like to add!`,
+          errInputName: singleTagName,
+        });
+        if (selectedGenresState.debouncedStateArr.length === 0)
+          newGameFieldsValidationErrorsToSet.push(
+            tagsValidationErrorGenerator("genres")
+          );
+        if (selectedPlatformsState.debouncedStateArr.length === 0)
+          newGameFieldsValidationErrorsToSet.push(
+            tagsValidationErrorGenerator("platforms")
+          );
+        if (!dateRegex.test(formDataObj.releaseDate as string))
+          newGameFieldsValidationErrorsToSet.push({
+            errInputName: "releaseDate",
+            message: "Invalid release date provided!",
+          });
+
+        if (newGameFieldsValidationErrorsToSet.length === 0)
+          return defaultNewGameValidationErrors;
+        encounteredValidationErrors = true;
+        return newGameFieldsValidationErrorsToSet;
+      });
+      if (!encounteredValidationErrors) return mutate();
+    },
     [
+      gameStable,
       productManagementMutate,
       setPrice,
       setDiscount,
@@ -516,7 +590,6 @@ export default function NewOrExistingProductManagementForm({
       selectedGenresState.debouncedStateArr,
       selectedPlatformsState.debouncedStateArr,
       selectedPublishersState.debouncedStateArr,
-      gameStable?._id,
       choseToEditArtworks,
       artworksManagementState.currentArtworksStable,
     ]
@@ -545,6 +618,14 @@ export default function NewOrExistingProductManagementForm({
     [ProductManagementPropertyXSign]
   );
 
+  const newGameInvalidReleaseDateError = newGameFieldsValidationErrors.find(
+    (newGameFieldsValidationError) =>
+      newGameFieldsValidationError.errInputName === "releaseDate"
+  )?.message;
+  const newGameFieldsValidationErrorsStable = useCompareComplexForUseMemo(
+    newGameFieldsValidationErrors
+  );
+
   return (
     <>
       <TabsComponent
@@ -562,7 +643,7 @@ export default function NewOrExistingProductManagementForm({
           )
         }
       />
-      <section id="product-tags-management">
+      <section id="product-tags-management" className="flex flex-col gap-6">
         <MainCustomizationComponentsWithInputsAndTagsConfigurationContextProvider
           selectedDevelopersState={selectedDevelopersState}
           selectedDevelopersDispatch={selectedDevelopersDispatch}
@@ -575,17 +656,29 @@ export default function NewOrExistingProductManagementForm({
           allowToAddNonExistentTags
           {...componentsWithInputsAndTagsConfigurationContextInformationDefault}
         >
-          <MainCustomizationComponentsWithInputsAndTags
-            tagTypesToShowStable={
-              tagTypesToShowStable as useQueryGetTagsAvailableTagsNames[]
+          <CustomizationComponentWithInputAndTagsConfigurationContextProvider
+            requiredTagsArr={
+              gameStable
+                ? []
+                : (necessaryGameTagsWhenAddingANewGame as unknown as useQueryGetTagsAvailableTagsNames[])
             }
-            additionalContentAtTheBeginningOfEachComponent={tagsComponentsXSign}
-          />
+            tagsValidationErrors={newGameFieldsValidationErrorsStable}
+          >
+            <MainCustomizationComponentsWithInputsAndTags
+              tagTypesToShowStable={
+                tagTypesToShowStable as useQueryGetTagsAvailableTagsNames[]
+              }
+              additionalContentAtTheBeginningOfEachComponent={
+                tagsComponentsXSign
+              }
+            />
+          </CustomizationComponentWithInputAndTagsConfigurationContextProvider>
         </MainCustomizationComponentsWithInputsAndTagsConfigurationContextProvider>
       </section>
       <FormWithErrorHandling
         queryRelatedToActionState={productManagementQueryRes}
         onSubmit={handleSubmitProductManagement}
+        customFlexGap="gap-6"
       >
         {Object.values(availableProductManagementInputFields).map(
           (availableProductManagementFieldObj: IFormInputField) =>
@@ -593,23 +686,37 @@ export default function NewOrExistingProductManagementForm({
               <InputFieldElement
                 inputFieldObjFromProps={availableProductManagementFieldObj}
                 key={availableProductManagementFieldObj.name}
-              >
-                <ProductManagementPropertyXSign
-                  productManagementPropertyName={
-                    availableProductManagementFieldObj.name as newOrExistingProductManagementStatePossiblePropertiesToEdit
-                  }
-                />
-              </InputFieldElement>
-            ) : (
-              <DatePickerInputFieldElement
-                inputFieldObjFromProps={availableProductManagementFieldObj}
-                key={availableProductManagementFieldObj.name}
-                latestPossibleDate={createDateNoTakingTimezoneIntoAccount({
-                  year: curDate.getFullYear() + 10,
-                  month: curDate.getMonth(),
-                  day: curDate.getDate(),
-                })}
+                contentAboveInput={
+                  <ProductManagementPropertyXSign
+                    productManagementPropertyName={
+                      availableProductManagementFieldObj.name as newOrExistingProductManagementStatePossiblePropertiesToEdit
+                    }
+                  />
+                }
               />
+            ) : (
+              <section
+                id="product-release-date-management"
+                className="w-full flex flex-col gap-4"
+                key={availableProductManagementFieldObj.name}
+              >
+                <ProductManagementPropertyXSign productManagementPropertyName="releaseDate" />
+                <DatePickerInputFieldElement
+                  inputFieldObjFromProps={availableProductManagementFieldObj}
+                  key={availableProductManagementFieldObj.name}
+                  latestPossibleDate={createDateNoTakingTimezoneIntoAccount({
+                    year: curDate.getFullYear() + 10,
+                    month: curDate.getMonth(),
+                    day: curDate.getDate(),
+                  })}
+                />
+                {newGameInvalidReleaseDateError && (
+                  <Error
+                    smallVersion
+                    message={newGameInvalidReleaseDateError}
+                  />
+                )}
+              </section>
             )
         )}
         {newOrExistingProductManagementStateStable.priceManagement
@@ -650,6 +757,7 @@ export default function NewOrExistingProductManagementForm({
         )}
         {choseToEditArtworks && (
           <ArtworksManagementContextProvider {...artworksManagementState}>
+            <ProductManagementPropertyXSign productManagementPropertyName="artworks" />
             <ArtworksManagement />
           </ArtworksManagementContextProvider>
         )}

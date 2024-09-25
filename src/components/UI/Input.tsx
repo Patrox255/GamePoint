@@ -3,6 +3,7 @@ import properties from "../../styles/properties";
 import { ChangeEvent, ChangeEventHandler, forwardRef, useContext } from "react";
 import isoStringToDateInputValue from "../../helpers/isoStringToDateInputValue";
 import { FormWithErrorHandlingContext } from "./FormWithErrorHandling";
+import filterOrOnlyIncludeCertainPropertiesFromObj from "../../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
 
 export type inputValue = string | number | Date;
 
@@ -222,6 +223,10 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
           {...sharedPropsAcrossInputAndSelect}
           defaultValue={defaultValueInCaseOfCheckboxOrTextArea}
           rows={5}
+          {...filterOrOnlyIncludeCertainPropertiesFromObj(
+            otherValidationInputAttributes,
+            ["pattern"]
+          )}
         ></motion.textarea>
       );
 

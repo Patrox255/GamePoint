@@ -654,7 +654,6 @@ export function DatePickerInputFieldElementContent() {
   const { dateInPossibleRangeStable, inputFieldObjFromProps } = useContext(
     DatePickerInputFieldElementConfigurationContext
   );
-  console.log(inputFieldObjFromProps);
   const [datePickerState, setDatePickerState] = useState<datePickerState>("");
   const [selectedDate, setSelectedDate] = useState<Date | string>(
     inputFieldObjFromProps?.defaultValue &&

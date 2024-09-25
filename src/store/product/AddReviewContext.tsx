@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import {
+import React, {
   createContext,
   memo,
   ReactNode,
@@ -226,12 +226,31 @@ export const handleMutationError = async function (
   await queryClient.setQueryData(gameDataKey, oldGameData);
 };
 
+export const AddReviewContextCreatingGameDataQueryKeyBasedOnSlugContext =
+  createContext<boolean>(true);
+
+export const AddReviewContextCreatingGameDataQueryKeyBasedOnSlugContextProvider =
+  ({
+    children,
+    creatingGameDataQueryKeyBasedOnSlug,
+  }: {
+    children: ReactNode;
+    creatingGameDataQueryKeyBasedOnSlug: boolean;
+  }) => (
+    <AddReviewContextCreatingGameDataQueryKeyBasedOnSlugContext.Provider
+      value={creatingGameDataQueryKeyBasedOnSlug}
+    >
+      {children}
+    </AddReviewContextCreatingGameDataQueryKeyBasedOnSlugContext.Provider>
+  );
+
 export const AddReviewContextProvider = memo(
   ({ children, gameId }: { children: ReactNode; gameId: string }) => {
     const location = useLocation();
     const { search } = location;
     const searchParams = new URLSearchParams(search);
-    const { gameDataKey, reviewsKey } = useGetQueryKeysForOptimisticUpdate();
+    const { gameDataKey, reviewsKey } =
+      useGetQueryKeysForOptimisticUpdate(gameId);
 
     const initialReviewContent =
       generateInitialStateFromSearchParamsOrSessionStorage(

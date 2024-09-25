@@ -709,7 +709,7 @@ export const modifyUserDataByAdmin = async function ({
 export const productManagement = async function (
   productManagementDataToSend: INewOrExistingProductManagementStateToSend
 ) {
-  const data = await getJSON<string>({
+  const data = await getJSON<IGame>({
     url: `${API_URL}/products-management`,
     method: "POST",
     body: productManagementDataToSend,

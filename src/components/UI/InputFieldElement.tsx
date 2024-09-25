@@ -18,6 +18,7 @@ import Input, { inputOnChange, inputValue } from "./Input";
 import Error from "./Error";
 import DropDownMenuWrapper from "./DropDownMenu/DropDownMenuWrapper";
 import DropDownMenuDroppedElementsContainer from "./DropDownMenu/DropDownMenuDroppedElementsContainer";
+import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
 
 export interface IInputFieldValidationError {
   message: string;
@@ -141,6 +142,7 @@ const InputFieldElement = forwardRef<
     value?: inputValue;
     onChange?: inputOnChange;
     customAlignSelfTailwindClass?: string;
+    contentAboveInput?: ReactNode;
   }
 >(
   (
@@ -153,6 +155,7 @@ const InputFieldElement = forwardRef<
       value,
       onChange,
       customAlignSelfTailwindClass,
+      contentAboveInput,
     },
     inputRef
   ) => {
@@ -176,6 +179,21 @@ const InputFieldElement = forwardRef<
     const onInputBlur = useCallback(() => setInputFocused(false), []);
     const onInputFocus = useCallback(() => setInputFocused(true), []);
     const insideSingleRowCtx = useContext(InputFieldSingleRowCtx);
+    const inputFieldObjStable = useCompareComplexForUseMemo(inputFieldObj);
+    const InputFieldElementChildrenCtxWrapper = useCallback(
+      ({ children }: { children: ReactNode }) => (
+        <InputFieldElementChildrenCtx.Provider
+          value={{
+            forceInputFieldBlur: onInputBlur,
+            forceInputFieldFocus: onInputFocus,
+            inputFieldObj: inputFieldObjStable,
+          }}
+        >
+          {children}
+        </InputFieldElementChildrenCtx.Provider>
+      ),
+      [inputFieldObjStable, onInputBlur, onInputFocus]
+    );
 
     if (!inputFieldObj || errorsRelatedToValidation === null)
       return (
@@ -221,15 +239,9 @@ const InputFieldElement = forwardRef<
             step={inputFieldObj.step}
           />
           {children && (
-            <InputFieldElementChildrenCtx.Provider
-              value={{
-                forceInputFieldBlur: onInputBlur,
-                forceInputFieldFocus: onInputFocus,
-                inputFieldObj,
-              }}
-            >
+            <InputFieldElementChildrenCtxWrapper>
               {children}
-            </InputFieldElementChildrenCtx.Provider>
+            </InputFieldElementChildrenCtxWrapper>
           )}
         </div>
       </>
@@ -263,6 +275,11 @@ const InputFieldElement = forwardRef<
         whileHover="hover"
         whileFocus="hover"
       >
+        {contentAboveInput && (
+          <InputFieldElementChildrenCtxWrapper>
+            {contentAboveInput}
+          </InputFieldElementChildrenCtxWrapper>
+        )}
         {inputFieldObj.type === "checkbox" ? (
           <div className="w-full flex justify-center gap-3">
             {inputLabelElement}

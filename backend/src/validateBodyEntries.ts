@@ -551,11 +551,12 @@ export type IGameInformationSentByAdmin = IGameInformationBasicPart<string> & {
   // Only because of the mechanics of tags hook which only stores selected tags in arrays and therefore in order not to
   // play with data flow that much I will receive these properties also as raw data from front end
 };
-export interface IProductsManagementBodyFromRequest
-  extends IBodyFromRequestToValidate,
-    IGameInformationSentByAdmin {
+interface IProductsManagementBody extends IGameInformationSentByAdmin {
   artworks?: { url: string; custom: boolean; fileName?: string }[];
 }
+export interface IProductsManagementBodyFromRequest
+  extends IBodyFromRequestToValidate,
+    IProductsManagementBody {}
 
 type productsManagementEntry =
   IValidateBodyEntry<IProductsManagementBodyFromRequest>;
@@ -643,3 +644,18 @@ export const productsManagementEntries: productsManagementEntry[] = [
     requestBodyName: "artworks",
   },
 ];
+
+const productManagementNonRequiredEntriesWhenAddingANewProduct: (keyof IProductsManagementBody)[] =
+  ["artworks", "developers", "publishers", "productId"];
+export const productManagementRequiredEntriesWhenAddingANewProduct: IValidateBodyEntry<IProductsManagementBodyFromRequest>[] =
+  productsManagementEntries
+    .filter(
+      (productManagementEntry) =>
+        !productManagementNonRequiredEntriesWhenAddingANewProduct.includes(
+          productManagementEntry.requestBodyName as keyof IProductsManagementBody
+        )
+    )
+    .map((productsManagementEntry) => ({
+      ...productsManagementEntry,
+      optional: false,
+    }));

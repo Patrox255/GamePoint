@@ -9,7 +9,8 @@ export interface IFormDataObj {
   [k: string]: FormDataEntryValue;
 }
 
-export type ValidationErrorsArr = { message: string; errInputName: string }[];
+export type IValidationErr = { message: string; errInputName: string };
+export type ValidationErrorsArr = IValidationErr[];
 
 export type FormActionBackendResponse<T = string> =
   | { data: T }
@@ -53,6 +54,7 @@ interface IFormProps<T, Y> {
   inputFields?: FormInputFields;
   inputFieldsToRender?: FormInputFields;
   lightTheme?: boolean;
+  customFlexGap?: string;
 }
 
 export const FormWithErrorHandlingContext = createContext<{
@@ -76,6 +78,7 @@ export default function FormWithErrorHandling<T, Y>({
   inputFields,
   inputFieldsToRender,
   lightTheme = false,
+  customFlexGap = "gap-3",
 }: IFormProps<T, Y>) {
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
@@ -118,7 +121,7 @@ export default function FormWithErrorHandling<T, Y>({
       value={{ errorsRelatedToValidation, inputFields, lightTheme, isPending }}
     >
       <form
-        className="login-form w-3/4 h-full flex flex-col justify-center items-center gap-3"
+        className={`login-form w-3/4 h-full flex flex-col justify-center items-center ${customFlexGap}`}
         method="post"
         action=""
         onSubmit={handleFormSubmit}

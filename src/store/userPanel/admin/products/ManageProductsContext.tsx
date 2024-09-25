@@ -4,10 +4,12 @@ import { useStateWithSearchParams } from "../../../../hooks/useStateWithSearchPa
 export const ManageProductsContext = createContext<{
   selectedProductId: string;
   setSelectedProductId: (newProductId: string) => void;
+  setSelectedProductIdAndDebouncedOne: (newProductId: string) => void;
   restrictManageProductsSectionsNavigation: boolean;
 }>({
   selectedProductId: "",
   setSelectedProductId: () => {},
+  setSelectedProductIdAndDebouncedOne: () => {},
   restrictManageProductsSectionsNavigation: false,
 });
 
@@ -19,6 +21,7 @@ export default function ManageProductsContextProvider({
   const {
     state: selectedProductId,
     setStateWithSearchParams: setSelectedProductId,
+    setNormalAndDebouncingState: setSelectedProductIdAndDebouncedOne,
     debouncingState: selectedProductIdDebounced,
   } = useStateWithSearchParams({
     initialStateStable: "",
@@ -32,6 +35,7 @@ export default function ManageProductsContextProvider({
       value={{
         selectedProductId,
         setSelectedProductId,
+        setSelectedProductIdAndDebouncedOne,
         restrictManageProductsSectionsNavigation,
       }}
     >
