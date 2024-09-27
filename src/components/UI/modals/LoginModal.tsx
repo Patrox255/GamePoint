@@ -17,6 +17,7 @@ import FormWithErrorHandling, {
 import inputFieldsObjs from "../../../lib/inputFieldsObjs";
 import { cartStateArr } from "../../../store/cartSlice";
 import { useAppSelector } from "../../../hooks/reduxStore";
+import useCreateHelperFunctionsRelatedToNotificationManagement from "../../../hooks/notificationSystemRelated/useCreateHelperFunctionsRelatedToNotificationManagement";
 
 export interface ILoginActionMutateArgs {
   login: string;
@@ -36,9 +37,18 @@ const inputFields: FormInputFields = [
   },
 ];
 
+const loadingInformationNotificationContent = "Logging in...";
+const successNotificationContent = "Successfully logged in!";
+
 export default function LoginModal() {
   const { loginModalOpen, setLoginModalOpen } = useContext(ModalContext);
   const [loginModalState, setLoginModalState] = useState<"" | "success">("");
+
+  const {
+    generateErrorNotificationInCaseOfQueryErrStable,
+    generateLoadingInformationNotificationStable,
+    generateSuccessNotificationStable,
+  } = useCreateHelperFunctionsRelatedToNotificationManagement("login");
 
   const { isPending, data, mutate, error, reset } = useMutation<
     FormActionBackendResponse,
@@ -46,9 +56,18 @@ export default function LoginModal() {
     ILoginActionMutateArgs
   >({
     mutationFn: login,
-    onSuccess: (data) =>
-      typeof data.data !== "object" &&
-      queryClient.invalidateQueries({ queryKey: ["userAuth"] }),
+    onMutate: () =>
+      generateLoadingInformationNotificationStable(
+        loadingInformationNotificationContent
+      ),
+    onError: (err) => generateErrorNotificationInCaseOfQueryErrStable(err),
+    onSuccess: (data) => {
+      generateErrorNotificationInCaseOfQueryErrStable(data.data);
+      if (typeof data.data !== "object") {
+        queryClient.invalidateQueries({ queryKey: ["userAuth"] });
+        generateSuccessNotificationStable(successNotificationContent);
+      }
+    },
   });
 
   const cart = useAppSelector((state) => state.cartSlice.cart);

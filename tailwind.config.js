@@ -8,6 +8,7 @@ export default {
         defaultFont: "#F1F1F1",
         highlightRed: "#AD3434",
         highlightGreen: "#3D8351",
+        highlightLoading: "#6E3C3C",
         darkerBg: "#1F1F1F",
       },
       fontFamily: {

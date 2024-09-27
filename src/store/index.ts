@@ -2,9 +2,15 @@ import { configureStore } from "@reduxjs/toolkit";
 import mainSearchBarSlice from "./mainSearchBarSlice";
 import userAuthSlice from "./userAuthSlice";
 import cartSlice from "./cartSlice";
+import notificationSystemSlice from "./UI/notificationSystemSlice";
 
 const store = configureStore({
-  reducer: { mainSearchBarSlice, userAuthSlice, cartSlice },
+  reducer: {
+    mainSearchBarSlice,
+    userAuthSlice,
+    cartSlice,
+    notificationSystem: notificationSystemSlice,
+  },
 });
 
 export default store;

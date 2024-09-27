@@ -34,7 +34,7 @@ export default function DropDownMenuDroppedElementsContainer({
         customPaddingsTailwindClasses?.px
           ? customPaddingsTailwindClasses.px
           : "px-3"
-      } absolute bottom-0 translate-y-[100%] flex justify-center overflow-y-auto overflow-x-clip max-h-[40vh] z-50 w-full ${
+      } absolute bottom-0 translate-y-[100%] flex justify-center overflow-y-auto overflow-x-clip max-h-[40vh] z-30 w-full ${
         showResults ? "pointer-events-auto" : "pointer-events-none"
       }`}
       initial={{ opacity: 0 }}

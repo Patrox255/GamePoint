@@ -38,6 +38,7 @@ export default function HeaderLinkOrHeaderAnimation({
   onlyAnimation = false,
   onClick,
   disabled = false,
+  customWhileHoverColor = "highlightRed",
 }: {
   href?: string;
   children: ReactNode;
@@ -47,6 +48,7 @@ export default function HeaderLinkOrHeaderAnimation({
   onlyAnimation?: boolean;
   onClick?: () => void;
   disabled?: boolean;
+  customWhileHoverColor?: keyof typeof properties;
 }) {
   const { otherSearchParams } = useContext(HeaderLinkSearchParamsContext);
 
@@ -56,7 +58,7 @@ export default function HeaderLinkOrHeaderAnimation({
         headerAnimationProps: {
           initial: { color: properties.defaultFont },
           whileHover: !disabled
-            ? { color: properties.highlightRed }
+            ? { color: properties[customWhileHoverColor] }
             : undefined,
         },
         disabled,

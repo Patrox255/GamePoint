@@ -19,6 +19,7 @@ import { cartSliceActions } from "../store/cartSlice";
 import generateInitialStateFromSearchParamsOrSessionStorage from "../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
 import useGetAuthData from "../hooks/accountRelated/useGetAuthData";
 import filterOrOnlyIncludeCertainPropertiesFromObj from "../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
+import NotificationsWrapper from "../components/UI/NotificationSystem/NotificationsWrapper";
 
 let initialRender = true;
 export const generateCartStateFromLocalStorage = () =>
@@ -144,6 +145,10 @@ const RootLayout = ({ children }: { children?: ReactNode }) => {
           </ModalContainer>
         </ModalOverlay>,
         document.getElementById("modals")!
+      )}
+      {createPortal(
+        <NotificationsWrapper />,
+        document.getElementById("notifications")!
       )}
     </ModalContextProvider>
   );
