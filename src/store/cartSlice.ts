@@ -15,11 +15,12 @@ const initialState: cartState = {
   optimisticUpdatingInProgress: false,
 };
 
-type modifyProductQuantityOperations = "increase" | "decrease" | "set";
+export type modifyProductQuantityOperations = "increase" | "decrease" | "set";
 export interface IModifyProductQuantityPayload {
   operation: modifyProductQuantityOperations;
   productId: string;
   newQuantity?: number;
+  finalPrice: number;
 }
 
 export interface ICartDetailsEntry {

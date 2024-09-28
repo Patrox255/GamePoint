@@ -598,7 +598,13 @@ export const generateOrderObj = (
   return sortProperties;
 };
 
-export const calcShopPrice = (price: number) => Math.trunc(price * 100) / 10000;
+export const truncToSetDecimalPlaces = (
+  value: number,
+  decimalPlaces: number = 0
+) => Math.trunc(value * 10 ** decimalPlaces) / 10 ** decimalPlaces;
+export const calcShopPrice = (price: number) =>
+  truncToSetDecimalPlaces(price) / 100;
+// divided by 100 as discount is already multiplied by 100
 
 export const calcTotalGamesPrice = <
   T extends { quantity: number; finalPrice: number }
@@ -606,7 +612,8 @@ export const calcTotalGamesPrice = <
   games: T[]
 ) =>
   games.reduce(
-    (acc, game) => acc + calcShopPrice(game.finalPrice * game.quantity),
+    (acc, game) =>
+      acc + truncToSetDecimalPlaces(game.finalPrice * game.quantity, 2),
     0
   );
 

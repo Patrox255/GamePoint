@@ -68,6 +68,7 @@ import {
   addProductTagEntries,
   addReviewEntries,
   cartDataEntries,
+  cartDataEntriesWithRequiredCartData,
   changeActiveContactInformationEntries,
   checkOrderIdEntries,
   contactInformationEntries,
@@ -1178,10 +1179,7 @@ const startServer = async () => {
           const { cart } = req.body as ICartDataEntriesFromRequest;
           if (
             !validateBodyEntries({
-              entries: cartDataEntries.map((cartDataEntry) => ({
-                ...cartDataEntry,
-                optional: false,
-              })),
+              entries: cartDataEntriesWithRequiredCartData,
               req,
               res,
             })
@@ -1192,27 +1190,51 @@ const startServer = async () => {
           ).filter(
             (cartWithGamesEntry) => cartWithGamesEntry.relatedGame !== null
           );
-
-          const cartTotalPrice = calcTotalGamesPrice(
-            cartWithGames.map((cartWithGamesEntry) => {
-              const {
-                relatedGame: { finalPrice },
-                quantity,
-              } = cartWithGamesEntry as typeof cartWithGamesEntry & {
-                relatedGame: IGame;
-              };
-              return { finalPrice: finalPrice!, quantity };
-            })
-          );
           const cartToSend = cartWithGames.map((cartEntry) =>
             filterPropertiesFromObj(cartEntry, ["quantity"])
           );
-          return res.status(200).json({ cart: cartToSend, cartTotalPrice });
+          return res.status(200).json({ cart: cartToSend });
         } catch (e) {
           next(e);
         }
       }
     );
+
+    app.post("/cart-details-price", async (req, res, next) => {
+      try {
+        const { cart } = req.body as ICartDataEntriesFromRequest;
+        if (
+          !validateBodyEntries({
+            req,
+            res,
+            entries: cartDataEntriesWithRequiredCartData,
+          })
+        )
+          return;
+
+        const cartWithGames = (
+          await createCartWithGamesBasedOnReceivedCart(cart)
+        ).filter(
+          (cartWithGamesEntry) => cartWithGamesEntry.relatedGame !== null
+        );
+        const cartTotalPrice = calcTotalGamesPrice(
+          cartWithGames.map((cartWithGamesEntry) => {
+            const {
+              relatedGame: { finalPrice },
+              quantity,
+            } = cartWithGamesEntry as typeof cartWithGamesEntry & {
+              relatedGame: IGame;
+            };
+            return { finalPrice: finalPrice!, quantity };
+          })
+        );
+
+        console.log(cartTotalPrice);
+        return res.status(200).json(cartTotalPrice);
+      } catch (e) {
+        next(e);
+      }
+    });
 
     app.get(
       "/logout",

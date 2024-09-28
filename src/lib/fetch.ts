@@ -347,7 +347,6 @@ export const sendCart = async function (
 
 export type ICartDetailsReceivedObj = {
   cart: cartDetails;
-  cartTotalPrice: number;
 };
 export const getCartDetails = async function (
   signal: AbortSignal,
@@ -729,6 +728,19 @@ export const addProductTag = async function ({
     url: `${API_URL}/add-product-tag`,
     body: { tagId, tagName },
     method: "POST",
+  });
+  return data;
+};
+
+export const retrieveCartDetailsTotalPrice = async (
+  cart: cartStateArr,
+  signal: AbortSignal
+) => {
+  const data = await getJSON<number>({
+    url: `${API_URL}/cart-details-price`,
+    method: "POST",
+    body: { cart },
+    signal,
   });
   return data;
 };

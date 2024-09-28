@@ -10,6 +10,13 @@ import { getGameData, queryClient } from "../lib/fetch";
 import MainWrapper from "../components/structure/MainWrapper";
 import Product from "../components/product/Product";
 import ProductContextProvider from "../store/product/ProductContext";
+import store from "../store";
+import { notificationSystemActions } from "../store/UI/notificationSystemSlice";
+
+export const loadingRequestedProductMessage =
+  "Loading the requested product data...";
+export const couldNotFindRequestedProductErrorMessage =
+  "Requested product does not exist!";
 
 export default function ProductPage() {
   const { productSlug } = useParams();
@@ -32,6 +39,16 @@ export const loader: LoaderFunction = async function ({ params, request }) {
   const previousPagePathName = searchParams.get("previousPagePathName");
   const productSlug = params.productSlug;
   try {
+    store.dispatch(
+      notificationSystemActions.ADD_NOTIFICATION({
+        content: loadingRequestedProductMessage,
+        rawInformationToRecognizeSameNotifications:
+          loadingRequestedProductMessage,
+        type: "information",
+        relatedApplicationFunctionalityIdentifier:
+          "fetchingProductBasedOnProvidedData",
+      })
+    );
     const gameData = await queryClient.fetchQuery({
       queryFn: ({ signal }) =>
         getGameData({ signal, productSlug: productSlug! }),
@@ -43,8 +60,19 @@ export const loader: LoaderFunction = async function ({ params, request }) {
       (err as ErrorResponse).status === 404 &&
       (err as ErrorResponse & Error).message ===
         "No such a game has been found!"
-    )
+    ) {
+      store.dispatch(
+        notificationSystemActions.ADD_NOTIFICATION({
+          content: couldNotFindRequestedProductErrorMessage,
+          type: "error",
+          relatedApplicationFunctionalityIdentifier:
+            "fetchingProductBasedOnProvidedData",
+          rawInformationToRecognizeSameNotifications:
+            couldNotFindRequestedProductErrorMessage,
+        })
+      );
       return redirect(previousPagePathName || "/");
+    }
   }
   return null;
 };

@@ -18,6 +18,7 @@ import FetchedGamesQuantityModificationAdditionalInformation, {
   FetchedGamesQuantityModificationAdditionalInformationContextProvider,
   onModifyGameQuantityFnStable,
 } from "../components/products/FetchedGamesQuantityModificationAdditionalInformation";
+import useQueryGetCartTotalPrice from "../hooks/queryRelated/useQueryGetCartTotalPrice";
 
 const CartPageHeader = ({ children }: { children: ReactNode }) => (
   <header className="mb-6">
@@ -80,9 +81,33 @@ export default function CartPage() {
             productId: gameInfo._id,
             login,
             newQuantity: newGameQuantity,
+            finalPrice: gameInfo.finalPrice,
           })
         ),
       [login, dispatch]
+    );
+
+  const { cartTotalPriceData, cartTotalPriceError, cartTotalPriceIsLoading } =
+    useQueryGetCartTotalPrice(cart || []);
+
+  let cartTotalPriceContent;
+  if (cartTotalPriceIsLoading)
+    cartTotalPriceContent = (
+      <LoadingFallback customText="Getting total price from the server..." />
+    );
+  if (cartTotalPriceError)
+    cartTotalPriceContent = Array.isArray(cartTotalPriceError) ? (
+      cartTotalPriceError.map((validationError) => (
+        <Error smallVersion message={validationError.message} />
+      ))
+    ) : (
+      <Error smallVersion message={cartTotalPriceError.message} />
+    );
+  if (cartTotalPriceData)
+    cartTotalPriceContent = (
+      <span className="font-bold text-highlightRed text-xl">
+        {priceFormat.format(cartTotalPriceData.data)}
+      </span>
     );
 
   let content;
@@ -134,12 +159,13 @@ export default function CartPage() {
             </FetchedGamesQuantityModificationAdditionalInformationContextProvider>
           </section>
           <section className="w-1/4 bg-darkerBg rounded-xl flex flex-col items-center justify-start py-6 px-4 gap-6 self-center">
-            <p className="text-lg flex items-center gap-2">
+            <section
+              id="cart-total-price-wrapper"
+              className="text-lg flex flex-col items-center gap-2"
+            >
               Total price:
-              <span className="font-bold text-highlightRed text-xl">
-                {priceFormat.format(cartDetailsData?.data?.cartTotalPrice)}
-              </span>
-            </p>
+              {cartTotalPriceContent}
+            </section>
             <Button
               onClick={() =>
                 navigate(

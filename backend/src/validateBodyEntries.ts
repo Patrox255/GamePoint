@@ -216,6 +216,14 @@ export interface ICartDataEntriesFromRequest
 export const cartDataEntries: IValidateBodyEntry<ICartDataEntriesFromRequest>[] =
   [cartDataEntry as unknown as IValidateBodyEntry<ICartDataEntriesFromRequest>];
 
+export const cartDataEntriesWithRequiredCartData: IValidateBodyEntry<ICartDataEntriesFromRequest>[] =
+  [
+    {
+      ...cartDataEntry,
+      optional: false,
+    } as unknown as IValidateBodyEntry<ICartDataEntriesFromRequest>,
+  ];
+
 type criteriaArr = {
   criterionName: string;
   rating: number | null;

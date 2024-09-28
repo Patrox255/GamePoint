@@ -1,9 +1,15 @@
 import { AnimatePresence } from "framer-motion";
+import { isEqual } from "lodash";
+import { useCallback, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 
 import { useAppDispatch, useAppSelector } from "../../../hooks/reduxStore";
 import Notification from "./Notification";
-import { useEffect } from "react";
-import { notificationSystemActions } from "../../../store/UI/notificationSystemSlice";
+import {
+  initialState,
+  notificationSystemActions,
+} from "../../../store/UI/notificationSystemSlice";
+import generateInitialStateFromSearchParamsOrSessionStorage from "../../../helpers/generateInitialStateFromSearchParamsOrSessionStorage";
 
 export default function NotificationsWrapper() {
   const notifications = useAppSelector((state) => state.notificationSystem);
@@ -37,6 +43,44 @@ export default function NotificationsWrapper() {
 
     return () => clearInterval(notificationsRefreshInterval);
   }, [dispatch]);
+
+  const { search } = useLocation();
+  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
+  const getNotificationsStateFromSessionStorage = useCallback(
+    (returnFalseInCaseOfLuckOfSessionStorageValue?: boolean) =>
+      generateInitialStateFromSearchParamsOrSessionStorage(
+        initialState,
+        searchParams,
+        "notifications",
+        false,
+        false,
+        returnFalseInCaseOfLuckOfSessionStorageValue ? false : undefined
+      ),
+    [searchParams]
+  );
+
+  // Setting initial state to the from session storage if such exists
+  useEffect(() => {
+    const notificationsStateFromSessionStorage =
+      getNotificationsStateFromSessionStorage(true);
+    if (
+      !notificationsStateFromSessionStorage ||
+      (Array.isArray(notificationsStateFromSessionStorage) &&
+        notificationsStateFromSessionStorage.length === 0)
+    )
+      return;
+    dispatch(
+      notificationSystemActions.SET_STATE(notificationsStateFromSessionStorage)
+    );
+  }, [searchParams, dispatch, getNotificationsStateFromSessionStorage]);
+
+  // Updating notifications session storage entry every time its state changes
+  useEffect(() => {
+    const notificationsStateFromSessionStorage =
+      getNotificationsStateFromSessionStorage();
+    if (!isEqual(notificationsStateFromSessionStorage, notifications))
+      sessionStorage.setItem("notifications", JSON.stringify(notifications));
+  }, [getNotificationsStateFromSessionStorage, notifications]);
 
   return (
     <section className="flex flex-col fixed left-0 bottom-0 gap-4 z-40 px-4 py-4 w-[30vw] transition-all">

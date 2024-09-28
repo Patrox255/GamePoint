@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { IGame } from "../../models/game.model";
@@ -11,6 +11,9 @@ import { SearchCustomizationContext } from "./SearchCustomizationContext";
 import { IOrderCustomizationProperty } from "../../hooks/useHandleElementsOrderCustomizationState";
 import { calcMaxPossiblePageNr } from "../../components/UI/PagesElement";
 import { MAX_GAMES_PER_PAGE } from "../../lib/config";
+import useQueryManageNotificationsBasedOnResponse, {
+  IUseQueryManageNotificationsBasedOnResponseArg,
+} from "../../hooks/notificationSystemRelated/useQueryManageNotificationsBasedOnResponse";
 
 export const ProductsContext = createContext<{
   games: IGame[];
@@ -202,6 +205,23 @@ export default function ProductsContextProvider({
       !hasToChangePage &&
       pageNr !== null,
   });
+
+  const manageNotificationsBasedOnResponseArg =
+    useMemo<IUseQueryManageNotificationsBasedOnResponseArg>(
+      () => ({
+        queryData: data,
+        queryError: countGamesError || error,
+        queryIsLoading: isLoading,
+        relatedApplicationFunctionalityIdentifier:
+          "fetchingProductsBasedOnProvidedData",
+        loadingMessage: "Loading the requested products...",
+        successMessage: "Loaded the requested products!",
+      }),
+      [countGamesError, data, error, isLoading]
+    );
+  useQueryManageNotificationsBasedOnResponse(
+    manageNotificationsBasedOnResponseArg
+  );
 
   return (
     <ProductsContext.Provider

@@ -74,6 +74,7 @@ const ExtendedGamePreview = memo(
                             productId: element._id,
                             operation: "increase",
                             login,
+                            finalPrice: game.finalPrice,
                           })
                         );
                       }

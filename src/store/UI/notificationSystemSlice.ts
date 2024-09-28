@@ -1,12 +1,20 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { ReactNode } from "react";
 
-type notificationTypes =
+export type notificationTypes =
   | "information"
   | "error"
   | "success"
   | "validationErrors";
-export type possibleApplicationFunctionalitiesIdentifiers = "login";
+const possibleApplicationFunctionalitiesIdentifiersArr = [
+  "login",
+  "logout",
+  "fetchingProductsBasedOnProvidedData",
+  "fetchingProductBasedOnProvidedData",
+  "manageCartContent",
+] as const;
+export type possibleApplicationFunctionalitiesIdentifiers =
+  (typeof possibleApplicationFunctionalitiesIdentifiersArr)[number];
 export interface INotificationPropertiesRequiredWhenAddingOne {
   content: ReactNode;
   type: notificationTypes;
@@ -19,7 +27,7 @@ export interface INotification
   id: number;
   visibilityDurationInSeconds: number;
 }
-const initialState: INotification[] = [];
+export const initialState: INotification[] = [];
 
 const notificationSystemSlice = createSlice({
   name: "notificationSystem",
@@ -93,6 +101,9 @@ const notificationSystemSlice = createSlice({
       );
       if (relatedNotificationIndex !== -1)
         S.splice(relatedNotificationIndex, 1);
+    },
+    SET_STATE(_, A: PayloadAction<INotification[]>) {
+      return A.payload;
     },
   },
 });

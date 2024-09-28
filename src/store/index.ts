@@ -11,6 +11,7 @@ const store = configureStore({
     cartSlice,
     notificationSystem: notificationSystemSlice,
   },
+  devTools: { actionsDenylist: "REFRESH_NOTIFICATIONS" },
 });
 
 export default store;

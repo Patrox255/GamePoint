@@ -1,10 +1,14 @@
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 
 import { IGame } from "../../models/game.model";
 import ExtendedGamePreview from "../products/ExtendedGamePreview";
 import Error from "../UI/Error";
 import { ProductContext } from "../../store/product/ProductContext";
 import useQueryGetGameData from "../../hooks/queryRelated/useQueryGetGameData";
+import useQueryManageNotificationsBasedOnResponse, {
+  IUseQueryManageNotificationsBasedOnResponseArg,
+} from "../../hooks/notificationSystemRelated/useQueryManageNotificationsBasedOnResponse";
+import { loadingRequestedProductMessage } from "../../pages/ProductPage";
 
 export default function Product() {
   const { productId, productSlug } = useContext(ProductContext);
@@ -13,6 +17,20 @@ export default function Product() {
     productId,
     productSlug,
   });
+
+  const manageNotificationsHookArg =
+    useMemo<IUseQueryManageNotificationsBasedOnResponseArg>(
+      () => ({
+        queryData: gameStable,
+        queryError: gameDataError,
+        relatedApplicationFunctionalityIdentifier:
+          "fetchingProductBasedOnProvidedData",
+        loadingMessage: loadingRequestedProductMessage,
+        successMessage: "Successfully loaded the requested product data!",
+      }),
+      [gameDataError, gameStable]
+    );
+  useQueryManageNotificationsBasedOnResponse(manageNotificationsHookArg);
 
   let content;
   if (!productId && !productSlug)

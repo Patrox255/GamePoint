@@ -24,6 +24,7 @@ import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryCo
 import OrderGeneralInformation from "./OrderGeneralInformation";
 import { UpdateOrderDetailsContext } from "../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
 import OrderFindingSummaryDetailedContactInformation from "../userPanel/admin/orders/OrderFindingSummaryDetailedContactInformation";
+import useQueryGetCartTotalPrice from "../../hooks/queryRelated/useQueryGetCartTotalPrice";
 
 export const OrderSummarySectionWrapper = ({
   children,
@@ -87,7 +88,10 @@ export default function OrderSummary({
     () => cartDetailsData?.data?.cart,
     [cartDetailsData]
   );
-  const cartTotalPrice = cartDetailsData?.data?.cartTotalPrice;
+  const { cartTotalPriceData } = useQueryGetCartTotalPrice(
+    stateCartStable || []
+  );
+  const cartTotalPrice = cartTotalPriceData?.data;
   const gamesWithQuantityStable = useMemo(
     () =>
       !cartDetailsStable

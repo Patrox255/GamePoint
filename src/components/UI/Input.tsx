@@ -122,7 +122,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
     const sharedPropsAcrossInputAndSelect = {
       className,
       name,
-      id: `input-${name}`,
+      id: !name ? undefined : `input-${name}`,
       variants: {
         initial: {
           opacity: useOpacity ? 0.5 : undefined,

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getCartDetails } from "../lib/fetch";
 import { useAppSelector } from "./reduxStore";
 import useCompareComplexForUseMemo from "./useCompareComplexForUseMemo";
+import generateCartDetailsQueryKey from "../helpers/generateCartDetailsQueryKey";
 
 export default function useRetrieveCartDetails(enabled: boolean = true) {
   const cart = useCompareComplexForUseMemo(
@@ -17,10 +18,7 @@ export default function useRetrieveCartDetails(enabled: boolean = true) {
     isLoading: cartDetailsIsLoading,
   } = useQuery({
     queryFn: ({ signal }) => getCartDetails(signal, cartForQueryToAvoidErrors),
-    queryKey: [
-      "cart-details",
-      cartForQueryToAvoidErrors.map((cartEntry) => cartEntry.id),
-    ],
+    queryKey: generateCartDetailsQueryKey(cartForQueryToAvoidErrors),
     enabled: canLookForCartDetails && enabled,
     refetchInterval: 30000, // monitoring prices
   });

@@ -20,6 +20,7 @@ import AnimatedSVG from "./svg/AnimatedSVG";
 import svgPathBase from "./svg/svgPathBase";
 import properties from "../../styles/properties";
 import { HeaderLinkSearchParamsContextProvider } from "./headers/HeaderLinkOrHeaderAnimation";
+import useCreateHelperFunctionsRelatedToNotificationManagement from "../../hooks/notificationSystemRelated/useCreateHelperFunctionsRelatedToNotificationManagement";
 
 let initialRender = true;
 
@@ -62,10 +63,23 @@ const Nav = memo(() => {
   const { setLoginModalOpen } = useContext(ModalContext);
   const isLogged =
     useAppSelector((state) => state.userAuthSlice.login) !== undefined;
+  const {
+    generateLoadingInformationNotificationStable,
+    generateSuccessNotificationStable,
+    generateErrorNotificationInCaseOfQueryErrStable,
+  } = useCreateHelperFunctionsRelatedToNotificationManagement("logout");
   const { mutate } = useMutation({
     mutationFn: () => logout(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userAuth"] }),
-    onError: () => window.location.reload(), // had to do this in case of an error related to logout because only invalidating userAuth key query won't do anything as
+    onMutate: () =>
+      generateLoadingInformationNotificationStable("Logging out..."),
+    onSuccess: () => {
+      generateSuccessNotificationStable("Logged out!");
+      queryClient.invalidateQueries({ queryKey: ["userAuth"] });
+    },
+    onError: (err) => {
+      generateErrorNotificationInCaseOfQueryErrStable(err);
+      window.location.reload();
+    }, // had to do this in case of an error related to logout because only invalidating userAuth key query won't do anything as
     // when logout fails also result of this response doesn't change so that won't trigger any change in state nor reevaluation of the logic in RootLayout
   });
 
