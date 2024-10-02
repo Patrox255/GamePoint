@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
-import { useCallback } from "react";
+import { ReactNode, useCallback, useMemo } from "react";
 
 import {
   INotification,
+  notificationContentComponentsIdsToComponentsMap,
   notificationSystemActions,
 } from "../../../store/UI/notificationSystemSlice";
 import Header from "../headers/Header";
@@ -29,6 +30,14 @@ export default function Notification({
     [dispatch, id]
   );
 
+  const NotificationContentComponent = useMemo(
+    () =>
+      notificationContentComponentsIdsToComponentsMap[
+        notification.contentComponentId
+      ],
+    [notification.contentComponentId]
+  );
+
   return (
     <motion.section
       className={`notification ${backgroundTailwindClass} px-8 py-4 rounded-xl w-full flex justify-center items-center flex-col text-defaultFont font-bold text-wrap text-center gap-4 overflow-hidden`}
@@ -39,7 +48,13 @@ export default function Notification({
       layout
     >
       <span className="notification-content w-full text-wrap">
-        {notification.content}
+        <NotificationContentComponent
+          {...(notification.relatedContentComponentProps as (typeof notificationContentComponentsIdsToComponentsMap)[typeof notification.contentComponentId] extends (
+            props: infer P
+          ) => ReactNode
+            ? P
+            : never)}
+        />
       </span>
       <HeaderLinkOrHeaderAnimation
         onClick={handleRemoveNotification}

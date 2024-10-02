@@ -255,7 +255,12 @@ export const addReviewEntries: IValidateBodyEntry<IAddReviewEntriesFromRequest>[
       requestBodyName: "reviewContent",
       type: "string",
     },
-    { name: "Game", requestBodyName: "gameId", type: "string" },
+    {
+      name: "Game",
+      requestBodyName: "gameId",
+      type: "string",
+      validateFn: bodyEntryValidMongooseObjectIdValidateFn,
+    },
   ];
 
 export interface IRemoveReviewEntriesFromRequest
@@ -269,6 +274,7 @@ export const removeReviewEntries: IValidateBodyEntry<IRemoveReviewEntriesFromReq
       type: "string",
       requestBodyName: "reviewId",
       name: "Identificator of your review",
+      validateFn: bodyEntryValidMongooseObjectIdValidateFn,
     },
   ];
 

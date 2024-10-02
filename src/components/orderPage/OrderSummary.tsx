@@ -89,7 +89,8 @@ export default function OrderSummary({
     [cartDetailsData]
   );
   const { cartTotalPriceData } = useQueryGetCartTotalPrice(
-    stateCartStable || []
+    stateCartStable || [],
+    false
   );
   const cartTotalPrice = cartTotalPriceData?.data;
   const gamesWithQuantityStable = useMemo(

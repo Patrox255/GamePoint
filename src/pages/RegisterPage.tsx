@@ -1,5 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
-import { ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 
 import MainWrapper from "../components/structure/MainWrapper";
@@ -16,6 +23,27 @@ import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointW
 import { ContactInformationFormContentContext } from "../components/formRelated/ContactInformationFormContent";
 import ContactInformationFormInputFieldsContent from "../components/formRelated/ContactInformationFormInputFieldsContent";
 
+type registerPageFormControlsShowNotificationUponResettingFieldsContentContextBody =
+  () => void;
+const RegisterPageFormControlsShowNotificationUponResettingFieldsContentContext =
+  createContext<registerPageFormControlsShowNotificationUponResettingFieldsContentContextBody>(
+    () => {}
+  );
+export const RegisterPageFormControlsShowNotificationUponResettingFieldsContentContextProvider =
+  ({
+    ctxBody,
+    children,
+  }: {
+    ctxBody: registerPageFormControlsShowNotificationUponResettingFieldsContentContextBody;
+    children?: ReactNode;
+  }) => (
+    <RegisterPageFormControlsShowNotificationUponResettingFieldsContentContext.Provider
+      value={ctxBody}
+    >
+      {children}
+    </RegisterPageFormControlsShowNotificationUponResettingFieldsContentContext.Provider>
+  );
+
 export const RegisterPageFormControls = ({
   additionalResetClickAction,
   submitBtnTextFromProps = "Register",
@@ -29,11 +57,21 @@ export const RegisterPageFormControls = ({
   const submitBtnText =
     useContext(ContactInformationFormContentContext).submitBtnText ||
     submitBtnTextFromProps;
+  const registerPageFormControlsShowNotificationUponResettingFieldsContent =
+    useContext(
+      RegisterPageFormControlsShowNotificationUponResettingFieldsContentContext
+    );
 
   return (
     <div className="form-controls flex gap-3 justify-between w-full py-6">
       {children}
-      <Button type="reset" onClick={additionalResetClickAction}>
+      <Button
+        type="reset"
+        onClick={() => {
+          additionalResetClickAction?.();
+          registerPageFormControlsShowNotificationUponResettingFieldsContent?.();
+        }}
+      >
         Reset fields
       </Button>
       <Button disabled={isPending}>

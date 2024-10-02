@@ -52,13 +52,14 @@ const RootLayout = ({ children }: { children?: ReactNode }) => {
     );
 
   const cartSlice = useAppSelector((state) => state.cartSlice);
-  const { optimisticUpdatingInProgress } = cartSlice;
+  const { optimisticUpdatingInProgressObj } = cartSlice;
   const cartStateStable = useCompareComplexForUseMemo(cartSlice.cart);
   const { data: cartData, isLoading: userCartDataIsLoading } = useQuery({
     queryKey: ["cart"],
     queryFn: ({ signal }) => getCart(signal),
     retry: false,
   });
+  const optimisticUpdatingInProgressCart = optimisticUpdatingInProgressObj.cart;
 
   const userCartData = useMemo(() => cartData?.data?.cart, [cartData]);
 
@@ -67,7 +68,7 @@ const RootLayout = ({ children }: { children?: ReactNode }) => {
       !userCartData ||
       !userAuthStateStable.login ||
       isEqual(userCartData, cartStateStable) ||
-      optimisticUpdatingInProgress
+      optimisticUpdatingInProgressCart
     )
       return;
     dispatch(cartSliceActions.SET_CART(userCartData));
@@ -75,7 +76,7 @@ const RootLayout = ({ children }: { children?: ReactNode }) => {
     cartStateStable,
     dispatch,
     userCartData,
-    optimisticUpdatingInProgress,
+    optimisticUpdatingInProgressCart,
     userAuthStateStable.login,
   ]);
 

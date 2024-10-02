@@ -209,7 +209,7 @@ export default function ProductsContextProvider({
   const manageNotificationsBasedOnResponseArg =
     useMemo<IUseQueryManageNotificationsBasedOnResponseArg>(
       () => ({
-        queryData: data,
+        queryData: data?.data,
         queryError: countGamesError || error,
         queryIsLoading: isLoading,
         relatedApplicationFunctionalityIdentifier:

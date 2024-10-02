@@ -44,6 +44,7 @@ export default function UserContactInformationOverviews({
     handleApplyClick: handleApplyClickFromCtx,
     data,
     setContactInformationSectionState,
+    isPending,
   } = useContext(ChangeActiveUserContactInformationContext);
 
   const activeContactInformationOverviewIdFromReq =
@@ -104,6 +105,7 @@ export default function UserContactInformationOverviews({
                       contactInformationEntry._id
                     )
               }
+              disabled={isPending}
             >
               <div className="flex flex-col">
                 <p>
@@ -132,7 +134,7 @@ export default function UserContactInformationOverviews({
           <Button
             disabled={
               curActiveContactInformationOverviewId ===
-              activeContactInformationOverviewIdFromReq
+                activeContactInformationOverviewIdFromReq || isPending
             }
             onClick={() =>
               handleApplyClick(curActiveContactInformationOverviewId)

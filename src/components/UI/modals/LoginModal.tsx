@@ -57,15 +57,17 @@ export default function LoginModal() {
   >({
     mutationFn: login,
     onMutate: () =>
-      generateLoadingInformationNotificationStable(
-        loadingInformationNotificationContent
-      ),
+      generateLoadingInformationNotificationStable("default", {
+        text: loadingInformationNotificationContent,
+      }),
     onError: (err) => generateErrorNotificationInCaseOfQueryErrStable(err),
     onSuccess: (data) => {
       generateErrorNotificationInCaseOfQueryErrStable(data.data);
       if (typeof data.data !== "object") {
         queryClient.invalidateQueries({ queryKey: ["userAuth"] });
-        generateSuccessNotificationStable(successNotificationContent);
+        generateSuccessNotificationStable("default", {
+          text: successNotificationContent,
+        });
       }
     },
   });

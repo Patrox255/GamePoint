@@ -3,3 +3,4 @@ export const MAX_ORDERS_PER_PAGE = 5;
 export const MAX_GAMES_PER_PAGE = 10;
 export const MAX_USERS_PER_PAGE = 5;
 export const MAX_DISPLAYED_TAGS = 10;
+export const DEFAULT_NOTIFICATION_DURATION_IN_SECONDS = 5;

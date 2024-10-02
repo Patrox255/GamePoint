@@ -1481,7 +1481,7 @@ const startServer = async () => {
             Review
           );
 
-          await relatedGame.updateOne({
+          await relatedGame!.updateOne({
             $push: { reviews: newObjs[0]._id },
           });
           return res.sendStatus(200);
@@ -1530,10 +1530,12 @@ const startServer = async () => {
           session.startTransaction();
 
           try {
-            await relatedGame.updateOne({
-              $pull: { reviews: requestedReviewToRemove._id },
-            });
-            await requestedReviewToRemove.deleteOne();
+            await relatedGame
+              .updateOne({
+                $pull: { reviews: requestedReviewToRemove._id },
+              })
+              .session(session);
+            await requestedReviewToRemove.deleteOne().session(session);
           } catch (e) {
             await session.abortTransaction();
             throw e;

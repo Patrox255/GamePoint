@@ -1,73 +1,128 @@
-import { ReactNode, useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
-import useCreateHelperFunctionsRelatedToNotificationManagement from "./useCreateHelperFunctionsRelatedToNotificationManagement";
-import { possibleApplicationFunctionalitiesIdentifiers } from "../../store/UI/notificationSystemSlice";
+import useCreateHelperFunctionsRelatedToNotificationManagement, {
+  contentComponentPropsGeneratorForNormalErrorNotificationFn,
+  IPossibleErrorsAndValidationErrosNotificationsDurationInSecondsObjStable,
+} from "./useCreateHelperFunctionsRelatedToNotificationManagement";
+import {
+  notificationContentComponentsIds,
+  possibleApplicationFunctionalitiesIdentifiers,
+} from "../../store/UI/notificationSystemSlice";
 
 type possibleMessages = "successMessage" | "loadingMessage";
 type IPossibleMessagesObj = {
-  [key in possibleMessages]?: ReactNode;
+  [key in possibleMessages]?: string;
 };
-type generatePossibleRawInformationKeys<possibleMessages extends string> =
-  `${possibleMessages}PossibleRawInformation`;
-type IPossibleRawInformationObj = {
-  [key in generatePossibleRawInformationKeys<possibleMessages>]?: string;
-};
-export interface IUseQueryManageNotificationsBasedOnResponseArg
-  extends IPossibleMessagesObj,
-    IPossibleRawInformationObj {
+
+type IPossibleNotificationsTypesVisibilityDurationInSecondsMap = {
+  [key in possibleMessages as `${key}NotificationDuration`]?: number;
+} & IPossibleErrorsAndValidationErrosNotificationsDurationInSecondsObjStable;
+
+export type IUseQueryManageNotificationsBasedOnResponseArg<
+  contentComponentId extends notificationContentComponentsIds = "default"
+> = {
   queryData?: unknown;
   queryError?: unknown;
   queryIsLoading?: boolean;
   relatedApplicationFunctionalityIdentifier: possibleApplicationFunctionalitiesIdentifiers;
-}
-export default function useQueryManageNotificationsBasedOnResponse({
+  contentComponentIdForNormalErrorNotification?: contentComponentId;
+  contentComponentPropsGeneratorForNormalErrorNotification?: contentComponentPropsGeneratorForNormalErrorNotificationFn<contentComponentId>;
+  errorNotificationMessageToOverrideTheMessageInsideReceivedError?: string;
+  enabled?: boolean;
+} & IPossibleMessagesObj &
+  IPossibleNotificationsTypesVisibilityDurationInSecondsMap;
+export default function useQueryManageNotificationsBasedOnResponse<
+  contentComponentId extends notificationContentComponentsIds
+>({
   loadingMessage = "",
   successMessage = "",
   queryData,
   queryError,
   queryIsLoading,
   relatedApplicationFunctionalityIdentifier,
-  loadingMessagePossibleRawInformation,
-  successMessagePossibleRawInformation,
-}: IUseQueryManageNotificationsBasedOnResponseArg) {
+  errorNotificationMessageToOverrideTheMessageInsideReceivedError,
+  contentComponentIdForNormalErrorNotification,
+  contentComponentPropsGeneratorForNormalErrorNotification,
+  loadingMessageNotificationDuration,
+  successMessageNotificationDuration,
+  errorMessageNotificationDuration,
+  validationErrorMessageNotificationDuration,
+  enabled = true,
+}: IUseQueryManageNotificationsBasedOnResponseArg<contentComponentId>) {
+  const errorAndValidationErrorsNotificationsDurationObj = useMemo(
+    () => ({
+      errorMessageNotificationDuration,
+      validationErrorMessageNotificationDuration,
+    }),
+    [
+      errorMessageNotificationDuration,
+      validationErrorMessageNotificationDuration,
+    ]
+  );
   const {
     generateErrorNotificationInCaseOfQueryErrStable,
     generateLoadingInformationNotificationStable,
     generateSuccessNotificationStable,
   } = useCreateHelperFunctionsRelatedToNotificationManagement(
-    relatedApplicationFunctionalityIdentifier
+    relatedApplicationFunctionalityIdentifier,
+    errorAndValidationErrorsNotificationsDurationObj
   );
 
   useEffect(() => {
-    if (queryData) {
-      generateErrorNotificationInCaseOfQueryErrStable(queryData);
+    if (!enabled) return;
+    if (queryData && !queryError) {
+      if (generateErrorNotificationInCaseOfQueryErrStable(queryData)) return;
+      // do not show success notifcation in case an error occurred
       generateSuccessNotificationStable(
-        successMessage,
-        successMessagePossibleRawInformation
+        "default",
+        { text: successMessage },
+        successMessageNotificationDuration
       );
     }
   }, [
     generateSuccessNotificationStable,
     queryData,
     successMessage,
-    successMessagePossibleRawInformation,
     generateErrorNotificationInCaseOfQueryErrStable,
+    queryError,
+    successMessageNotificationDuration,
+    enabled,
   ]);
 
   useEffect(() => {
-    if (queryError) generateErrorNotificationInCaseOfQueryErrStable(queryError);
-  });
-
-  useEffect(() => {
-    if (queryIsLoading)
-      generateLoadingInformationNotificationStable(
-        loadingMessage,
-        loadingMessagePossibleRawInformation
+    if (!enabled) return;
+    if (queryError)
+      generateErrorNotificationInCaseOfQueryErrStable(
+        queryError,
+        contentComponentIdForNormalErrorNotification,
+        true,
+        errorNotificationMessageToOverrideTheMessageInsideReceivedError,
+        contentComponentPropsGeneratorForNormalErrorNotification
       );
   }, [
+    contentComponentIdForNormalErrorNotification,
+    contentComponentPropsGeneratorForNormalErrorNotification,
+    enabled,
+    errorNotificationMessageToOverrideTheMessageInsideReceivedError,
+    generateErrorNotificationInCaseOfQueryErrStable,
+    queryError,
+  ]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (queryIsLoading)
+      generateLoadingInformationNotificationStable(
+        "default",
+        {
+          text: loadingMessage,
+        },
+        loadingMessageNotificationDuration
+      );
+  }, [
+    enabled,
     generateLoadingInformationNotificationStable,
     loadingMessage,
-    loadingMessagePossibleRawInformation,
+    loadingMessageNotificationDuration,
     queryIsLoading,
   ]);
 

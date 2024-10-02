@@ -68,29 +68,42 @@ const modifyCartQuantityActionArgToNotificationMessageEntry = ({
 type IModifyCartQuantityActionArg = IModifyProductQuantityPayload & {
   login?: string;
 };
+type cartStateFromReduxState = cartStateArr | undefined;
 export const modifyCartQuantityAction =
-  (data: IModifyCartQuantityActionArg) =>
+  (
+    data: IModifyCartQuantityActionArg,
+    abortIfCannotAccessCurCartTotalPriceForOptimisticUpdate: boolean = false
+  ) =>
   async (dispatch: AppDispatch, getState: () => RootState) => {
     const curActionRelatedNotificationMessageEntry =
       modifyCartQuantityActionArgToNotificationMessageEntry(data);
     let curCartQueryResIfUserLogged: cartStateArr | undefined;
-    let curCartState: cartStateArr | undefined;
+    let curCartState: cartStateFromReduxState;
+    let newCart: cartStateFromReduxState;
+    let finishModifyCartQuantityActionWithDataValidationAfterOptimisticUpdate: () => void =
+      async () => {};
     try {
       curCartState = getState().cartSlice.cart;
       if (!curCartState) return;
       const curCartTotalPrice = queryClient.getQueryData(
         generateCartTotalPriceQueryKey(curCartState)
       ) as { data: number } | undefined;
-      console.log(data.operation, data, curCartTotalPrice);
       const { login } = data;
+      dispatch(
+        cartSliceActions.MODIFY_OPTIMISTIC_UPDATING({
+          propertyName: "totalPrice",
+          value: true,
+        })
+      );
       if (login) dispatch(cartSliceActions.MODIFY_OPTIMISTIC_UPDATING(true));
       dispatch(
         notificationSystemActions.ADD_NOTIFICATION({
           type: "information",
           relatedApplicationFunctionalityIdentifier: "manageCartContent",
-          content: curActionRelatedNotificationMessageEntry.information,
-          rawInformationToRecognizeSameNotifications:
-            curActionRelatedNotificationMessageEntry.information,
+          contentComponentId: "default",
+          defaultComponentProps: {
+            text: curActionRelatedNotificationMessageEntry.information,
+          },
         })
       );
       dispatch(
@@ -100,24 +113,47 @@ export const modifyCartQuantityAction =
           ]) as IModifyProductQuantityPayload
         )
       );
-      const {
+      ({
         cartSlice: { cart: newCart },
-      } = getState();
+      } = getState());
+      // const newCartTotalPriceQueryKey = generateCartTotalPriceQueryKey(
+      //   newCart!
+      // );
+      // const newCartTotalPriceQueryKey = ["cart-details-price", newCart];
       const newCartTotalPriceQueryKey = generateCartTotalPriceQueryKey(
-        newCart!
+        newCart || []
       );
-      await queryClient.cancelQueries({ queryKey: newCartTotalPriceQueryKey });
+      finishModifyCartQuantityActionWithDataValidationAfterOptimisticUpdate =
+        async () => {
+          dispatch(
+            cartSliceActions.MODIFY_OPTIMISTIC_UPDATING({
+              propertyName: "totalPrice",
+              value: false,
+            })
+          );
+          await queryClient.invalidateQueries({ queryKey: ["cart"] });
+          await queryClient.invalidateQueries({
+            queryKey: newCartTotalPriceQueryKey,
+          });
+        };
       localStorage.setItem("cart", JSON.stringify(newCart));
       const showSuccessNotification = () =>
         dispatch(
           notificationSystemActions.ADD_NOTIFICATION({
             type: "success",
-            content: curActionRelatedNotificationMessageEntry.success,
+            contentComponentId: "default",
+            defaultComponentProps: {
+              text: curActionRelatedNotificationMessageEntry.success,
+            },
             relatedApplicationFunctionalityIdentifier: "manageCartContent",
-            rawInformationToRecognizeSameNotifications:
-              curActionRelatedNotificationMessageEntry.success,
           })
         );
+      const finishActionWithSuccess = () => {
+        showSuccessNotification();
+        dispatch(
+          cartSliceActions.SET_PRODUCT_ID_WHICH_CART_MODIFICATION_RESULTED_IN_AN_ERROR()
+        );
+      };
       const findCurrentlyModifiedProductAmongCartState = (
         cartState: cartStateArr | undefined
       ) => cartState?.find((cartEntry) => cartEntry.id === data.productId);
@@ -125,19 +161,46 @@ export const modifyCartQuantityAction =
         findCurrentlyModifiedProductAmongCartState(curCartState);
       const newCartProduct =
         findCurrentlyModifiedProductAmongCartState(newCart);
-      if (!previousCartProduct || !newCartProduct) throw "";
-      const productQuantityDiff =
-        newCartProduct.quantity - previousCartProduct.quantity;
+      const removingCartProductFromTheCart =
+        (previousCartProduct?.quantity === 1 &&
+          data.operation === "decrease") ||
+        (data.newQuantity !== undefined &&
+          data.newQuantity <= 0 &&
+          data.operation === "set")
+          ? true
+          : false;
+      const addingProductToTheCart =
+        !previousCartProduct && newCartProduct ? true : false;
+      if (
+        (!previousCartProduct && !addingProductToTheCart) ||
+        (!newCartProduct && !removingCartProductFromTheCart)
+      )
+        throw "";
+      const productQuantityDiff = addingProductToTheCart
+        ? newCartProduct!.quantity
+        : removingCartProductFromTheCart
+        ? -previousCartProduct!.quantity
+        : newCartProduct!.quantity - previousCartProduct!.quantity;
+      if (
+        curCartTotalPrice?.data === undefined &&
+        abortIfCannotAccessCurCartTotalPriceForOptimisticUpdate
+      )
+        throw {
+          message:
+            "Failed to update the product quantity due to not being able to validate current cart price!",
+          customMessage: true,
+        };
       const newCartTotalPrice =
         (curCartTotalPrice?.data || 0) + productQuantityDiff * data.finalPrice;
-      console.log(newCartTotalPrice);
       queryClient.setQueryData(newCartTotalPriceQueryKey, {
         data: newCartTotalPrice,
       });
 
-      if (!login) return showSuccessNotification();
+      if (!login) {
+        await finishModifyCartQuantityActionWithDataValidationAfterOptimisticUpdate();
+        return finishActionWithSuccess();
+      }
       curCartQueryResIfUserLogged = queryClient.getQueryData(["cart"]);
-      console.log(curCartQueryResIfUserLogged);
       await queryClient.cancelQueries({ queryKey: ["cart-edit"] });
       await queryClient.cancelQueries({ queryKey: ["cart"] });
       await queryClient.fetchQuery({
@@ -146,8 +209,13 @@ export const modifyCartQuantityAction =
       });
       await queryClient.setQueryData(["cart"], newCart);
       dispatch(cartSliceActions.MODIFY_OPTIMISTIC_UPDATING(false));
-      showSuccessNotification();
+      finishActionWithSuccess();
     } catch (e) {
+      dispatch(
+        cartSliceActions.SET_PRODUCT_ID_WHICH_CART_MODIFICATION_RESULTED_IN_AN_ERROR(
+          data.productId
+        )
+      );
       dispatch(cartSliceActions.MODIFY_OPTIMISTIC_UPDATING(false));
       if (curCartState) {
         dispatch(cartSliceActions.SET_CART(curCartState));
@@ -155,15 +223,18 @@ export const modifyCartQuantityAction =
       }
       dispatch(
         notificationSystemActions.ADD_NOTIFICATION({
-          content: curActionRelatedNotificationMessageEntry.error,
+          contentComponentId: "default",
+          defaultComponentProps: {
+            text: (e as Error & { customMessage?: boolean }).customMessage
+              ? (e as Error).message
+              : curActionRelatedNotificationMessageEntry.error,
+          },
           type: "error",
           relatedApplicationFunctionalityIdentifier: "manageCartContent",
-          rawInformationToRecognizeSameNotifications:
-            curActionRelatedNotificationMessageEntry.error,
         })
       );
       if (curCartQueryResIfUserLogged)
         queryClient.setQueryData(["cart"], curCartQueryResIfUserLogged);
     }
-    await queryClient.invalidateQueries({ queryKey: ["cart"] });
+    await finishModifyCartQuantityActionWithDataValidationAfterOptimisticUpdate();
   };

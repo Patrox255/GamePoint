@@ -15,6 +15,8 @@ import { priceFormat } from "../game/PriceTag";
 import Error from "../UI/Error";
 import { IGameWithQuantityBasedOnCartDetailsEntry } from "../../helpers/generateGamesWithQuantityOutOfCartDetailsEntries";
 import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
+import { ValidationErrorsArr } from "../UI/FormWithErrorHandling";
+import { useAppSelector } from "../../hooks/reduxStore";
 
 const cartControlButtonsAdditionalTailwindCSS = {
   px: "px-3",
@@ -26,21 +28,32 @@ export type onModifyGameQuantityFnStable = (
   gameInfo: IGameWithQuantityBasedOnCartDetailsEntry
 ) => void;
 
+type IFetchedGamesQuantityModificationAdditionalInformationContextBody = {
+  onModifyGameQuantityFnStable: onModifyGameQuantityFnStable | undefined;
+  gameQuantityModificationQueryPotentialError?:
+    | Error
+    | null
+    | ValidationErrorsArr;
+  gameQuantityModificationQueryPotentialData?: unknown;
+};
 export const FetchedGamesQuantityModificationAdditionalInformationContext =
-  createContext<{
-    onModifyGameQuantityFnStable: onModifyGameQuantityFnStable | undefined;
-  }>({ onModifyGameQuantityFnStable: undefined });
+  createContext<IFetchedGamesQuantityModificationAdditionalInformationContextBody>(
+    {
+      onModifyGameQuantityFnStable: undefined,
+      gameQuantityModificationQueryPotentialError: null,
+      gameQuantityModificationQueryPotentialData: undefined,
+    }
+  );
 
 export const FetchedGamesQuantityModificationAdditionalInformationContextProvider =
   ({
-    onModifyGameQuantityFnStable,
     children,
+    ...ctxBody
   }: {
-    onModifyGameQuantityFnStable: onModifyGameQuantityFnStable;
     children: ReactNode;
-  }) => (
+  } & IFetchedGamesQuantityModificationAdditionalInformationContextBody) => (
     <FetchedGamesQuantityModificationAdditionalInformationContext.Provider
-      value={{ onModifyGameQuantityFnStable }}
+      value={ctxBody}
     >
       {children}
     </FetchedGamesQuantityModificationAdditionalInformationContext.Provider>
@@ -64,14 +77,30 @@ export default function FetchedGamesQuantityModificationAdditionalInformation({
   );
 
   const gameStable = useCompareComplexForUseMemo(game);
+  const productIdWhichCartModificationResultedInAnError = useAppSelector(
+    (state) => state.cartSlice.productIdWhichCartModificationResultedInAnError
+  );
 
   const [useQuantityFromInput, setUseQuantityFromInput] =
     useState<boolean>(false);
 
-  useEffect(() => {
+  const refreshGameQuantityValue = useCallback(() => {
     setInputQuantityValue(gameQuantityFromPassedGameInformation);
     setGameQuantityState(gameQuantityFromPassedGameInformation);
   }, [gameQuantityFromPassedGameInformation]);
+
+  useEffect(() => {
+    refreshGameQuantityValue();
+  }, [refreshGameQuantityValue]);
+
+  useEffect(() => {
+    if (game._id !== productIdWhichCartModificationResultedInAnError) return;
+    refreshGameQuantityValue();
+  }, [
+    game._id,
+    productIdWhichCartModificationResultedInAnError,
+    refreshGameQuantityValue,
+  ]);
 
   useEffect(() => {
     if (

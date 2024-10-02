@@ -10,6 +10,7 @@ import {
   optimisticUpdateForReview,
 } from "./AddReviewContext";
 import { ProductContext } from "./ProductContext";
+import useCreateHelperFunctionsRelatedToNotificationManagement from "../../hooks/notificationSystemRelated/useCreateHelperFunctionsRelatedToNotificationManagement";
 
 export const RemoveReviewContext = createContext<{
   review: IReview | undefined;
@@ -41,20 +42,40 @@ export default function RemoveReviewContextProvider({
     [gameDataKey, reviewsKey]
   );
 
+  const {
+    generateErrorNotificationInCaseOfQueryErrStable,
+    generateLoadingInformationNotificationStable,
+    generateSuccessNotificationStable,
+  } = useCreateHelperFunctionsRelatedToNotificationManagement("removeReview");
+
   const { isPending, data, error, mutate } = useMutation({
     mutationFn: removeReview,
-    onMutate: async () => optimisticUpdateForReview(gameDataKey, reviewsKey),
-    onError: async (_, __, ctx) => {
+    onMutate: async () => {
+      generateLoadingInformationNotificationStable("default", {
+        text: "Deleting your review...",
+      });
+      return await optimisticUpdateForReview(gameDataKey, reviewsKey);
+    },
+    onError: async (err, __, ctx) => {
+      generateErrorNotificationInCaseOfQueryErrStable(err);
       await handleMutationErrorQueryKeysBound(ctx!);
     },
     onSuccess: async (data, _, ctx) => {
-      if (typeof data.data === "object")
+      const queryData = data?.data;
+      generateErrorNotificationInCaseOfQueryErrStable(queryData);
+      if (typeof queryData === "object")
         return await handleMutationErrorQueryKeysBound(ctx);
+      generateSuccessNotificationStable("default", {
+        text: "Your review has been deleted!",
+      });
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: gameDataKey });
     },
   });
+  // Had not to use my hook which automatically plugs my back-end query responses to appropriate notifications as invalidating
+  // game data makes it so it loses the removed review and therefore reevaluates this component and as a result my hook won't catch
+  // the received data and react to it
 
   const removeReviewHandler = useCallback(
     (reviewId: string) => mutate(reviewId),

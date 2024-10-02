@@ -26,6 +26,9 @@ import useCreateOrderCustomizationSortPropertiesToSend from "../../hooks/orderCu
 import { useLocation, useNavigate } from "react-router-dom";
 import createUrlWithCurrentSearchParams from "../../helpers/createUrlWithCurrentSearchParams";
 import { ManageUsersContext } from "./admin/users/ManageUsersContext";
+import useQueryManageNotificationsBasedOnResponse, {
+  IUseQueryManageNotificationsBasedOnResponseArg,
+} from "../../hooks/notificationSystemRelated/useQueryManageNotificationsBasedOnResponse";
 
 export type IOrdersSortProperties =
   IOrderCustomizationStateObjWithDebouncedFields<ordersSortPropertiesFieldsNames>;
@@ -116,6 +119,23 @@ export default function UserOrdersManagerOrdersDetailsContextProvider({
     queryKey: ["orders", login, ordersSortPropertiesToSend, pageNr],
     enabled: ordersAmount > 0 && orderDetailsQueryEnabled,
   });
+
+  const useQueryManageNotificationsBasedOnResponseArg =
+    useMemo<IUseQueryManageNotificationsBasedOnResponseArg>(
+      () => ({
+        loadingMessage: "Loading available orders to choose from...",
+        successMessage: "Loaded the requested orders!",
+        relatedApplicationFunctionalityIdentifier:
+          "curAccountOrdersUserPanelLoading",
+        queryData: ordersDetailsData,
+        queryError: ordersDetailsError,
+        queryIsLoading: ordersDetailsIsLoading,
+      }),
+      [ordersDetailsData, ordersDetailsError, ordersDetailsIsLoading]
+    );
+  useQueryManageNotificationsBasedOnResponse(
+    useQueryManageNotificationsBasedOnResponseArg
+  );
 
   const ordersDetails = useMemo(
     () =>

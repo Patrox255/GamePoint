@@ -2,7 +2,10 @@ import { createContext, useCallback, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useLoaderData } from "react-router-dom";
 
-import { IActionMutateArgsContact } from "../../pages/RegisterPage";
+import {
+  IActionMutateArgsContact,
+  RegisterPageFormControlsShowNotificationUponResettingFieldsContentContextProvider,
+} from "../../pages/RegisterPage";
 import { IInputFieldsDefaultValues } from "../formRelated/ContactInformationFormInputFieldsContent";
 import FormWithErrorHandling, {
   FormActionBackendErrorResponse,
@@ -26,6 +29,10 @@ import UserContactInformationOverviews, {
 import { IAdditionalContactInformation } from "../../models/additionalContactInformation.model";
 import useRetrieveContactInformation from "../../hooks/accountRelated/useRetrieveContactInformation";
 import ContactInformationFormContent from "../formRelated/ContactInformationFormContent";
+import useQueryManageNotificationsBasedOnResponse, {
+  IUseQueryManageNotificationsBasedOnResponseArg,
+} from "../../hooks/notificationSystemRelated/useQueryManageNotificationsBasedOnResponse";
+import useCreateHelperFunctionsRelatedToNotificationManagement from "../../hooks/notificationSystemRelated/useCreateHelperFunctionsRelatedToNotificationManagement";
 
 interface IActionMutateArgsContactUserPanelFormData {
   newContactInformation: IActionMutateArgsContact;
@@ -49,6 +56,7 @@ export const ChangeActiveUserContactInformationContext = createContext<{
   setContactInformationSectionState: React.Dispatch<
     React.SetStateAction<string>
   >;
+  isPending: boolean;
 }>({
   handleApplyClick: () => {},
   error: null,
@@ -56,6 +64,7 @@ export const ChangeActiveUserContactInformationContext = createContext<{
   activeContactInformationOverviewIdFromReq: undefined,
   data: undefined,
   setContactInformationSectionState: () => {},
+  isPending: false,
 });
 
 interface IRetrievedContactInformationQueryRes {
@@ -99,6 +108,36 @@ export default function UserContactInformation({
     ...customUserDataInformationObjForQueries,
     customUserLogin: login,
   });
+  const useQueryManageNotificationsBasedOnResponseArg =
+    useMemo<IUseQueryManageNotificationsBasedOnResponseArg>(
+      () => ({
+        loadingMessage: "Loading your contact details entries...",
+        successMessage:
+          "Successfully retrieved contact details entries associated with your account!",
+        relatedApplicationFunctionalityIdentifier:
+          "curAccountContactInformationLoading",
+        queryData: contactInformationData?.data,
+        queryError: contactInformationError,
+        queryIsLoading: contactInformationLoading,
+      }),
+      [
+        contactInformationData,
+        contactInformationError,
+        contactInformationLoading,
+      ]
+    );
+  useQueryManageNotificationsBasedOnResponse(
+    useQueryManageNotificationsBasedOnResponseArg
+  );
+
+  const {
+    generateSuccessNotificationStable,
+    generateErrorNotificationInCaseOfQueryErrStable,
+    generateLoadingInformationNotificationStable,
+  } = useCreateHelperFunctionsRelatedToNotificationManagement(
+    "editOrAddContactInformationEntry"
+  );
+
   const activeContactInformationOverviewIdFromReq =
     contactInformationData?.data?.activeAdditionalContactInformation || "";
   const hasContactInformationSaved =
@@ -110,14 +149,35 @@ export default function UserContactInformation({
     IActionMutateArgsContactUserPanel
   >({
     mutationFn: manageContactInformation,
+    onMutate: () =>
+      generateLoadingInformationNotificationStable("default", {
+        text: `${
+          contactInformationSectionState === "add"
+            ? "Adding a new"
+            : "Editing the selected"
+        } contact details entry...`,
+      }),
+    onError: (e) => generateErrorNotificationInCaseOfQueryErrStable(e),
     onSuccess: async (resData) => {
-      if (typeof resData.data === "object") return;
+      const queryData = resData.data;
+      generateErrorNotificationInCaseOfQueryErrStable(queryData);
+      if (typeof queryData === "object") return;
+      generateSuccessNotificationStable("default", {
+        text: `${
+          contactInformationSectionState === "add"
+            ? "Added a new"
+            : "Edited the selected"
+        } contact details entry!`,
+      });
       setContactInformationSectionState("");
       await queryClient.resetQueries({
         queryKey: contactInformationQueryKey,
       });
     },
   });
+  // Had to manage notifications like this and not to use my hook designed for that because text of the success notification
+  // depends on the current section state which would be changed if everything went alright before the generation of the
+  // success notification therefore its text would be incorrect
 
   const selectedContactInformationEntryId =
     !contactInformationSectionStateValuesNotRelatedToContactInformationEntryId.includes(
@@ -143,10 +203,21 @@ export default function UserContactInformation({
     setContactInformationSectionState("");
   }, []);
 
+  const manageChangeUserActiveAdditionalInformationMutateError = useCallback(
+    (oldContactInformation?: IRetrievedContactInformationQueryRes) => {
+      if (!oldContactInformation) return;
+      queryClient.setQueryData(
+        contactInformationQueryKey,
+        oldContactInformation
+      );
+    },
+    [contactInformationQueryKey]
+  );
   const {
     mutate: changeUserActiveAdditionalInformationMutate,
     error: changeUserActiveAdditionalInformationError,
     data: changeUserActiveAdditionalInformationData,
+    isPending: changeUserActiveAdditionalInformationIsPending,
   } = useMutation<
     FormActionBackendResponse,
     FormActionBackendErrorResponse,
@@ -154,7 +225,7 @@ export default function UserContactInformation({
     IRetrievedContactInformationQueryRes
   >({
     mutationFn: changeUserActiveAdditionalInformation,
-    onMutate: async (newId) => {
+    onMutate: async (mutateData) => {
       await queryClient.cancelQueries({
         queryKey: contactInformationQueryKey,
       });
@@ -165,13 +236,21 @@ export default function UserContactInformation({
       queryClient.setQueryData(contactInformationQueryKey, {
         data: {
           ...oldContactInformation.data,
-          activeAdditionalContactInformation: newId,
+          activeAdditionalContactInformation:
+            mutateData.newActiveAdditionalInformationEntryId,
         },
       });
       return oldContactInformation;
     },
+    onSuccess: (data, __, ctx) => {
+      if (
+        typeof data.data === "object" &&
+        (data.data as { message?: string }).message
+      )
+        manageChangeUserActiveAdditionalInformationMutateError(ctx);
+    },
     onError: (_, __, ctx) => {
-      queryClient.setQueryData(contactInformationQueryKey, ctx);
+      manageChangeUserActiveAdditionalInformationMutateError(ctx);
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({
@@ -179,6 +258,28 @@ export default function UserContactInformation({
       });
     },
   });
+
+  const useQueryManageNotificationsBasedOnResponseArgForChangingActiveAdditionalContactInformation =
+    useMemo<IUseQueryManageNotificationsBasedOnResponseArg>(
+      () => ({
+        relatedApplicationFunctionalityIdentifier:
+          "curAccountChangeActiveContactInformation",
+        queryData: changeUserActiveAdditionalInformationData?.data,
+        queryError: changeUserActiveAdditionalInformationError,
+        queryIsLoading: changeUserActiveAdditionalInformationIsPending,
+        loadingMessage: "Changing the active contact details entry...",
+        successMessage:
+          "Successfully updated the current active contact details entry!",
+      }),
+      [
+        changeUserActiveAdditionalInformationData,
+        changeUserActiveAdditionalInformationError,
+        changeUserActiveAdditionalInformationIsPending,
+      ]
+    );
+  useQueryManageNotificationsBasedOnResponse(
+    useQueryManageNotificationsBasedOnResponseArgForChangingActiveAdditionalContactInformation
+  );
 
   const handleApplyClick = useCallback(
     (newActiveAdditionalInformationEntryId: string) =>
@@ -211,6 +312,16 @@ export default function UserContactInformation({
     return selectedContactInformationData;
   }, [contactInformationArr, contactInformationSectionState]);
 
+  const generateNotificationUponResettingFormInputFields = useCallback(
+    () =>
+      generateSuccessNotificationStable("default", {
+        text: `${
+          contactInformationSectionState === "add" ? "Cleared" : "Resetted"
+        } every input field!`,
+      }),
+    [contactInformationSectionState, generateSuccessNotificationStable]
+  );
+
   // sectionState set to an individual contact details entry id or to "add" in case of adding a new contact
   // details entry
   let content = (
@@ -220,19 +331,23 @@ export default function UserContactInformation({
         onSubmit={handleFormSubmit}
         lightTheme
       >
-        <ContactInformationFormContent
-          defaultValuesObj={
-            defaultContactInformationFormValues
-              ? (defaultContactInformationFormValues as unknown as IInputFieldsDefaultValues)
-              : undefined
-          }
-          submitBtnText={
-            contactInformationSectionState === "add"
-              ? "Add Entry"
-              : "Edit Entry"
-          }
-          goBackBtnClickHandler={handleGoToContactInformationMainPage}
-        />
+        <RegisterPageFormControlsShowNotificationUponResettingFieldsContentContextProvider
+          ctxBody={generateNotificationUponResettingFormInputFields}
+        >
+          <ContactInformationFormContent
+            defaultValuesObj={
+              defaultContactInformationFormValues
+                ? (defaultContactInformationFormValues as unknown as IInputFieldsDefaultValues)
+                : undefined
+            }
+            submitBtnText={
+              contactInformationSectionState === "add"
+                ? "Add Entry"
+                : "Edit Entry"
+            }
+            goBackBtnClickHandler={handleGoToContactInformationMainPage}
+          />
+        </RegisterPageFormControlsShowNotificationUponResettingFieldsContentContextProvider>
       </FormWithErrorHandling>
     </article>
   );
@@ -264,6 +379,7 @@ export default function UserContactInformation({
                 contactInformationArr,
                 activeContactInformationOverviewIdFromReq,
                 data: changeUserActiveAdditionalInformationData,
+                isPending: changeUserActiveAdditionalInformationIsPending,
               }}
             >
               {hasContactInformationSaved ? (

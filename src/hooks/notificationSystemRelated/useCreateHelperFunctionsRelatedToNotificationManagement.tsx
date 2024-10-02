@@ -1,126 +1,158 @@
-import { ReactNode, useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 import {
+  getNotificationComponentPropsKeyBasedOnItsId,
+  INotificationContentComponentIdToNotificationComponentProps,
+  notificationContentComponentsIds,
   notificationSystemActions,
+  notificationTypes,
   possibleApplicationFunctionalitiesIdentifiers,
 } from "../../store/UI/notificationSystemSlice";
 import { useAppDispatch } from "../reduxStore";
 import { ValidationErrorsArr } from "../../components/UI/FormWithErrorHandling";
-import Header from "../../components/UI/headers/Header";
+
+const validationErrorHeader =
+  "You have encountered some validation errors based on the provided data!";
+const defaultErrorMessage = "An error occurred!";
+
+export type contentComponentPropsGeneratorForNormalErrorNotificationFn<
+  contentComponentId extends notificationContentComponentsIds
+> = (
+  errorMessage?: string,
+  validationErrors?: ValidationErrorsArr
+) => INotificationContentComponentIdToNotificationComponentProps[contentComponentId];
+
+export type IPossibleNotificationsTypesVisibilityDurationInSecondsMap<
+  possibleMessages extends string
+> = {
+  [key in possibleMessages as `${key}NotificationDuration`]?: number;
+};
+
+export type IPossibleErrorsAndValidationErrosNotificationsDurationInSecondsObjStable =
+  IPossibleNotificationsTypesVisibilityDurationInSecondsMap<
+    "errorMessage" | "validationErrorMessage"
+  >;
 
 export default function useCreateHelperFunctionsRelatedToNotificationManagement(
   relatedApplicationFunctionalityIdentifier: possibleApplicationFunctionalitiesIdentifiers,
-  checkWhetherItIsAnError: boolean = true
+  possibleErrorsAndValidationErrosNotificationsDurationInSecondsObjStable?: IPossibleErrorsAndValidationErrosNotificationsDurationInSecondsObjStable
 ) {
   const dispatch = useAppDispatch();
 
-  const generateErrorNotificationInCaseOfQueryErrStable = useCallback(
-    (possibleErrObjOrArr: unknown) => {
-      const errorNotificationGenerator = (
-        content: ReactNode,
-        rawInformationToRecognizeSameNotifications?: string,
-        normalError: boolean = true
+  const generateNotificationBasicFunctionGeneratorStable = useCallback(
+    (type: notificationTypes) =>
+      <contentComponentId extends notificationContentComponentsIds>(
+        contentComponentId: contentComponentId,
+        contentComponentProps: INotificationContentComponentIdToNotificationComponentProps[contentComponentId],
+        visibilityDurationInSeconds?: number
       ) =>
         dispatch(
           notificationSystemActions.ADD_NOTIFICATION({
-            type: normalError ? "error" : "validationErrors",
-            content,
+            type,
             relatedApplicationFunctionalityIdentifier,
-            rawInformationToRecognizeSameNotifications,
+            contentComponentId,
+            [getNotificationComponentPropsKeyBasedOnItsId(contentComponentId)]:
+              contentComponentProps,
+            visibilityDurationInSeconds,
           })
-        );
-      const validationErrorHeader =
-        "You have encountered some validation errors based on the provided data!";
-      const defaultErrorMessage = "An error occurred!";
+        ),
+    [dispatch, relatedApplicationFunctionalityIdentifier]
+  );
+
+  const generateErrorNotification = useMemo(
+    () => generateNotificationBasicFunctionGeneratorStable("error"),
+    [generateNotificationBasicFunctionGeneratorStable]
+  );
+
+  const generateValidationErrorsNotification = useMemo(
+    () => generateNotificationBasicFunctionGeneratorStable("validationErrors"),
+    [generateNotificationBasicFunctionGeneratorStable]
+  );
+
+  // this function also returns true in case error object or array really meets the requirements of such variables and false otherwise
+  const generateErrorNotificationInCaseOfQueryErrStable = useCallback(
+    <contentComponentId extends notificationContentComponentsIds = "default">(
+      possibleErrObjOrArr: unknown,
+      contentComponentIdForNormalErrorNotification: contentComponentId = "default" as contentComponentId,
+      checkWhetherItIsAnError: boolean = true,
+      overrideDefaultErrorMessage?: string,
+      contentComponentPropsGeneratorForNormalErrorNotification: contentComponentPropsGeneratorForNormalErrorNotificationFn<contentComponentId> = (
+        message
+      ) =>
+        ({
+          text: message,
+        } as INotificationContentComponentIdToNotificationComponentProps[contentComponentId])
+    ) => {
       if (
         Array.isArray(possibleErrObjOrArr) &&
         (possibleErrObjOrArr as ValidationErrorsArr).every(
           (possibleValidationErrorsObj) =>
             possibleValidationErrorsObj.message !== undefined
         )
-      )
-        return errorNotificationGenerator(
-          <>
-            <Header
-              usePaddingBottom={false}
-              colorTailwindClass="text-defaultFont"
-            >
-              {validationErrorHeader}
-            </Header>
-            <section className="notification-validation-errors flex flex-col gap-2 font-normal">
-              {(possibleErrObjOrArr as ValidationErrorsArr).map(
-                (validationError) => (
-                  <span>•&nbsp;{validationError.message}</span>
-                )
-              )}
-            </section>
-          </>,
-          `${validationErrorHeader}${(
-            possibleErrObjOrArr as ValidationErrorsArr
-          )
-            .map((validationError) => validationError.message)
-            .join("")}`,
-          false
+      ) {
+        generateValidationErrorsNotification(
+          "validationErrors",
+          {
+            validationErrors: possibleErrObjOrArr,
+            validationErrorHeader,
+          },
+          possibleErrorsAndValidationErrosNotificationsDurationInSecondsObjStable?.validationErrorMessageNotificationDuration
         );
+        return true;
+      }
       if (
         typeof possibleErrObjOrArr === "object" &&
         (possibleErrObjOrArr as Error).message !== undefined
       ) {
         const errorMesg = (possibleErrObjOrArr as Error).message;
-        return errorNotificationGenerator(errorMesg, errorMesg);
-      }
-      if (!checkWhetherItIsAnError)
-        return errorNotificationGenerator(
-          defaultErrorMessage,
-          defaultErrorMessage
+        generateErrorNotification(
+          contentComponentIdForNormalErrorNotification,
+          contentComponentPropsGeneratorForNormalErrorNotification(
+            overrideDefaultErrorMessage
+              ? overrideDefaultErrorMessage
+              : errorMesg
+          ),
+          possibleErrorsAndValidationErrosNotificationsDurationInSecondsObjStable?.errorMessageNotificationDuration
         );
+        return true;
+      }
+      if (!checkWhetherItIsAnError) {
+        generateErrorNotification(
+          contentComponentIdForNormalErrorNotification,
+          contentComponentPropsGeneratorForNormalErrorNotification(
+            overrideDefaultErrorMessage
+              ? overrideDefaultErrorMessage
+              : defaultErrorMessage
+          ),
+          possibleErrorsAndValidationErrosNotificationsDurationInSecondsObjStable?.errorMessageNotificationDuration
+        );
+        return true;
+      }
+      return false;
     },
     [
-      checkWhetherItIsAnError,
-      dispatch,
-      relatedApplicationFunctionalityIdentifier,
+      generateErrorNotification,
+      generateValidationErrorsNotification,
+      possibleErrorsAndValidationErrosNotificationsDurationInSecondsObjStable?.errorMessageNotificationDuration,
+      possibleErrorsAndValidationErrosNotificationsDurationInSecondsObjStable?.validationErrorMessageNotificationDuration,
     ]
   );
 
-  const generateLoadingInformationNotificationStable = useCallback(
-    (
-      content: ReactNode,
-      rawInformationToRecognizeSameNotifications:
-        | string
-        | undefined = typeof content === "string" ? content : undefined
-    ) =>
-      dispatch(
-        notificationSystemActions.ADD_NOTIFICATION({
-          type: "information",
-          relatedApplicationFunctionalityIdentifier,
-          content,
-          rawInformationToRecognizeSameNotifications,
-        })
-      ),
-    [dispatch, relatedApplicationFunctionalityIdentifier]
+  const generateLoadingInformationNotificationStable = useMemo(
+    () => generateNotificationBasicFunctionGeneratorStable("information"),
+    [generateNotificationBasicFunctionGeneratorStable]
   );
 
-  const generateSuccessNotificationStable = useCallback(
-    (
-      content: ReactNode,
-      rawInformationToRecognizeSameNotifications:
-        | string
-        | undefined = typeof content === "string" ? content : undefined
-    ) =>
-      dispatch(
-        notificationSystemActions.ADD_NOTIFICATION({
-          type: "success",
-          relatedApplicationFunctionalityIdentifier,
-          content,
-          rawInformationToRecognizeSameNotifications,
-        })
-      ),
-    [dispatch, relatedApplicationFunctionalityIdentifier]
+  const generateSuccessNotificationStable = useMemo(
+    () => generateNotificationBasicFunctionGeneratorStable("success"),
+    [generateNotificationBasicFunctionGeneratorStable]
   );
 
   return {
     generateErrorNotificationInCaseOfQueryErrStable,
     generateSuccessNotificationStable,
     generateLoadingInformationNotificationStable,
+    generateErrorNotification,
+    generateValidationErrorsNotification,
   };
 }

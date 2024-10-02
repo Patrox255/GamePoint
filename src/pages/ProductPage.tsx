@@ -41,12 +41,11 @@ export const loader: LoaderFunction = async function ({ params, request }) {
   try {
     store.dispatch(
       notificationSystemActions.ADD_NOTIFICATION({
-        content: loadingRequestedProductMessage,
-        rawInformationToRecognizeSameNotifications:
-          loadingRequestedProductMessage,
         type: "information",
         relatedApplicationFunctionalityIdentifier:
           "fetchingProductBasedOnProvidedData",
+        contentComponentId: "default",
+        defaultComponentProps: { text: loadingRequestedProductMessage },
       })
     );
     const gameData = await queryClient.fetchQuery({
@@ -63,12 +62,13 @@ export const loader: LoaderFunction = async function ({ params, request }) {
     ) {
       store.dispatch(
         notificationSystemActions.ADD_NOTIFICATION({
-          content: couldNotFindRequestedProductErrorMessage,
           type: "error",
           relatedApplicationFunctionalityIdentifier:
             "fetchingProductBasedOnProvidedData",
-          rawInformationToRecognizeSameNotifications:
-            couldNotFindRequestedProductErrorMessage,
+          contentComponentId: "default",
+          defaultComponentProps: {
+            text: couldNotFindRequestedProductErrorMessage,
+          },
         })
       );
       return redirect(previousPagePathName || "/");

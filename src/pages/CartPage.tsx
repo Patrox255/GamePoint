@@ -19,6 +19,7 @@ import FetchedGamesQuantityModificationAdditionalInformation, {
   onModifyGameQuantityFnStable,
 } from "../components/products/FetchedGamesQuantityModificationAdditionalInformation";
 import useQueryGetCartTotalPrice from "../hooks/queryRelated/useQueryGetCartTotalPrice";
+import { defaultFetchErrorMessageContent } from "../lib/fetch";
 
 const CartPageHeader = ({ children }: { children: ReactNode }) => (
   <header className="mb-6">
@@ -76,13 +77,16 @@ export default function CartPage() {
     useCallback<onModifyGameQuantityFnStable>(
       (newGameQuantity, gameInfo) =>
         dispatch(
-          modifyCartQuantityAction({
-            operation: "set",
-            productId: gameInfo._id,
-            login,
-            newQuantity: newGameQuantity,
-            finalPrice: gameInfo.finalPrice,
-          })
+          modifyCartQuantityAction(
+            {
+              operation: "set",
+              productId: gameInfo._id,
+              login,
+              newQuantity: newGameQuantity,
+              finalPrice: gameInfo.finalPrice,
+            },
+            true
+          )
         ),
       [login, dispatch]
     );
@@ -101,7 +105,14 @@ export default function CartPage() {
         <Error smallVersion message={validationError.message} />
       ))
     ) : (
-      <Error smallVersion message={cartTotalPriceError.message} />
+      <Error
+        smallVersion
+        message={
+          cartTotalPriceError.message === defaultFetchErrorMessageContent
+            ? "Failed to validate cart total price!"
+            : cartTotalPriceError.message
+        }
+      />
     );
   if (cartTotalPriceData)
     cartTotalPriceContent = (

@@ -16,23 +16,40 @@ export default function NotificationsWrapper() {
   const dispatch = useAppDispatch();
 
   // useEffect(() => {
-  //   const timer = setTimeout(
-  //     () => {
-  //       for (let i = 0; i < 10; i++) {
-  //         dispatch(
-  //           notificationSystemActions.ADD_NOTIFICATION({
-  //             content:
-  //               "Loading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...",
-  //             type:
-  //               i % 3 === 0 ? "success" : i % 3 === 1 ? "information" : "error",
-  //           })
-  //         );
-  //       }
+  // const timer = setTimeout(
+  //   () => {
+  //     for (let i = 0; i < 10; i++) {
+  //       dispatch(
+  //         notificationSystemActions.ADD_NOTIFICATION({
+  //           contentComponentId: "default",
+  //           defaultComponentProps: {
+  //             text: "Loading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...",
+  //           },
+  //           relatedApplicationFunctionalityIdentifier: "cartTotalPrice",
+  //           type:
+  //             i % 3 === 0 ? "success" : i % 3 === 1 ? "information" : "error",
+  //         })
+  //       );
   //     }
-  //     // 2000
-  //   );
-
-  //   return () => clearTimeout(timer);
+  //   }
+  //   // 2000
+  // );
+  // return () => clearTimeout(timer);
+  //   const test = async (i = 0) => {
+  //     dispatch(
+  //       notificationSystemActions.ADD_NOTIFICATION({
+  //         contentComponentId: "default",
+  //         defaultComponentProps: {
+  //           text: "Loading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...",
+  //         },
+  //         relatedApplicationFunctionalityIdentifier: "cartTotalPrice",
+  //         type: i % 3 === 0 ? "success" : i % 3 === 1 ? "information" : "error",
+  //       })
+  //     );
+  //     await new Promise((resolve) => setTimeout(resolve, 1000));
+  //     if (i < 10) await test(i + 1);
+  //   };
+  //   test();
   // }, [dispatch]);
 
   useEffect(() => {

@@ -5,6 +5,7 @@ import React, {
   ReactNode,
   Reducer,
   useCallback,
+  useMemo,
   useReducer,
   useState,
 } from "react";
@@ -25,6 +26,9 @@ import { useAppSelector } from "../../hooks/reduxStore";
 import { IUser } from "../../models/user.model";
 import { IExtendedGamePreviewGameArg } from "../../components/products/ExtendedGamePreview";
 import useGetQueryKeysForOptimisticUpdate from "../../hooks/gameReviews/useGetQueryKeysForOptimisticUpdate";
+import useQueryManageNotificationsBasedOnResponse, {
+  IUseQueryManageNotificationsBasedOnResponseArg,
+} from "../../hooks/notificationSystemRelated/useQueryManageNotificationsBasedOnResponse";
 
 interface ICriterion {
   criterionName: string;
@@ -321,6 +325,22 @@ export const AddReviewContextProvider = memo(
         await queryClient.invalidateQueries({ queryKey: gameDataKey });
       },
     });
+
+    const useQueryManageNotificationsBasedOnResponseArg =
+      useMemo<IUseQueryManageNotificationsBasedOnResponseArg>(
+        () => ({
+          loadingMessage: "Uploading your review...",
+          successMessage: "Sent review has been submitted!",
+          queryData: data?.data,
+          queryError: error,
+          queryIsLoading: isPending,
+          relatedApplicationFunctionalityIdentifier: "addReview",
+        }),
+        [data, error, isPending]
+      );
+    useQueryManageNotificationsBasedOnResponse(
+      useQueryManageNotificationsBasedOnResponseArg
+    );
 
     const handleReviewSubmit = useCallback(
       (reviewToSend: IReviewDataArg) => mutate({ ...reviewToSend, gameId }),

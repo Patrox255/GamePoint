@@ -71,13 +71,20 @@ const Nav = memo(() => {
   const { mutate } = useMutation({
     mutationFn: () => logout(),
     onMutate: () =>
-      generateLoadingInformationNotificationStable("Logging out..."),
+      generateLoadingInformationNotificationStable("default", {
+        text: "Logging out...",
+      }),
     onSuccess: () => {
-      generateSuccessNotificationStable("Logged out!");
+      generateSuccessNotificationStable("default", { text: "Logged out!" });
       queryClient.invalidateQueries({ queryKey: ["userAuth"] });
     },
     onError: (err) => {
-      generateErrorNotificationInCaseOfQueryErrStable(err);
+      generateErrorNotificationInCaseOfQueryErrStable(
+        err,
+        "default",
+        undefined,
+        "Failed to log out!"
+      );
       window.location.reload();
     }, // had to do this in case of an error related to logout because only invalidating userAuth key query won't do anything as
     // when logout fails also result of this response doesn't change so that won't trigger any change in state nor reevaluation of the logic in RootLayout

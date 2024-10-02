@@ -38,6 +38,9 @@ import { useAppDispatch, useAppSelector } from "../../hooks/reduxStore";
 import { cartSliceActions } from "../../store/cartSlice";
 import { OrderPageContentIsLoggedContext } from "../../store/orderPage/OrderPageContentIsLoggedContext";
 import NewOrderSummaryContextProvider from "../../store/orderPage/NewOrderSummaryContext";
+import useQueryManageNotificationsBasedOnResponse, {
+  IUseQueryManageNotificationsBasedOnResponseArg,
+} from "../../hooks/notificationSystemRelated/useQueryManageNotificationsBasedOnResponse";
 
 export type IAdditionalContactInformationFromGuestOrder =
   IActionMutateArgsContact & { email: string };
@@ -123,6 +126,22 @@ export default function OrderPageContent() {
   >({
     mutationFn: placeAnOrder,
   });
+
+  const useQueryManageNotificationsBasedOnResponseArg =
+    useMemo<IUseQueryManageNotificationsBasedOnResponseArg>(
+      () => ({
+        loadingMessage: "Placing the order...",
+        successMessage: "Successfully placed the order!",
+        relatedApplicationFunctionalityIdentifier: "placingTheOrder",
+        queryData: placeAnOrderData?.data,
+        queryError: placeAnOrderError,
+        queryIsLoading: placeAnOrderIsPending,
+      }),
+      [placeAnOrderData, placeAnOrderError, placeAnOrderIsPending]
+    );
+  useQueryManageNotificationsBasedOnResponse(
+    useQueryManageNotificationsBasedOnResponseArg
+  );
 
   const dispatch = useAppDispatch();
 

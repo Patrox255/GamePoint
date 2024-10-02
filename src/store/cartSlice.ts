@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { IGame } from "../models/game.model";
 
+type possibleOptimisticUpdatingProperties = "cart" | "totalPrice";
 export interface ICartStateArrEntry {
   id: string;
   quantity: number;
@@ -8,11 +9,15 @@ export interface ICartStateArrEntry {
 export type cartStateArr = ICartStateArrEntry[];
 export type cartState = {
   cart?: cartStateArr;
-  optimisticUpdatingInProgress: boolean;
+  optimisticUpdatingInProgressObj: {
+    [key in possibleOptimisticUpdatingProperties]: boolean;
+  };
+  productIdWhichCartModificationResultedInAnError?: string;
 };
 const initialState: cartState = {
   cart: undefined,
-  optimisticUpdatingInProgress: false,
+  optimisticUpdatingInProgressObj: { cart: false, totalPrice: false },
+  productIdWhichCartModificationResultedInAnError: undefined,
 };
 
 export type modifyProductQuantityOperations = "increase" | "decrease" | "set";
@@ -27,6 +32,11 @@ export interface ICartDetailsEntry {
   relatedGame: IGame;
 }
 export type cartDetails = ICartDetailsEntry[];
+
+interface IModifyOptimisticUpdatingPossibleArg {
+  propertyName: possibleOptimisticUpdatingProperties;
+  value: boolean;
+}
 
 const cartSlice = createSlice({
   name: "cartSlice",
@@ -67,8 +77,25 @@ const cartSlice = createSlice({
         };
       cartProduct.quantity = newProductQuantity;
     },
-    MODIFY_OPTIMISTIC_UPDATING: (state, action: PayloadAction<boolean>) => {
-      state.optimisticUpdatingInProgress = action.payload;
+    MODIFY_OPTIMISTIC_UPDATING: (
+      state,
+      action: PayloadAction<IModifyOptimisticUpdatingPossibleArg | boolean>
+    ) => {
+      const { payload } = action;
+      const propertyName =
+        (payload as IModifyOptimisticUpdatingPossibleArg)?.propertyName ||
+        "cart";
+      const payloadValue = (payload as IModifyOptimisticUpdatingPossibleArg)
+        ?.value;
+      const value =
+        payloadValue !== undefined ? payloadValue : (payload as boolean);
+      state.optimisticUpdatingInProgressObj[propertyName] = value;
+    },
+    SET_PRODUCT_ID_WHICH_CART_MODIFICATION_RESULTED_IN_AN_ERROR: (
+      S,
+      A: PayloadAction<string | undefined>
+    ) => {
+      S.productIdWhichCartModificationResultedInAnError = A.payload;
     },
   },
 });

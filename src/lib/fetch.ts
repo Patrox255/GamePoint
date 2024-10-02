@@ -31,6 +31,8 @@ export type IResponseFromFetchFn<T> = {
   data: T;
 };
 
+export const defaultFetchErrorMessageContent = "Failed to fetch data.";
+
 export const getJSON = async function <dataInterface>({
   url,
   signal,
@@ -63,7 +65,7 @@ export const getJSON = async function <dataInterface>({
         (data && (data as { message?: string }).message) ||
         (res.status === 403
           ? "You are not allowed to access this functionality!"
-          : "Failed to fetch data.")
+          : defaultFetchErrorMessageContent)
       }`,
       status: res.status,
     };
@@ -378,7 +380,6 @@ export const removeReview = async function (reviewId: string) {
     method: "POST",
     body: { reviewId },
   });
-
   return data as FormActionBackendResponse;
 };
 
