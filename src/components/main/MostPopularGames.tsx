@@ -15,8 +15,8 @@ export default function MostPopularGames() {
   });
 
   return (
-    <article className="flex flex-col justify-center items-center py-12 w-full">
-      <h1 className="text-highlightRed text-4xl">
+    <article className="flex flex-col justify-center items-center py-12 w-full text-center">
+      <h1 className="text-highlightRed md:text-4xl text-xl px-2">
         Check out the most popular games currently
       </h1>
       {isLoading && <LoadingFallback />}

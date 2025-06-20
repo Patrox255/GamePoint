@@ -20,6 +20,9 @@ import { IUser } from "../../../../models/user.model";
 import useRetrieveFoundUsersDataBasedOnProvidedSearchQuery from "../../../../hooks/adminPanelRelated/useRetrieveFoundUsersDataBasedOnProvidedSearchQuery";
 import { ManageUsersContext } from "../users/ManageUsersContext";
 import { useStateWithSearchParams } from "../../../../hooks/useStateWithSearchParams";
+import useQueryManageNotificationsBasedOnResponse, {
+  IUseQueryManageNotificationsBasedOnResponseArg,
+} from "../../../../hooks/notificationSystemRelated/useQueryManageNotificationsBasedOnResponse";
 
 const manageOrdersFindingInputsEntriesNames = [
   "orderFindingUser",
@@ -177,6 +180,30 @@ export default function ManageOrdersFindingOrderContextProvider({
     selectedUserFromList,
     !insideManageUsersComponent
   );
+  const useQueryManageNotificationsBasedOnResponseRetrieveUsersQueryArg =
+    useMemo<IUseQueryManageNotificationsBasedOnResponseArg>(
+      () => ({
+        relatedApplicationFunctionalityIdentifier:
+          "retrieveUsersToChooseFromInAdminPanelManageOrdersSection",
+        loadingMessage:
+          "Loading possible users to choose from based on provided query...",
+        successMessage:
+          "Loaded possible users to choose from based on provided query!",
+        queryData: retrieveUsersArr,
+        queryError:
+          retrieveUsersDifferentError || retrieveUsersValidationErrors,
+        queryIsLoading: retrieveUsersIsLoading,
+      }),
+      [
+        retrieveUsersArr,
+        retrieveUsersDifferentError,
+        retrieveUsersIsLoading,
+        retrieveUsersValidationErrors,
+      ]
+    );
+  useQueryManageNotificationsBasedOnResponse(
+    useQueryManageNotificationsBasedOnResponseRetrieveUsersQueryArg
+  );
 
   const { pageNr, setPageNr } = useContext(PagesManagerContext);
   const { ordersSortPropertiesToSend } = useContext(
@@ -207,6 +234,40 @@ export default function ManageOrdersFindingOrderContextProvider({
     | IReceivedOrdersDocumentsWhenRetrievingThemAsAnAdmin
     | undefined; // had to type it like this as its type
   // wasn't inferenced correctly
+
+  const useQueryManageNotificationsBasedOnResponseRetrieveOrdersQueryArg =
+    useMemo<IUseQueryManageNotificationsBasedOnResponseArg>(
+      () => ({
+        relatedApplicationFunctionalityIdentifier:
+          "retrieveOrdersToChooseFromInAdminPanelManageOrdersSection",
+        loadingMessage: "Loading orders based on the provided data...",
+        successMessage: "Loaded orders based on the provided data!",
+        queryData:
+          retrieveOrdersArr && retrieveOrdersAmount
+            ? retrieveOrdersArr
+            : undefined,
+        queryError:
+          retrieveOrdersAmountOtherErrors ||
+          retrieveOrdersAmountValidationErrors ||
+          retrieveOrdersOtherErrors ||
+          retrieveOrdersValidationErrors,
+        queryIsLoading:
+          retrieveOrdersAmountIsLoading || retrieveOrdersIsLoading,
+      }),
+      [
+        retrieveOrdersAmount,
+        retrieveOrdersAmountIsLoading,
+        retrieveOrdersAmountOtherErrors,
+        retrieveOrdersAmountValidationErrors,
+        retrieveOrdersArr,
+        retrieveOrdersIsLoading,
+        retrieveOrdersOtherErrors,
+        retrieveOrdersValidationErrors,
+      ]
+    );
+  useQueryManageNotificationsBasedOnResponse(
+    useQueryManageNotificationsBasedOnResponseRetrieveOrdersQueryArg
+  );
 
   useEffect(() => {
     if (

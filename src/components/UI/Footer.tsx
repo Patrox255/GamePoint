@@ -14,7 +14,7 @@ const FooterAnimatedSVG = ({ path }: { path: ReactNode }) => (
 
 export default function Footer() {
   return (
-    <footer className="flex flex-col justify-center items-center w-full mt-16 py-8 bg-darkerBg ">
+    <footer className="flex flex-col justify-center items-center w-full mt-16 py-8 bg-darkerBg text-center">
       <p>&copy; Patrox255. All rights reserved</p>
       <p>You can also find us on:</p>
       <nav className="flex py-3 gap-3">

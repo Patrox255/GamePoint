@@ -1,6 +1,6 @@
 import { useCallback, useContext, useMemo, useState } from "react";
 
-import Button from "../Button";
+import Button, { ButtonContextProvider } from "../Button";
 import { ModalContext } from "../../../store/ModalContext";
 import HeaderLinkOrHeaderAnimation from "../headers/HeaderLinkOrHeaderAnimation";
 import Header from "../headers/Header";
@@ -104,7 +104,7 @@ export default function LoginModal() {
   let content = (
     <>
       <header className="w-full flex justify-center pb-9">
-        <Logo widthTailwindClass="w-1/4" />
+        <Logo />
       </header>
       <FormWithErrorHandling
         onSubmit={onSubmitStable}
@@ -120,11 +120,13 @@ export default function LoginModal() {
         >
           <Header size="small">Haven't got an account yet?</Header>
         </HeaderLinkOrHeaderAnimation>
-        <div className="form-controls pt-6 w-full flex justify-between">
-          <Button type="button" onClick={() => setLoginModalOpen(false)}>
-            Close
-          </Button>
-          <Button>{isPending ? "Logging in..." : "Log in"}</Button>
+        <div className="form-controls pt-6 w-full flex justify-between gap-2 items-center">
+          <ButtonContextProvider useBiggerFont>
+            <Button type="button" onClick={() => setLoginModalOpen(false)}>
+              Close
+            </Button>
+            <Button>{isPending ? "Logging in..." : "Log in"}</Button>
+          </ButtonContextProvider>
         </div>
       </FormWithErrorHandling>
     </>

@@ -22,7 +22,9 @@ export default function ArrowSVG({
     <motion.div
       className={`arrow-svg-control-container ${
         !disabled ? "cursor-pointer" : ""
-      }`}
+      } absolute top-0 sm:top-1/2 ${
+        movingInReversedDirection ? "left-0" : "right-0"
+      } z-10`}
       variants={{
         unHovered: {
           ...(movingInReversedDirection

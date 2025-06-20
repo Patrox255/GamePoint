@@ -117,7 +117,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       lightTheme ? "bg-bodyBg" : "bg-darkerBg"
     } text-defaultFont border-2 ${width} ${
       additionalTailwindClasses ? additionalTailwindClasses : ""
-    }`;
+    } xl:text-xl text-xs`;
 
     const sharedPropsAcrossInputAndSelect = {
       className,

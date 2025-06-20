@@ -22,6 +22,7 @@ import InputFieldElement from "../components/UI/InputFieldElement";
 import generateUrlEndpointWithSearchParams from "../helpers/generateUrlEndpointWithSearchParams";
 import { ContactInformationFormContentContext } from "../components/formRelated/ContactInformationFormContent";
 import ContactInformationFormInputFieldsContent from "../components/formRelated/ContactInformationFormInputFieldsContent";
+import useCreateHelperFunctionsRelatedToNotificationManagement from "../hooks/notificationSystemRelated/useCreateHelperFunctionsRelatedToNotificationManagement";
 
 type registerPageFormControlsShowNotificationUponResettingFieldsContentContextBody =
   () => void;
@@ -114,12 +115,31 @@ type registerFormActionBackendResponseData = {
 };
 
 export default function RegisterPage() {
+  const {
+    generateSuccessNotificationStable,
+    generateErrorNotificationInCaseOfQueryErrStable,
+    generateLoadingInformationNotificationStable,
+  } =
+    useCreateHelperFunctionsRelatedToNotificationManagement(
+      "registerAnAccount"
+    );
   const { mutate, error, data, isPending } = useMutation<
     FormActionBackendResponse<registerFormActionBackendResponseData>,
     FormActionBackendErrorResponse,
     IActionMutateArgsRegister
   >({
     mutationFn: register,
+    onMutate: () =>
+      generateLoadingInformationNotificationStable("default", {
+        text: "Registering an account...",
+      }),
+    onError: (e) => generateErrorNotificationInCaseOfQueryErrStable(e),
+    onSuccess: (data) => {
+      if (generateErrorNotificationInCaseOfQueryErrStable(data?.data)) return;
+      generateSuccessNotificationStable("default", {
+        text: "Registered the account!",
+      });
+    },
   });
 
   const queryRelatedToActionStateStable = useMemo(

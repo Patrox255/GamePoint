@@ -85,6 +85,7 @@ export default function useCreateHelperFunctionsRelatedToNotificationManagement(
     ) => {
       if (
         Array.isArray(possibleErrObjOrArr) &&
+        possibleErrObjOrArr.length > 0 &&
         (possibleErrObjOrArr as ValidationErrorsArr).every(
           (possibleValidationErrorsObj) =>
             possibleValidationErrorsObj.message !== undefined

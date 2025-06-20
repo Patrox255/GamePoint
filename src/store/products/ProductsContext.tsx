@@ -222,6 +222,7 @@ export default function ProductsContextProvider({
   useQueryManageNotificationsBasedOnResponse(
     manageNotificationsBasedOnResponseArg
   );
+  console.log(countGamesError, error);
 
   return (
     <ProductsContext.Provider

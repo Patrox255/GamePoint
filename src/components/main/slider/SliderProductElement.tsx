@@ -50,7 +50,7 @@ export default function SliderProductElement<T, Y extends T[]>({
         customWidthTailwindClass={arrowSVGWidthClass}
       />
       <section
-        className={`overflow-hidden w-3/5 h-auto flex justify-center items-center`}
+        className={`overflow-hidden sm:w-3/5 w-full h-auto flex justify-center items-center`}
       >
         {children(element, activeElementIndex)}
       </section>

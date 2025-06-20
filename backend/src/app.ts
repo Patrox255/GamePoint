@@ -1359,6 +1359,7 @@ const startServer = async () => {
             ["string", registrationCode],
           ]);
 
+          if (!isValidObjectId(uId)) return res.sendStatus(422);
           const foundUser = await User.findById(uId);
           if (!foundUser || foundUser.emailVerified) return res.sendStatus(403);
 

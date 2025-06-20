@@ -23,19 +23,23 @@ import { useEffect, useMemo } from "react";
 import { useAppSelector } from "../hooks/reduxStore";
 import useCompareComplexForUseMemo from "../hooks/useCompareComplexForUseMemo";
 import { cartStateArr } from "../store/cartSlice";
+import useCreateHelperFunctionsRelatedToNotificationManagement from "../hooks/notificationSystemRelated/useCreateHelperFunctionsRelatedToNotificationManagement";
+
+type verifyEmailActionDataInCaseOfTheActionError =
+  | Error[]
+  | IInputFieldValidationError[];
 
 export default function VerifyEmailPage() {
   const actionData = useActionData() as
-    | Error[]
+    | verifyEmailActionDataInCaseOfTheActionError
     | string
-    | IInputFieldValidationError[]
     | undefined;
 
   const errorOccured = actionData && Array.isArray(actionData);
   const verificationSuccess =
     actionData && typeof actionData === "string" && actionData === "success";
   const navigate = useNavigate();
-  const loaderData = useLoaderData() as "redirect" | null;
+  const loaderData = useLoaderData() as Error | null;
   const cart = useAppSelector((state) => state.cartSlice.cart);
   const cartStable = useCompareComplexForUseMemo(cart);
   const cartValueToSend = useMemo(
@@ -43,11 +47,55 @@ export default function VerifyEmailPage() {
     [cartStable]
   );
 
+  const {
+    generateErrorNotification,
+    generateErrorNotificationInCaseOfQueryErrStable,
+    generateSuccessNotificationStable,
+    generateLoadingInformationNotificationStable,
+  } = useCreateHelperFunctionsRelatedToNotificationManagement(
+    "verifyEmailFunctionality"
+  );
+
   useEffect(() => {
-    loaderData === "redirect" &&
-      !verificationSuccess &&
+    if (!actionData) return;
+    if (verificationSuccess) {
+      generateSuccessNotificationStable("default", {
+        text: "Successfully verified your account e-mail address!",
+      });
+      return;
+    }
+    const errorDataToPassToNotificationGenerationFn = (
+      actionData as verifyEmailActionDataInCaseOfTheActionError
+    ).every(
+      (possibleValidationError) =>
+        (possibleValidationError as IInputFieldValidationError).errInputName
+    )
+      ? (actionData as IInputFieldValidationError[])
+      : (actionData[0] as Error);
+    generateErrorNotificationInCaseOfQueryErrStable(
+      errorDataToPassToNotificationGenerationFn
+    );
+  }, [
+    actionData,
+    generateErrorNotificationInCaseOfQueryErrStable,
+    generateSuccessNotificationStable,
+    verificationSuccess,
+  ]);
+
+  useEffect(() => {
+    if (loaderData && typeof loaderData === "object" && !verificationSuccess) {
+      const errorStatus = (loaderData as Error & { status?: number })?.status;
+      generateErrorNotification("default", {
+        text:
+          errorStatus === 422
+            ? "Provided user identificator isn't valid!"
+            : errorStatus === 403
+            ? "Couldn't find the requested user or it is an user with already verified email!"
+            : (loaderData as Error).message,
+      });
       navigate("/", { replace: true });
-  }, [loaderData, navigate, verificationSuccess]);
+    }
+  }, [generateErrorNotification, loaderData, navigate, verificationSuccess]);
 
   return (
     <MainWrapper>
@@ -63,6 +111,11 @@ export default function VerifyEmailPage() {
         <Form
           className="mt-6 flex items-center flex-col gap-6 w-full justify-center pb-6"
           method="POST"
+          onSubmit={() =>
+            generateLoadingInformationNotificationStable("default", {
+              text: "Verifying the e-mail address of your account...",
+            })
+          }
         >
           <Input
             otherValidationInputAttributes={{ minLength: 6, required: true }}
@@ -124,7 +177,7 @@ export const loader: LoaderFunction = async ({ request }) => {
         verifyEmailGuard(signal, ...(queryKey.slice(1) as [string, string])),
     });
   } catch (e) {
-    return "redirect";
+    return e;
   }
   return null;
 };

@@ -5,6 +5,7 @@ import AnimatedAppearance from "../UI/AnimatedAppearance";
 import useQueryGetTheMostPopularTags from "../../hooks/searchCustomizationRelated/useQueryGetTheMostPopularTags";
 import { useContext } from "react";
 import { DelayGenresAppearanceToTheFirstGameImageContext } from "../../store/mainPage/DelayGenresRenderToTheFirstGameImageContext";
+import { ButtonContextProvider } from "../UI/Button";
 
 export default function MostPopularGenres() {
   const { isLoading, isError, error, data } =
@@ -17,7 +18,7 @@ export default function MostPopularGenres() {
   return (
     <article className="popular-genres-container w-1/2 flex justify-center flex-col text-center gap-4">
       <AnimatedAppearance>
-        <h1 className="text-highlightRed text-4xl py-4">
+        <h1 className="text-highlightRed md:text-4xl text-xl py-4">
           Browse some trending genres
         </h1>
         {(isLoading || !finishedLoading) && <LoadingFallback />}
@@ -25,10 +26,12 @@ export default function MostPopularGenres() {
 
         {data && finishedLoading && (
           <AnimatedAppearance>
-            <TagsComponent
-              tags={data.data.map((genreObj) => genreObj.name).slice(0, 10)!}
-              paramName="genre"
-            />
+            <ButtonContextProvider useBiggerFont>
+              <TagsComponent
+                tags={data.data.map((genreObj) => genreObj.name).slice(0, 10)!}
+                paramName="genre"
+              />
+            </ButtonContextProvider>
           </AnimatedAppearance>
         )}
       </AnimatedAppearance>

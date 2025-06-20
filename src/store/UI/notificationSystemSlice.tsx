@@ -25,6 +25,10 @@ const possibleApplicationFunctionalitiesIdentifiersArr = [
   "curAccountChangeActiveContactInformation",
   "editOrAddContactInformationEntry",
   "registerAnAccount",
+  "verifyEmailFunctionality",
+  "retrieveUsersToChooseFromInAdminPanelManageOrdersSection",
+  "retrieveOrdersToChooseFromInAdminPanelManageOrdersSection",
+  "loadOrderDataForOrderSummary",
 ] as const;
 export type possibleApplicationFunctionalitiesIdentifiers =
   (typeof possibleApplicationFunctionalitiesIdentifiersArr)[number];

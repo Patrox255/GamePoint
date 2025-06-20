@@ -162,10 +162,10 @@ const Nav = memo(() => {
     <nav
       className={`w-full h-[15vh] flex items-center justify-between pt-6 pb-3 fixed top-0 left-0 z-10 bg-bodyBg opacity-80 hover:opacity-100 transition-all duration-1000`}
     >
-      <header className="w-1/5 px-6 text-4xl text-highlightRed font-bold tracking-widest">
+      <header className="w-1/4 h-full lg:w-1/5 px-2 xs:px-6 text-4xl text-highlightRed font-bold tracking-widest flex justify-center items-center">
         <Logo />
       </header>
-      <div className="px-6 flex justify-end gap-3 w-4/5 items-center h-full">
+      <div className="xs:px-6 px-2 flex justify-end sm:gap-3 gap-1 w-3/4 lg:w-4/5 items-center h-full">
         {pathname !== "/products" && (
           <>
             {showSearchBar && (
@@ -174,7 +174,13 @@ const Nav = memo(() => {
               </DropDownMenuWrapper>
             )}
             <Link to="/products">
-              <Button>Advanced Search</Button>
+              <AnimatedSVG
+                svgPath={svgPathBase.searchSVG}
+                useVariants
+                additionalTailwindClasses="w-12"
+                modifyStrokeInsteadOfFill
+                defaultFill={properties.defaultFont}
+              />
             </Link>
           </>
         )}
@@ -188,7 +194,7 @@ const Nav = memo(() => {
               useVariants={true}
             >
               {cartTotalQuantity ? (
-                <motion.span className="cart-total-quantity self-end cursor-default">
+                <motion.span className="cart-total-quantity self-end cursor-default lg:text-lg text-xs">
                   {cartTotalQuantity}
                 </motion.span>
               ) : undefined}

@@ -29,7 +29,7 @@ export default function DataSlider<ElementInterface, Y>({
   findCurrentElementsIndexBasedOnCurrentExternalState,
   additionalActionUponReachingTheBeginningByGoingForwardInTheEnd,
   additionalActionUponReachingTheEndByGoingBackwardsInTheBeginning,
-  customSliderContainerWidthTailwindClass = "w-4/5",
+  customSliderContainerWidthTailwindClass = "w-[95%] lg:w-4/5",
 }: {
   elements: ElementInterface[];
   children: ReactNode;
@@ -68,7 +68,7 @@ export default function DataSlider<ElementInterface, Y>({
   return (
     <AnimatedAppearance>
       <div
-        className={`data-slider-container flex justify-center items-center text-center gap-8 ${customSliderContainerWidthTailwindClass}`}
+        className={`data-slider-container relative flex justify-center items-center text-center gap-8 ${customSliderContainerWidthTailwindClass}`}
       >
         <SliderContext.Provider
           value={{

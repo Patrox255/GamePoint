@@ -7,7 +7,7 @@ export const defaultHeaderTailwindCSS = "pb-2 font-bold inline";
 const headerSizesProperties = {
   small: {
     element: motion.h3,
-    tailwindSizeClass: "text-lg",
+    tailwindSizeClass: "text-sm md:text-lg",
   },
   medium: {
     element: motion.h2,

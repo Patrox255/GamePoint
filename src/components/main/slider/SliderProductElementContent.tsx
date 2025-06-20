@@ -137,9 +137,9 @@ export default function SliderProductElementContent({
   );
 
   return (
-    <figure className="w-full flex gap-3 justify-center items-center py-24">
+    <figure className="w-full flex gap-3 justify-center items-center py-24 flex-col sm:flex-row">
       <PagesManagerContext.Provider value={{ pageNr, setPageNr }}>
-        <div className="figure-image-container w-3/5 flex justify-center items-center flex-col min-h-[24rem]">
+        <div className="sm:relative figure-image-container w-full sm:w-3/5 flex justify-center items-center flex-col sm:min-h-[24rem]">
           <AnimatePresence mode="wait">
             {!hasArtworks ? (
               <motion.p
@@ -176,7 +176,7 @@ export default function SliderProductElementContent({
         </div>
         <AnimatePresence mode="wait">
           <motion.figcaption
-            className={`w-2/5 flex justify-between items-center flex-col gap-6 text-center mb-6 ${
+            className={`w-full sm:w-2/5 flex justify-between items-center flex-col gap-6 text-center mb-6 ${
               showSummary && showTags ? "self-stretch" : ""
             }`}
             {...sliderProductElementsAnimation}
@@ -184,7 +184,7 @@ export default function SliderProductElementContent({
             onAnimationComplete={() => setFinishedLoadingDescription(true)}
           >
             <div className="flex flex-col gap-3">
-              <h2 className="text-2xl text-highlightRed font-bold">
+              <h2 className="text-lg lg:text-2xl text-highlightRed font-bold">
                 {element.title}
               </h2>
               {showTags && (
@@ -195,7 +195,11 @@ export default function SliderProductElementContent({
                   />
                 </AnimatedAppearance>
               )}
-              {showSummary && <p className="text-sm">{element.summary}</p>}
+              {showSummary && (
+                <p className="sm-xs md:text-base text-base">
+                  {element.summary}
+                </p>
+              )}
             </div>
             <div className="price-product-page-container w-full flex justify-around flex-wrap gap-4">
               <PriceTag

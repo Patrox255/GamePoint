@@ -22,6 +22,9 @@ import { retrieveOrderData } from "../../../lib/fetch";
 import { IOrder } from "../../../models/order.model";
 import { UpdateOrderDetailsContext } from "../../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
 import filterOrOnlyIncludeCertainPropertiesFromObj from "../../../helpers/filterOrOnlyIncludeCertainPropertiesFromObj";
+import useQueryManageNotificationsBasedOnResponse, {
+  IUseQueryManageNotificationsBasedOnResponseArg,
+} from "../../../hooks/notificationSystemRelated/useQueryManageNotificationsBasedOnResponse";
 
 export type IRetrieveOrderDataResponse = { data: IOrder };
 
@@ -50,6 +53,23 @@ export default function OrderSummaryUserPanel() {
       ? requestedOrderError[0]
       : requestedOrderError
     : null;
+
+  const useQueryManageNotificationsBasedOnResponseArg =
+    useMemo<IUseQueryManageNotificationsBasedOnResponseArg>(
+      () => ({
+        relatedApplicationFunctionalityIdentifier:
+          "loadOrderDataForOrderSummary",
+        loadingMessage: "Loading the selected order data...",
+        successMessage: "Loaded the selected order data!",
+        queryData: requestedOrderData?.data,
+        queryError: requestedOrderError,
+        queryIsLoading: requestedOrderIsLoading,
+      }),
+      [requestedOrderData?.data, requestedOrderError, requestedOrderIsLoading]
+    );
+  useQueryManageNotificationsBasedOnResponse(
+    useQueryManageNotificationsBasedOnResponseArg
+  );
 
   const handleRedirectBack = useCallback(() => {
     const parentPath = pathname.split("/").slice(0, -1).join("/") + search; // had to manually remove the last part of the current pathname

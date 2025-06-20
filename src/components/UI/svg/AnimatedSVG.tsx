@@ -22,6 +22,7 @@ export default function AnimatedSVG({
   defaultFill = properties.darkerBg,
   children,
   useVariants = false,
+  modifyStrokeInsteadOfFill = false,
 }: {
   size?: string;
   onClick?: () => void;
@@ -35,18 +36,34 @@ export default function AnimatedSVG({
   defaultFill?: string;
   children?: ReactNode;
   useVariants?: boolean;
+  modifyStrokeInsteadOfFill?: boolean;
 }) {
   const initialVariantSVG = useMemo(
-    () => ({ ...initialVariantAnimatedSVG, fill: defaultFill }),
-    [defaultFill]
+    () => ({
+      ...initialVariantAnimatedSVG,
+      ...(modifyStrokeInsteadOfFill
+        ? { stroke: defaultFill }
+        : { fill: defaultFill }),
+    }),
+    [defaultFill, modifyStrokeInsteadOfFill]
   );
   const hoverVariantSVG = useMemo(
-    () => ({ ...hoverVariantAnimatedSVG, fill: properties.highlightRed }),
-    []
+    () => ({
+      ...hoverVariantAnimatedSVG,
+      ...(modifyStrokeInsteadOfFill
+        ? { stroke: properties.highlightRed }
+        : { fill: properties.highlightRed }),
+    }),
+    [modifyStrokeInsteadOfFill]
   );
   const animateVariantSVG = useMemo(
-    () => ({ ...animateVariantAnimatedSVG, fill: properties.highlightRed }),
-    []
+    () => ({
+      ...animateVariantAnimatedSVG,
+      ...(modifyStrokeInsteadOfFill
+        ? { stroke: properties.highlightRed }
+        : { fill: properties.highlightRed }),
+    }),
+    [modifyStrokeInsteadOfFill]
   );
 
   return (
@@ -80,7 +97,7 @@ export default function AnimatedSVG({
         xmlns="http://www.w3.org/2000/svg"
         className={`${hoverAnimation ? "cursor-pointer" : undefined} ${
           additionalTailwindClasses ? additionalTailwindClasses : ""
-        }`}
+        } lg:w-12 xs:w-6 w-4`}
         fill={defaultFill}
         onClick={onClick}
         onMouseEnter={onMouseEnter}

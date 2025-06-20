@@ -10,7 +10,7 @@ export const DropDownMenuContext = createContext<{
 
 export default function DropDownMenuWrapper({
   children,
-  widthTailwindClass = "w-2/5",
+  widthTailwindClass = "lg:w-2/5 w-32 xs:w-52",
 }: {
   children: ReactNode;
   widthTailwindClass?: React.HTMLAttributes<HTMLDivElement>["className"];
@@ -27,7 +27,7 @@ export default function DropDownMenuWrapper({
   return (
     <DropDownMenuContext.Provider value={{ showResults, setShowResults }}>
       <div
-        className={`flex ${widthTailwindClass} justify-end flex-col relative`}
+        className={`flex ${widthTailwindClass} items-end flex-col relative`}
         onMouseEnter={mouseEnterSearchResults}
         onMouseLeave={mouseLeaveSearchResults}
       >

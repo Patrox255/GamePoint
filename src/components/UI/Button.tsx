@@ -1,8 +1,31 @@
-import { MouseEventHandler, ReactNode } from "react";
+import { createContext, MouseEventHandler, ReactNode, useContext } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import properties from "../../styles/properties";
 
-const defaultAdditionalTailwindCSS = { px: "px-6", py: "py-2" };
+const defaultAdditionalTailwindCSS = {
+  px: "px-1 xs:px-2 sm:px-4",
+  py: "py-1 xs:py-2",
+};
+
+interface IButtonContext {
+  useBiggerFont: boolean;
+}
+export const ButtonContext = createContext<IButtonContext>({
+  useBiggerFont: false,
+});
+
+export function ButtonContextProvider({
+  children,
+  useBiggerFont = false,
+}: {
+  children: ReactNode;
+} & IButtonContext) {
+  return (
+    <ButtonContext.Provider value={{ useBiggerFont }}>
+      {children}
+    </ButtonContext.Provider>
+  );
+}
 
 export default function Button({
   children = "",
@@ -16,6 +39,7 @@ export default function Button({
   canClickWhileActive = false,
   type,
   useRounded = true,
+  biggerFont = false,
   ...props // sadly it is not supported in TS so I add each prop individually
 }: {
   children?: ReactNode;
@@ -33,6 +57,7 @@ export default function Button({
   canClickWhileActive?: boolean;
   type?: "submit" | "reset" | "button";
   useRounded?: boolean;
+  biggerFont?: boolean;
 }) {
   const initialClasses = {
     opacity: 0.5,
@@ -76,6 +101,8 @@ export default function Button({
         defaultAdditionalTailwindCSS[additionalTailwindCSSKey];
   });
 
+  const { useBiggerFont: useBiggerFontFromCtx } = useContext(ButtonContext);
+
   return (
     <AnimatePresence mode="wait">
       <motion.button
@@ -86,6 +113,8 @@ export default function Button({
         } font-bold ${
           additionalTailwindCSS &&
           Object.values(additionalTailwindCSS).join(" ")
+        } text-xs  ${
+          biggerFont || useBiggerFontFromCtx ? "xs:text-base" : "xs:text-sm"
         }`}
         whileHover={
           disabled

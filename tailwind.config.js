@@ -17,6 +17,14 @@ export default {
       gridTemplateColumns: {
         gameSearchBarResult: "minmax(0, 1fr) minmax(0, 0.5fr)",
       },
+      screens: {
+        xs: "340px",
+      },
+      fontSize: {
+        xs: "0.5rem",
+        "xs+": "0.6rem",
+        "2xs": "0.3rem",
+      },
     },
   },
   plugins: [],

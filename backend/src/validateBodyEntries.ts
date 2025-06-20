@@ -188,6 +188,7 @@ export const verifyEmailEntries: IValidateBodyEntry<IVerifyEmailEntriesFromReque
       name: "User identificator",
       requestBodyName: "uId",
       type: "string",
+      validateFn: bodyEntryValidMongooseObjectIdValidateFn,
     },
     {
       name: "Provided registration code",

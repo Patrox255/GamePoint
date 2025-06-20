@@ -29,7 +29,12 @@ export default function OrderCartInformation() {
     useContext(UpdateOrderDetailsContext);
   const serveAsUpdateOrderCartInformation = selectedOrderFromList !== "";
   const cartTotalPrice =
-    cartTotalPriceFromCartInformationCtx ?? cartTotalPriceNotFromCartDetails;
+    cartTotalPriceNotFromCartDetails ?? cartTotalPriceFromCartInformationCtx;
+  console.log(
+    cartTotalPriceFromCartInformationCtx,
+    cartTotalPriceNotFromCartDetails,
+    cartTotalPrice
+  );
 
   const {
     gamesWithQuantityBasedOnQuantityModificationEntries:

@@ -3,6 +3,7 @@ import TagComponent from "./TagComponent";
 import { Link } from "react-router-dom";
 import Button from "../../UI/Button";
 import { AnimatePresence, motion } from "framer-motion";
+
 export default function TagsComponent<T>({
   tags,
   paramName,
