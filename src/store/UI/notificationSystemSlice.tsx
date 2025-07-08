@@ -73,10 +73,14 @@ export const notificationContentComponentsIdsToComponentsMap: {
     validationErrorHeader,
   }: validationErrorsComponentProps) => (
     <>
-      <Header usePaddingBottom={false} colorTailwindClass="text-defaultFont">
+      <Header
+        usePaddingBottom={false}
+        colorTailwindClass="text-defaultFont"
+        additionalTailwindClasses="text-xs xs:text-sm lg:text-xl"
+      >
         {validationErrorHeader}
       </Header>
-      <section className="notification-validation-errors flex flex-col gap-2 font-normal">
+      <section className="notification-validation-errors flex flex-col gap-2 font-normal sm:text-base xs:text-sm text-xs">
         {validationErrors.map((validationError) => (
           <span key={validationError.message}>
             •&nbsp;{validationError.message}
@@ -185,11 +189,18 @@ const notificationSystemSlice = createSlice({
     },
     REFRESH_NOTIFICATIONS(S) {
       const curDate = +new Date();
-      return S.filter(
+      const onlyViableNotifications = S.filter(
         (notification) =>
           (curDate - notification.createdAtMiliseconds) / 1000 <=
-          notification.visibilityDurationInSeconds!
+          (notification.visibilityDurationInSeconds ?? 0) + 100!
       );
+      return onlyViableNotifications.length !== S.length ||
+        S.some(
+          (notification, notificationId) =>
+            notification !== onlyViableNotifications[notificationId]
+        )
+        ? onlyViableNotifications
+        : S;
     },
     REMOVE_SPECIFIC_NOTIFICATION(S, A: PayloadAction<number>) {
       const relatedNotificationIndex = S.findIndex(

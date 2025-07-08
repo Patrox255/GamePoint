@@ -118,7 +118,9 @@ export default function LoginModal() {
           additionalTailwindClasses="self-start"
           onClick={() => setLoginModalOpen(false)}
         >
-          <Header size="small">Haven't got an account yet?</Header>
+          <Header size="small" additionalTailwindClasses="text-xs xs:text-sm">
+            Haven't got an account yet?
+          </Header>
         </HeaderLinkOrHeaderAnimation>
         <div className="form-controls pt-6 w-full flex justify-between gap-2 items-center">
           <ButtonContextProvider useBiggerFont>

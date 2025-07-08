@@ -28,8 +28,10 @@ export default function NavUserPanelLink({
           : { onlyAnimation: true, onClick: actionOnClick })}
         additionalTailwindClasses="w-full"
       >
-        <header className="user-panel-nav-link-header px-3 w-full">
-          <Header additionalTailwindClasses="break-words">{header}</Header>
+        <header className="user-panel-nav-link-header px-1 xs:px-3 w-full">
+          <Header additionalTailwindClasses="break-words md:!text-xl !text-sm">
+            {header}
+          </Header>
         </header>
         <div className="user-panel-nav-link-highlight-container flex w-full justify-center">
           <motion.div

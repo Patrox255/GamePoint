@@ -56,10 +56,6 @@ const SliderImageOverview = memo(function ({
       for (const entry of entries) {
         const entrySubsetId = entry.target.getAttribute("data-subset-id");
         if (!entrySubsetId || parseInt(entrySubsetId) != pageNr) continue;
-        console.log(
-          entrySubsetId,
-          subsetContainerRef.current?.getBoundingClientRect().height || 0
-        );
         debouncedSetHeight(
           subsetContainerRef.current?.getBoundingClientRect().height || 0
         );

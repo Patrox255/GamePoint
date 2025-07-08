@@ -19,6 +19,7 @@ export default {
       },
       screens: {
         xs: "340px",
+        "2xs": "550px",
       },
       fontSize: {
         xs: "0.5rem",

@@ -12,6 +12,11 @@ import { GameResultContext } from "../main/nav/GamesResults";
 import Error from "../UI/Error";
 import { IGameWithQuantityBasedOnCartDetailsEntry } from "../../helpers/generateGamesWithQuantityOutOfCartDetailsEntries";
 import properties from "../../styles/properties";
+import {
+  cssPropertyMediaQueryKeyToCSSPropertyValueMap,
+  useWindowMatchMediaQueriesCSSPropertiesMap,
+  windowMatchMediaQueriesCSSPropertiesMap,
+} from "../../hooks/RWD/useWindowMatchMediaQueriesPropertiesMap";
 
 export const priceFormat = new Intl.NumberFormat(navigator.language, {
   style: "currency",
@@ -47,18 +52,40 @@ const quanityAndFinalPriceAnimationKeyframesDefinition: DOMKeyframesDefinition =
     color: properties.highlightRed,
   };
 
+type mediaQueriesProperties =
+  | "priceTagFontSize"
+  | "discountBoxPadding"
+  | "discountBoxFontSize";
+const priceTagFontSizeMediaQueryKeyToCSSPropertyValueMap: cssPropertyMediaQueryKeyToCSSPropertyValueMap =
+  {
+    default: ".750rem",
+    xs: ".875rem",
+    sm: "1.125rem",
+  };
+const mediaQueriesPropertiesMapInput: windowMatchMediaQueriesCSSPropertiesMap<mediaQueriesProperties> =
+  {
+    priceTagFontSize: priceTagFontSizeMediaQueryKeyToCSSPropertyValueMap,
+    discountBoxPadding: {
+      "2xs": ".5rem",
+      default: ".25rem",
+    },
+    discountBoxFontSize: priceTagFontSizeMediaQueryKeyToCSSPropertyValueMap,
+  } as const;
+
 export default function PriceTag({
   priceFromProps,
   discountFromProps,
   finalPriceFromProps,
   startAnimation = false,
   removeOriginalPriceAfterAnimation = false,
+  customRWDFlexDisplayProperties = "2xs:flex-row lg:flex-col xl:flex-row",
 }: {
   priceFromProps?: number;
   discountFromProps?: number;
   finalPriceFromProps?: number;
   startAnimation: boolean;
   removeOriginalPriceAfterAnimation?: boolean;
+  customRWDFlexDisplayProperties?: string;
 }) {
   const [scope, animate] = useAnimate();
   const { showQuantityAndFinalPrice, game } = useContext(GameResultContext);
@@ -83,9 +110,15 @@ export default function PriceTag({
     showQuantityAndFinalPrice &&
     (game as IGameWithQuantityBasedOnCartDetailsEntry).quantity > 1;
 
+  const shouldFireAnimation = !isFree && hasDiscount && startAnimation;
+
+  const mediaQueriesPropertiesMap = useWindowMatchMediaQueriesCSSPropertiesMap(
+    mediaQueriesPropertiesMapInput
+  );
+
   useEffect(() => {
     const sequence = async () => {
-      if (isFree || !hasDiscount || !startAnimation) {
+      if (!shouldFireAnimation) {
         if (quantityHigherThanOne)
           await Promise.all([
             quantityFramerMotionAnimateEntry(),
@@ -109,7 +142,7 @@ export default function PriceTag({
           ".price",
           {
             textDecorationLine: "line-through",
-            fontSize: ".8rem",
+            fontSize: mediaQueriesPropertiesMap.priceTagFontSize,
             ...(hasDiscount && { fontWeight: 400 }),
             ...(removeOriginalPriceAfterAnimation && { opacity: 0, width: 0 }),
           },
@@ -123,7 +156,7 @@ export default function PriceTag({
             opacity: 1,
             backgroundColor: customColors.highlightGreen,
             width: "auto",
-            padding: "0.5rem",
+            padding: mediaQueriesPropertiesMap.discountBoxPadding,
             fontWeight: 700,
           },
           Object.fromEntries(
@@ -161,6 +194,9 @@ export default function PriceTag({
     quantityHigherThanOne,
     quantityFramerMotionAnimateEntry,
     finalPriceFramerMotionAnimateEntry,
+    shouldFireAnimation,
+    mediaQueriesPropertiesMap.priceTagFontSize,
+    mediaQueriesPropertiesMap.discountBoxPadding,
   ]);
 
   if (
@@ -177,7 +213,7 @@ export default function PriceTag({
 
   return (
     <div
-      className="product-price-div flex gap-2 justify-center items-center w-3/8"
+      className={`product-price-div flex ${customRWDFlexDisplayProperties} flex-col gap-2 justify-center items-center w-3/8`}
       ref={scope}
     >
       {quantityHigherThanOne && (
@@ -194,8 +230,13 @@ export default function PriceTag({
           className={`price ${!hasDiscount && "font-bold"}`}
           initial={{
             textDecorationLine: "none",
-            fontSize: "1rem",
+            fontSize: mediaQueriesPropertiesMap.priceTagFontSize,
             ...(hasDiscount && { fontWeight: 700 }),
+          }}
+          animate={{
+            ...(!shouldFireAnimation && {
+              fontSize: mediaQueriesPropertiesMap.priceTagFontSize,
+            }),
           }}
         >
           {priceFormat.format(price)}
@@ -205,8 +246,11 @@ export default function PriceTag({
       {!isFree && hasDiscount && (
         <>
           <motion.p
-            className="new-price text-lg text-highlightRed"
+            className="new-price text-highlightRed"
             initial={hiddenInitialElementMotionPropFn()}
+            style={{
+              fontSize: mediaQueriesPropertiesMap.priceTagFontSize,
+            }}
           >
             {priceFormat.format(priceAfterDiscount)}
           </motion.p>
@@ -218,6 +262,9 @@ export default function PriceTag({
               width: 0,
               padding: 0,
               fontWeight: 400,
+            }}
+            style={{
+              fontSize: mediaQueriesPropertiesMap.discountBoxFontSize,
             }}
           >
             -{discount}%

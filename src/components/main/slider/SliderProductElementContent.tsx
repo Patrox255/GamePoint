@@ -207,6 +207,7 @@ export default function SliderProductElementContent({
                 discountFromProps={element.discount}
                 startAnimation={finishedLoadingDescription}
                 finalPriceFromProps={element.finalPrice}
+                customRWDFlexDisplayProperties="2xs:flex-row sm:flex-col md:flex-row"
               />
               {children(element)}
             </div>

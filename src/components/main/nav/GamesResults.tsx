@@ -166,7 +166,7 @@ export default function GamesResults<T extends IGame>({
               }}
             >
               <GameContainer>
-                <figure className="grid grid-cols-2 items-center gap-2 justify-center">
+                <figure className="flex flex-col 2xs:grid 2xs:grid-cols-2 items-center gap-2 justify-center">
                   {game.artworks.length !== 0 ? (
                     <img
                       src={game.artworks[0].replace(
@@ -178,15 +178,19 @@ export default function GamesResults<T extends IGame>({
                       }`}
                     />
                   ) : (
-                    <div className="py-6">
+                    <div className="py-6 text-sm">
                       Failed to retrieve an image of the game
                     </div>
                   )}
 
                   <figcaption>
                     <h2
+                      // At lg: I go back to the smaller font as then the drop down containing all of the games results which is
+                      // not largeFormat changes its dimensions to match the input field instead of extending to the right viewport edge
                       className={`text-highlightRed font-bold min-w-2/5 ${
-                        largeFormat ? "text-2xl" : "text-lg"
+                        largeFormat
+                          ? "text-2xl"
+                          : "text-xs+ xs:text-sm sm:text-base md:text-lg lg:text-base xl:text-lg"
                       }`}
                     >
                       {!headerLinkInsteadOfWholeGameContainer ? (

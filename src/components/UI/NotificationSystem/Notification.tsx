@@ -15,12 +15,12 @@ export default function Notification({
 }: {
   notification: INotification;
 }) {
-  const backgroundTailwindClass = `bg-highlight${
+  const backgroundTailwindClass = `${
     notification.type === "error" || notification.type === "validationErrors"
-      ? "Red"
+      ? "bg-highlightRed"
       : notification.type === "success"
-      ? "Green"
-      : "Loading"
+      ? "bg-highlightGreen"
+      : "bg-highlightLoading"
   }`;
   const dispatch = useAppDispatch();
   const { id } = notification;
@@ -40,7 +40,7 @@ export default function Notification({
 
   return (
     <motion.section
-      className={`notification ${backgroundTailwindClass} px-8 py-4 rounded-xl w-full flex justify-center items-center flex-col text-defaultFont font-bold text-wrap text-center gap-4 overflow-hidden`}
+      className={`notification ${backgroundTailwindClass} text-xs xs:text-sm lg:text-xl px-2 xs:px-4 md:px-8 md:py-4 py-2 rounded-xl w-full flex justify-center items-center flex-col text-defaultFont font-bold text-wrap text-center gap-4 overflow-hidden`}
       initial={{ opacity: 0, translateX: "1rem", scale: 1.1 }}
       animate={{ opacity: 0.7, translateX: 0, scale: 1 }}
       whileHover={{ opacity: 1 }}
@@ -61,7 +61,7 @@ export default function Notification({
         onlyAnimation
         customWhileHoverColor="darkerBg"
       >
-        <Header>Close</Header>
+        <Header additionalTailwindClasses="!text-sm xs!:text-xl">Close</Header>
       </HeaderLinkOrHeaderAnimation>
     </motion.section>
   );

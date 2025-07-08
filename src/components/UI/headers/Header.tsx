@@ -55,7 +55,7 @@ export default function Header({
             ? "cursor-pointer"
             : ""
           : colorTailwindClass
-      } text-center ${additionalTailwindClasses}`}
+      } text-center ${additionalTailwindClasses} leading-3`}
       {...motionAnimationProperties}
       {...(usesHeaderLinkContext ? headerAnimationProps : {})}
     >

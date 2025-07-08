@@ -21,6 +21,7 @@ import svgPathBase from "./svg/svgPathBase";
 import properties from "../../styles/properties";
 import { HeaderLinkSearchParamsContextProvider } from "./headers/HeaderLinkOrHeaderAnimation";
 import useCreateHelperFunctionsRelatedToNotificationManagement from "../../hooks/notificationSystemRelated/useCreateHelperFunctionsRelatedToNotificationManagement";
+import { useWindowMatchMediaQueries } from "../../hooks/RWD/useWindowMatchMediaQueries";
 
 let initialRender = true;
 
@@ -121,6 +122,8 @@ const Nav = memo(() => {
     ? cart.reduce((quantity, product) => quantity + product.quantity, 0)
     : undefined;
 
+  const shouldShowOnlyUserIcon = useWindowMatchMediaQueries("2xs");
+
   const userRelatedElement = isLoading ? undefined : !isLogged ? (
     <Button onClick={() => setLoginModalOpen(true)}>Log in</Button>
   ) : (
@@ -132,12 +135,14 @@ const Nav = memo(() => {
         > */}
         <div className="flex items-center justify-center">
           <UserSVG className="w-8 h-8" />
-          {login}
+          {shouldShowOnlyUserIcon && login}
         </div>
         {/* </LinkToDifferentPageWithCurrentPageInformation> */}
       </Button>
       <DropDownMenuDroppedElementsContainer
         customPaddingsTailwindClasses={{ px: "0" }}
+        extendWidthOnLowerResolutions
+        lowerResolutionQueryId="2xs"
       >
         <ul className="user-panel-nav w-full flex flex-col gap-6 text-center">
           {userPanelLinks.map((userPanelLink) => (

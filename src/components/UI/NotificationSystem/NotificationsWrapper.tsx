@@ -15,6 +15,7 @@ export default function NotificationsWrapper() {
   const notifications = useAppSelector((state) => state.notificationSystem);
   const dispatch = useAppDispatch();
 
+  // DEBUG
   // useEffect(() => {
   // const timer = setTimeout(
   //   () => {
@@ -61,6 +62,8 @@ export default function NotificationsWrapper() {
     return () => clearInterval(notificationsRefreshInterval);
   }, [dispatch]);
 
+  console.log("RERENDER NOTIFICATIONS!");
+
   const { search } = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
   const getNotificationsStateFromSessionStorage = useCallback(
@@ -100,7 +103,7 @@ export default function NotificationsWrapper() {
   }, [getNotificationsStateFromSessionStorage, notifications]);
 
   return (
-    <section className="flex flex-col fixed left-0 bottom-0 gap-4 z-40 px-4 py-4 w-[30vw] transition-all">
+    <section className="flex flex-col fixed left-0 bottom-0 gap-4 z-40 px-4 py-4 md:w-[30vw] w-[50vw] transition-all">
       <AnimatePresence>
         {notifications.map((notification) => (
           <Notification notification={notification} key={notification.id} />
