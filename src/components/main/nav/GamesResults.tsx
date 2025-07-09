@@ -9,12 +9,23 @@ import {
 import slugify from "slugify";
 import { createContext, ReactNode, useContext, useMemo } from "react";
 
-import PriceTag from "../../game/PriceTag";
+import PriceTag, {
+  priceTagFontSizeMediaQueryKeyToCSSPropertyValueMap,
+} from "../../game/PriceTag";
 import { IGame } from "../../../models/game.model";
 import LinkToDifferentPageWithCurrentPageInformation from "../../UI/LinkToDifferentPageWithCurrentPageInformation";
 import HeaderLinkOrHeaderAnimation from "../../UI/headers/HeaderLinkOrHeaderAnimation";
 import Header from "../../UI/headers/Header";
 import { ProductsSearchCustomizationCustomInformationContext } from "../../../store/products/ProductsSearchCustomizationCustomInformationContext";
+import { SearchCustomizationContext } from "../../../store/products/SearchCustomizationContext";
+import {
+  useWindowMatchMediaQueriesCSSPropertiesMap,
+  windowMatchMediaQueriesCSSPropertiesMap,
+} from "../../../hooks/RWD/useWindowMatchMediaQueriesPropertiesMap";
+import { OnCartPageContext } from "../../../store/cartPage/OnCartPageContext";
+import { OrderSummaryCartInformationContext } from "../../orderPage/OrderSummary";
+import { UpdateOrderDetailsContext } from "../../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
+import { ManageProductsContext } from "../../../store/userPanel/admin/products/ManageProductsContext";
 
 const gameContainerClasses =
   "w-full grid grid-cols-gameSearchBarResult items-center gap-2 px-6";
@@ -66,10 +77,30 @@ const GameContainer = function ({ children }: { children: ReactNode }) {
   const { productEntryOnClickStableFn } = useContext(
     ProductsSearchCustomizationCustomInformationContext
   );
+  // In case of using GamesResults component on the cart page I want to modify its appearance based on screen dimensions
+  const onCartPage = useContext(OnCartPageContext);
+
+  const insideOrderSummaryContext = useContext(
+    OrderSummaryCartInformationContext
+  )?.insideOrderSummaryContext;
+  const onAdminPanelModifyOrderPage =
+    useContext(UpdateOrderDetailsContext)?.selectedOrderFromList !== "";
+  const onManageProductsPage = useContext(
+    ManageProductsContext
+  )?.onManageProductsPage;
+
+  let flexCSSClasses = "";
+  if (onCartPage)
+    flexCSSClasses = "!flex flex-col lg:flex-row gap-8 lg:gap-0 justify-center";
+  if (insideOrderSummaryContext || onManageProductsPage)
+    flexCSSClasses = "!flex flex-col 2xs:flex-row gap-8 justify-center";
+  if (onAdminPanelModifyOrderPage)
+    flexCSSClasses = "!flex flex-col sm:flex-row gap-8 justify-center";
+
   return headerLinkInsteadOfWholeGameContainer ||
     productEntryOnClickStableFn ? (
     <div
-      className={`${gameContainerClasses} ${
+      className={`${`${gameContainerClasses} ${flexCSSClasses}`} ${
         productEntryOnClickStableFn ? "cursor-pointer" : ""
       }`}
       onClick={
@@ -108,6 +139,8 @@ const GameLink = ({
   );
 };
 
+type windowMatchMediaQueriesCSSProperties = "headerFontSize";
+
 export default function GamesResults<T extends IGame>({
   games,
   largeFormat = false,
@@ -134,9 +167,48 @@ export default function GamesResults<T extends IGame>({
     [largeFormat, moveHighlight]
   );
 
+  // I want to stylize GameResult differently if it's located on the products search page
+  const insideSearchCustomizationContextProvider =
+    useContext(SearchCustomizationContext)?.insideCtxProvider === true;
+
+  const windowMatchMediaQueriesCSSPropertiesMapInput = useMemo<
+    windowMatchMediaQueriesCSSPropertiesMap<windowMatchMediaQueriesCSSProperties>
+  >(
+    () => ({
+      headerFontSize: {
+        ...(!insideSearchCustomizationContextProvider
+          ? {}
+          : { default: "1rem", xs: "1.5rem", lg: "1.5rem", md: "1rem" }),
+      },
+    }),
+    [insideSearchCustomizationContextProvider]
+  );
+  const mediaQueriesProperties = useWindowMatchMediaQueriesCSSPropertiesMap(
+    windowMatchMediaQueriesCSSPropertiesMapInput
+  );
+
+  // In case of using GamesResults component on the cart page I want to modify its appearance based on screen dimensions
+  const onCartPage = useContext(OnCartPageContext);
+
+  const insideOrderSummaryContext = useContext(
+    OrderSummaryCartInformationContext
+  )?.insideOrderSummaryContext;
+  const onManageProductsPage = useContext(
+    ManageProductsContext
+  )?.onManageProductsPage;
+
+  let displayCSSProperties = "";
+  if (onCartPage) displayCSSProperties = "gap-8 lg:gap-2 flex flex-col";
+  if (insideOrderSummaryContext) displayCSSProperties = "gap-8 flex flex-col";
+  if (onManageProductsPage)
+    displayCSSProperties = "gap-8 lg:gap-4 flex flex-col";
+
+  let figureCSSDisplayClasses = "2xs:grid 2xs:grid-cols-2";
+  if (onManageProductsPage) figureCSSDisplayClasses = "lg:grid lg:grid-cols-2";
+
   return (
     <motion.ul
-      className="w-full grid gap-2 text-center"
+      className={`w-full ${displayCSSProperties} text-center`}
       variants={{
         highlighted: {
           opacity: 1,
@@ -157,6 +229,7 @@ export default function GamesResults<T extends IGame>({
           <motion.li
             key={game.title}
             {...gameResultEntryElementMotionConfiguration}
+            className="w-full"
           >
             <GameResultContext.Provider
               value={{
@@ -166,7 +239,9 @@ export default function GamesResults<T extends IGame>({
               }}
             >
               <GameContainer>
-                <figure className="flex flex-col 2xs:grid 2xs:grid-cols-2 items-center gap-2 justify-center">
+                <figure
+                  className={`flex flex-col ${figureCSSDisplayClasses} items-center gap-2 justify-center`}
+                >
                   {game.artworks.length !== 0 ? (
                     <img
                       src={game.artworks[0].replace(
@@ -189,9 +264,14 @@ export default function GamesResults<T extends IGame>({
                       // not largeFormat changes its dimensions to match the input field instead of extending to the right viewport edge
                       className={`text-highlightRed font-bold min-w-2/5 ${
                         largeFormat
-                          ? "text-2xl"
+                          ? ""
                           : "text-xs+ xs:text-sm sm:text-base md:text-lg lg:text-base xl:text-lg"
                       }`}
+                      style={
+                        largeFormat
+                          ? { fontSize: mediaQueriesProperties.headerFontSize }
+                          : {}
+                      }
                     >
                       {!headerLinkInsteadOfWholeGameContainer ? (
                         game.title
@@ -206,6 +286,25 @@ export default function GamesResults<T extends IGame>({
                     startAnimation
                     {...(!largeFormat && {
                       removeOriginalPriceAfterAnimation: true,
+                    })}
+                    {...(largeFormat &&
+                      insideSearchCustomizationContextProvider && {
+                        priceTagFontSizeMediaQueryKeyToCSSPropertyValueMapOverwrite:
+                          {
+                            ...priceTagFontSizeMediaQueryKeyToCSSPropertyValueMap,
+                            lg: "1.125rem",
+                            md: "0.875rem",
+                          },
+                        customRWDFlexDisplayProperties: "2xs:flex-row",
+                      })}
+                    {...((onCartPage ||
+                      insideOrderSummaryContext ||
+                      onManageProductsPage) && {
+                      customRWDFlexDisplayProperties: `!flex-row ${
+                        insideOrderSummaryContext || onManageProductsPage
+                          ? "flex-wrap"
+                          : ""
+                      }`,
                     })}
                   />
                   {AdditionalGameInformation && (

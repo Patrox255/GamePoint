@@ -86,7 +86,7 @@ export default function UserContactInformationOverviews({
   return (
     <>
       <ul
-        className={`contact-information-overviews-container w-full flex justify-center items-center gap-4 ${additionalTailwindClasses}`}
+        className={`contact-information-overviews-container w-full flex flex-wrap justify-center items-center gap-4 ${additionalTailwindClasses}`}
       >
         {contactInformationArr.map((contactInformationEntry) => {
           const activeEntry =
@@ -106,6 +106,7 @@ export default function UserContactInformationOverviews({
                     )
               }
               disabled={isPending}
+              alternateTailwindClassesForBiggerFont
             >
               <div className="flex flex-col">
                 <p>
@@ -130,7 +131,7 @@ export default function UserContactInformationOverviews({
         })}
       </ul>
       {!omitShowingControlButtons && (
-        <div className="user-contact-information-overviews-control flex gap-4 justify-center items-center py-12">
+        <div className="user-contact-information-overviews-control flex-wrap flex gap-4 justify-center items-center py-12">
           <Button
             disabled={
               curActiveContactInformationOverviewId ===

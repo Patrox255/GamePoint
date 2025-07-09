@@ -62,8 +62,6 @@ export default function NotificationsWrapper() {
     return () => clearInterval(notificationsRefreshInterval);
   }, [dispatch]);
 
-  console.log("RERENDER NOTIFICATIONS!");
-
   const { search } = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
   const getNotificationsStateFromSessionStorage = useCallback(

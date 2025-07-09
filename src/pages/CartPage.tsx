@@ -20,6 +20,7 @@ import FetchedGamesQuantityModificationAdditionalInformation, {
 } from "../components/products/FetchedGamesQuantityModificationAdditionalInformation";
 import useQueryGetCartTotalPrice from "../hooks/queryRelated/useQueryGetCartTotalPrice";
 import { defaultFetchErrorMessageContent } from "../lib/fetch";
+import OnCartPageContextProvider from "../store/cartPage/OnCartPageContext";
 
 const CartPageHeader = ({ children }: { children: ReactNode }) => (
   <header className="mb-6">
@@ -153,45 +154,47 @@ export default function CartPage() {
     content = (
       <>
         <CartPageHeader>Your cart:</CartPageHeader>
-        <article className="w-7/8 flex">
-          <section className="w-3/4">
-            <FetchedGamesQuantityModificationAdditionalInformationContextProvider
-              onModifyGameQuantityFnStable={onModifyCartQuantityFnStable}
-            >
-              <GamesResults
-                games={gamesWithQuantityStable!}
-                largeFormat
-                moveHighlight={false}
-                headerLinkInsteadOfWholeGameContainer={true}
-                AdditionalGameInformation={
-                  FetchedGamesQuantityModificationAdditionalInformation
-                }
-              />
-            </FetchedGamesQuantityModificationAdditionalInformationContextProvider>
-          </section>
-          <section className="w-1/4 bg-darkerBg rounded-xl flex flex-col items-center justify-start py-6 px-4 gap-6 self-center">
-            <section
-              id="cart-total-price-wrapper"
-              className="text-lg flex flex-col items-center gap-2"
-            >
-              Total price:
-              {cartTotalPriceContent}
+        <OnCartPageContextProvider>
+          <article className="2xs:gap-0 gap-8 w-full 2xs:w-7/8 flex 2xs:flex-row flex-col">
+            <section className="w-full 2xs:w-3/4">
+              <FetchedGamesQuantityModificationAdditionalInformationContextProvider
+                onModifyGameQuantityFnStable={onModifyCartQuantityFnStable}
+              >
+                <GamesResults
+                  games={gamesWithQuantityStable!}
+                  largeFormat
+                  moveHighlight={false}
+                  headerLinkInsteadOfWholeGameContainer={true}
+                  AdditionalGameInformation={
+                    FetchedGamesQuantityModificationAdditionalInformation
+                  }
+                />
+              </FetchedGamesQuantityModificationAdditionalInformationContextProvider>
             </section>
-            <Button
-              onClick={() =>
-                navigate(
-                  !hasToProvideContactInformation
-                    ? "/order"
-                    : navigatePaths.userPanelContact
-                )
-              }
-            >
-              {!hasToProvideContactInformation
-                ? "Fulfill your order"
-                : "Provide contact details to proceed"}
-            </Button>
-          </section>
-        </article>
+            <section className="w-full 2xs:w-1/4 bg-darkerBg rounded-xl flex flex-col items-center justify-start py-6 px-4 gap-6 self-center">
+              <section
+                id="cart-total-price-wrapper"
+                className="text-lg flex flex-col items-center gap-2"
+              >
+                Total price:
+                {cartTotalPriceContent}
+              </section>
+              <Button
+                onClick={() =>
+                  navigate(
+                    !hasToProvideContactInformation
+                      ? "/order"
+                      : navigatePaths.userPanelContact
+                  )
+                }
+              >
+                {!hasToProvideContactInformation
+                  ? "Fulfill your order"
+                  : "Provide contact details to proceed"}
+              </Button>
+            </section>
+          </article>
+        </OnCartPageContextProvider>
       </>
     );
   }

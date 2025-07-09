@@ -312,7 +312,12 @@ export default function SelectedUserManagement() {
       <>
         <section className="user-management-general-information flex flex-col gap-4">
           <section className="user-header flex flex-col">
-            <Header size="large">{login}</Header>
+            <Header
+              size="large"
+              additionalTailwindClasses="!text-xl xs:!text-4xl "
+            >
+              {login}
+            </Header>
             {isAdmin && (
               <section className="user-admin-information">
                 <Header size="small" usePaddingBottom={false}>

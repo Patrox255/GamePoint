@@ -63,7 +63,7 @@ export default function ReviewContent() {
   const serveAsAnAddReviewComponent = !reviewToRender;
   const reviewContent = serveAsAnAddReviewComponent ? (
     <TextArea
-      widthTailwindClass="w-full h-full"
+      widthTailwindClass="w-full h-full text-xs+ 2xs:text-base"
       rows={8}
       placeholder="Enter your review content"
       value={content}
@@ -71,7 +71,7 @@ export default function ReviewContent() {
     ></TextArea>
   ) : (
     <p
-      className="w-full h-full whitespace-pre-wrap text-center"
+      className="w-full h-full whitespace-pre-wrap text-center text-xs+ 2xs:text-base break-words"
       dangerouslySetInnerHTML={{
         __html: reviewToRender.content,
       }} // safe to do so as review content went through html sanitize on the backend
@@ -117,19 +117,26 @@ export default function ReviewContent() {
           serveAsAnAddReviewComponent ? "add-review" : "review"
         } flex w-full py-3`}
       >
-        <AnimatedAppearance flexTailwindClass="flex-row">
+        <AnimatedAppearance flexTailwindClass="flex-col md:flex-row gap-4">
           <section
             className={`${
               serveAsAnAddReviewComponent ? "add-" : ""
-            }review-content w-1/2 self-stretch items-center justify-center flex flex-col`}
+            }review-content w-full md:w-1/2 self-stretch items-center justify-center flex flex-col`}
           >
             {!serveAsAnAddReviewComponent && (
-              <div className="review-header flex items-center text-nowrap justify-center">
-                Added by&nbsp;
-                <Header usePaddingBottom={false}>
-                  {reviewToRender.userId.login}
-                </Header>
-                &nbsp; on {dateFormat.format(new Date(reviewToRender.date))}
+              <div className="review-header flex items-center text-nowrap justify-center text-xs++ 2xs:text-base flex-col md:flex-row">
+                <span>
+                  Added by&nbsp;
+                  <Header
+                    usePaddingBottom={false}
+                    additionalTailwindClasses="2xs:!text-xl !text-base"
+                  >
+                    {reviewToRender.userId.login}
+                  </Header>
+                </span>
+                <span>
+                  &nbsp; on {dateFormat.format(new Date(reviewToRender.date))}
+                </span>
               </div>
             )}
             {reviewContent}
@@ -142,7 +149,7 @@ export default function ReviewContent() {
           <motion.section
             className={`${
               serveAsAnAddReviewComponent ? "add-" : ""
-            }review-criteria-container flex self-stretch w-1/2 items-center justify-center flex-col`}
+            }review-criteria-container flex self-stretch w-full md:w-1/2 items-center justify-center flex-col`}
           >
             <section className="w-full">
               <Header>Review Criteria</Header>
@@ -158,7 +165,7 @@ export default function ReviewContent() {
                   <motion.section
                     className={`${
                       serveAsAnAddReviewComponent ? "add-" : ""
-                    }review-criterion flex items-center justify-center gap-3`}
+                    }review-criterion flex xs:flex-row flex-col items-center justify-center gap-3 w-full break-words`}
                     key={`${serveAsAnAddReviewComponent ? "add-" : ""}review${
                       serveAsAnAddReviewComponent
                         ? ""
@@ -175,7 +182,7 @@ export default function ReviewContent() {
                       <Input
                         value={criterionObj.criterionName}
                         placeholder="Criterion name"
-                        width="w-1/4"
+                        width="w-full xs:w-1/2"
                         onChange={(value: string) =>
                           criteriaDispatch({
                             type: "CHANGE_CRITERION",
@@ -195,11 +202,17 @@ export default function ReviewContent() {
                           })
                         }
                         otherValidationInputAttributes={{ required: true }}
+                        additionalTailwindClasses="!text-xs+ 2xs:!text-base"
                       />
                     ) : (
-                      <p className="max-w-1/4">{criterionObj.criterionName}</p>
+                      <p className="w-full xs:w-1/2 break-words">
+                        {criterionObj.criterionName}
+                      </p>
                     )}
-                    <motion.section className="criterion-stars flex" layout>
+                    <motion.section
+                      className="criterion-stars flex xs:pr-3"
+                      layout
+                    >
                       {Array.from({ length: 5 }, (_, i) => i).map((rating) => (
                         <AnimatedSVG
                           size="48px"

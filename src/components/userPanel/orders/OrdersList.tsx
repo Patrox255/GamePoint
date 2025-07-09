@@ -40,10 +40,16 @@ export const OrdersDetailsError = ({
 
 export const HighlightedOrderDetailsEntry = ({
   children,
+  breakAll = false,
 }: {
   children: ReactNode;
+  breakAll?: boolean;
 }) => (
-  <span className="text-highlightRed font-bold text-sm max-w-full text-wrap flex justify-center sm:text-lg">
+  <span
+    className={`text-highlightRed ${
+      breakAll ? "break-all" : ""
+    } font-bold text-xs+ xs:text-sm w-full text-wrap flex justify-center sm:text-lg break-words`}
+  >
     {children}
   </span>
 );
@@ -58,7 +64,12 @@ GroupedOrderDetailsEntry.GroupElement = ({
   children,
 }: {
   children: ReactNode;
-}) => <span className="flex justify-center items-center">{children}</span>;
+}) => (
+  // Whitespace-nowrap just for e-mail title which forced it to wrap but I do not us any big titles which not wrapping could disturb the layout
+  <span className="flex justify-center items-center whitespace-nowrap flex-wrap">
+    {children}
+  </span>
+);
 
 type orderDetailsEntriesWithAccessToOrderEntry = "totalValue";
 type orderDetailsEntryContentFn<T> = (value: T) => ReactNode;
@@ -93,7 +104,9 @@ const orderDetailsEntries: IOrderDetailsNormalEntries = {
     contentFn: (id) => (
       <>
         ID:&nbsp;
-        <HighlightedOrderDetailsEntry>{id}</HighlightedOrderDetailsEntry>
+        <HighlightedOrderDetailsEntry breakAll>
+          {id}
+        </HighlightedOrderDetailsEntry>
       </>
     ),
   },

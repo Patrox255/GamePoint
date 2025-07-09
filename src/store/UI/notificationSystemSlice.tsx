@@ -192,7 +192,7 @@ const notificationSystemSlice = createSlice({
       const onlyViableNotifications = S.filter(
         (notification) =>
           (curDate - notification.createdAtMiliseconds) / 1000 <=
-          (notification.visibilityDurationInSeconds ?? 0) + 100!
+          (notification.visibilityDurationInSeconds ?? 0)
       );
       return onlyViableNotifications.length !== S.length ||
         S.some(

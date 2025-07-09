@@ -49,10 +49,13 @@ export const RegisterPageFormControls = ({
   additionalResetClickAction,
   submitBtnTextFromProps = "Register",
   children,
+  isOnRegisterPage = false,
 }: {
   additionalResetClickAction?: () => void;
   submitBtnTextFromProps?: string;
   children?: ReactNode;
+  isOnRegisterPage?: boolean; // Despite the name of the component this isn't really obvious as this component is also used on
+  // admin user management page when editing one's contact information and there I placed 3 buttons and I just want them to be centered
 }) => {
   const { isPending } = useContext(FormWithErrorHandlingContext);
   const submitBtnText =
@@ -64,7 +67,11 @@ export const RegisterPageFormControls = ({
     );
 
   return (
-    <div className="form-controls flex gap-3 justify-between w-full py-6">
+    <div
+      className={`form-controls flex gap-3 ${
+        isOnRegisterPage ? "justify-between" : "justify-center"
+      } w-full py-6 flex-wrap items-center`}
+    >
       {children}
       <Button
         type="reset"
@@ -72,10 +79,11 @@ export const RegisterPageFormControls = ({
           additionalResetClickAction?.();
           registerPageFormControlsShowNotificationUponResettingFieldsContent?.();
         }}
+        alternateTailwindClassesForBiggerFont
       >
         Reset fields
       </Button>
-      <Button disabled={isPending}>
+      <Button disabled={isPending} alternateTailwindClassesForBiggerFont>
         {isPending ? "Submitting..." : submitBtnText}
       </Button>
     </div>
@@ -198,6 +206,7 @@ export default function RegisterPage() {
         )}
         <RegisterPageFormControls
           additionalResetClickAction={handleFormReset}
+          isOnRegisterPage
         />
       </FormWithErrorHandling>
     </MainWrapper>

@@ -1,9 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
-import {
+import React, {
   createContext,
   MouseEvent,
   MouseEventHandler,
   ReactNode,
+  RefObject,
   useCallback,
   useContext,
   useEffect,
@@ -32,6 +33,9 @@ import DatePickerInputFieldElementConfigurationContextProvider, {
   DatePickerInputFieldElementConfigurationContext,
   IDatePickerInputFieldElementConfigurationContextProps,
 } from "../../store/UI/DatePickerInputFieldElementConfigurationContext";
+import { useWindowMatchMediaQueries } from "../../hooks/RWD/useWindowMatchMediaQueries";
+import DatePickerDataSliderArrowIndicatorContextProvider from "../../store/UI/DatePickerDataSliderArrowIndicatorContext";
+import { debounce } from "lodash";
 
 export const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -69,11 +73,22 @@ export const DatePickerInputFieldElementCtx = createContext<{
   setDatePickerState: React.Dispatch<React.SetStateAction<datePickerState>>;
   setSelectedDateImmediately: setSelectedDateImmediatelyFn;
   selectedDateObj: Date;
+  insideDatePicker?: boolean;
+  arrowSvgHeight?: number; // This is used to extend the date picker dimensions vertically on lower resolutions in order to
+  // make space for arrows above sliders
+  setArrowSvgHeight?: React.Dispatch<React.SetStateAction<number | undefined>>;
+  datePickerInputFieldContainerRef?: RefObject<HTMLDivElement>; // Used only to extend date picker to screen width on smaller resolutions
+  inputFieldRef?: RefObject<HTMLInputElement>; // Used in order to also monitor changing the size of the input when focusing or bluring to therefore change date picker dimensions accordingly
 }>({
   datePickerState: "",
   setDatePickerState: () => {},
   setSelectedDateImmediately: () => {},
   selectedDateObj: nowDate,
+  insideDatePicker: false,
+  arrowSvgHeight: undefined,
+  setArrowSvgHeight: () => {},
+  datePickerInputFieldContainerRef: undefined,
+  inputFieldRef: undefined,
 });
 
 const generateMonthsToChoose = (
@@ -200,6 +215,8 @@ function DatePicker() {
     setDatePickerState,
     selectedDateObj,
     setSelectedDateImmediately,
+    arrowSvgHeight,
+    datePickerInputFieldContainerRef,
   } = useContext(DatePickerInputFieldElementCtx);
   const {
     changeDateYearStable,
@@ -212,6 +229,9 @@ function DatePicker() {
     useContext(InputFieldElementChildrenCtx);
 
   const activeYearCellElement = useRef<HTMLTableCellElement>(null);
+
+  const pushArrowsSvgsSoThatTheyFitOnTheScreen =
+    !useWindowMatchMediaQueries("xs");
 
   useEffect(() => {
     const clickOutsideFn: EventListenerOrEventListenerObject = (e) => {
@@ -466,6 +486,37 @@ function DatePicker() {
       activeYearCellElement.current?.scrollIntoView({ behavior: "smooth" });
   }, [datePickerState]);
 
+  // Extending it across all of the screen just to make sure everything inside is fit within the screen
+  const extendDatePickerAcrossAllOfTheScreen =
+    pushArrowsSvgsSoThatTheyFitOnTheScreen;
+
+  // Due to absolute positioning in refer to input I just want to move it so that it sticks to the left screen edge
+  const [leftMargin, setLeftMargin] = useState<number | undefined>(undefined);
+
+  const changeLeftMarginOnResize = useMemo(
+    () =>
+      debounce(() => {
+        if (!datePickerInputFieldContainerRef) return; // Should never really happen unless not wrapped in context
+        setLeftMargin(
+          datePickerInputFieldContainerRef.current?.getBoundingClientRect().left
+        );
+      }, 200),
+    [datePickerInputFieldContainerRef]
+  );
+
+  useEffect(() => {
+    if (!extendDatePickerAcrossAllOfTheScreen) return;
+    window.addEventListener("resize", changeLeftMarginOnResize);
+
+    return () => {
+      window.removeEventListener("resize", changeLeftMarginOnResize);
+    };
+  }, [changeLeftMarginOnResize, extendDatePickerAcrossAllOfTheScreen]);
+
+  useEffect(() => {
+    datePickerInputFieldContainerRef && changeLeftMarginOnResize();
+  }, [changeLeftMarginOnResize, datePickerInputFieldContainerRef]);
+
   if (!inputFieldObj || !setDatePickerState)
     return <p>Must be called using the date picker input field element!</p>;
 
@@ -476,25 +527,33 @@ function DatePicker() {
   if (datePickerState === "start")
     datePickerContent = (
       <>
-        <DataSlider
-          elements={availableYearsToChoose}
-          manageExternalStateInsteadOfTheOneHereFn={
-            manageYearStateInDataSliderFnStable
-          }
-          externalState={selectedDateObj.getFullYear() + ""}
-          findCurrentElementsIndexBasedOnCurrentExternalState={(curYear) =>
-            (year: string) =>
-              year === curYear}
-          customSliderContainerWidthTailwindClass="w-full"
-        >
-          <SliderProductElement
+        <DatePickerDataSliderArrowIndicatorContextProvider DatePickerDataSliderArrowIndicatorContextVal="upper">
+          <DataSlider
             elements={availableYearsToChoose}
-            lessInvasiveArrowAnimation
-            smallerArrowSVG
+            manageExternalStateInsteadOfTheOneHereFn={
+              manageYearStateInDataSliderFnStable
+            }
+            externalState={selectedDateObj.getFullYear() + ""}
+            findCurrentElementsIndexBasedOnCurrentExternalState={(curYear) =>
+              (year: string) =>
+                year === curYear}
+            customSliderContainerWidthTailwindClass="w-full"
+            additionalContainerStyle={{
+              ...(arrowSvgHeight !== undefined &&
+                pushArrowsSvgsSoThatTheyFitOnTheScreen && {
+                  paddingTop: `${arrowSvgHeight}px`,
+                }),
+            }}
           >
-            {sliderProductElementChildrenYearsRelatedFnStable}
-          </SliderProductElement>
-        </DataSlider>
+            <SliderProductElement
+              elements={availableYearsToChoose}
+              lessInvasiveArrowAnimation
+              smallerArrowSVG
+            >
+              {sliderProductElementChildrenYearsRelatedFnStable}
+            </SliderProductElement>
+          </DataSlider>
+        </DatePickerDataSliderArrowIndicatorContextProvider>
         <ul className="date-picker-dates-grid grid grid-cols-7 gap-3">
           {datesGrid.map((dateGridObj) => {
             const isActive =
@@ -541,41 +600,49 @@ function DatePicker() {
             );
           })}
         </ul>
-        <DataSlider
-          elements={availableMonthsToChoose}
-          manageExternalStateInsteadOfTheOneHereFn={
-            manageMonthStateInDataSliderFnStable
-          }
-          externalState={selectedDateObj.getMonth()}
-          findCurrentElementsIndexBasedOnCurrentExternalState={(
-              curExternalState
-            ) =>
-            (_, index) =>
-              curExternalState === index}
-          additionalActionUponReachingTheBeginningByGoingForwardInTheEnd={() => {
-            manageYearStateInDataSliderFnStable((curYearIndex) =>
-              curYearIndex === availableYearsToChoose.length - 1
-                ? 0
-                : curYearIndex + 1
-            );
-          }}
-          additionalActionUponReachingTheEndByGoingBackwardsInTheBeginning={() => {
-            manageYearStateInDataSliderFnStable((curYearIndex) =>
-              curYearIndex === 0
-                ? availableYearsToChoose.length - 1
-                : curYearIndex - 1
-            );
-          }}
-          customSliderContainerWidthTailwindClass="w-full"
-        >
-          <SliderProductElement
-            lessInvasiveArrowAnimation
+        <DatePickerDataSliderArrowIndicatorContextProvider DatePickerDataSliderArrowIndicatorContextVal="lower">
+          <DataSlider
             elements={availableMonthsToChoose}
-            smallerArrowSVG
+            manageExternalStateInsteadOfTheOneHereFn={
+              manageMonthStateInDataSliderFnStable
+            }
+            externalState={selectedDateObj.getMonth()}
+            findCurrentElementsIndexBasedOnCurrentExternalState={(
+                curExternalState
+              ) =>
+              (_, index) =>
+                curExternalState === index}
+            additionalActionUponReachingTheBeginningByGoingForwardInTheEnd={() => {
+              manageYearStateInDataSliderFnStable((curYearIndex) =>
+                curYearIndex === availableYearsToChoose.length - 1
+                  ? 0
+                  : curYearIndex + 1
+              );
+            }}
+            additionalActionUponReachingTheEndByGoingBackwardsInTheBeginning={() => {
+              manageYearStateInDataSliderFnStable((curYearIndex) =>
+                curYearIndex === 0
+                  ? availableYearsToChoose.length - 1
+                  : curYearIndex - 1
+              );
+            }}
+            customSliderContainerWidthTailwindClass="w-full"
+            additionalContainerStyle={{
+              ...(arrowSvgHeight !== undefined &&
+                pushArrowsSvgsSoThatTheyFitOnTheScreen && {
+                  paddingBottom: `${arrowSvgHeight}px`,
+                }),
+            }}
           >
-            {sliderProductElementChildrenMonthsRelatedFnStable}
-          </SliderProductElement>
-        </DataSlider>
+            <SliderProductElement
+              lessInvasiveArrowAnimation
+              elements={availableMonthsToChoose}
+              smallerArrowSVG
+            >
+              {sliderProductElementChildrenMonthsRelatedFnStable}
+            </SliderProductElement>
+          </DataSlider>
+        </DatePickerDataSliderArrowIndicatorContextProvider>
       </>
     );
 
@@ -631,7 +698,9 @@ function DatePicker() {
         </Button>
       </div>
       <motion.div
-        className="date-picker absolute top-[100%] left-0 bg-darkerBg overflow-hidden rounded-xl"
+        className={`date-picker absolute top-[100%] ${
+          !extendDatePickerAcrossAllOfTheScreen ? "left-0" : ""
+        } bg-darkerBg overflow-hidden rounded-xl`}
         initial={{ opacity: 0, height: 0 }}
         animate={{
           opacity: renderDatePicker ? 1 : 0,
@@ -641,8 +710,15 @@ function DatePicker() {
         onClick={() => {
           forceInputFieldFocus();
         }}
+        style={{
+          ...(extendDatePickerAcrossAllOfTheScreen &&
+            leftMargin !== undefined && {
+              left: `-${leftMargin}px`,
+              width: `100vw`,
+            }),
+        }}
       >
-        <div className="px-8 py-4 flex justify-center items-center flex-col">
+        <div className="px-8 py-4 flex justify-center items-center flex-col gap-4">
           {datePickerContent}
         </div>
       </motion.div>
@@ -661,6 +737,7 @@ export function DatePickerInputFieldElementContent() {
       ? inputFieldObjFromProps.defaultValue
       : ""
   );
+  const [arrowSvgHeight, setArrowSvgHeight] = useState<number | undefined>(0); // Check context definition for info why
 
   const {
     queryDebouncingState: selectedDateDebounced,
@@ -704,11 +781,16 @@ export function DatePickerInputFieldElementContent() {
       [selectedDateObj, setSelectedDateDebounced]
     );
 
+  const datePickerInputFieldContainerRef = useRef<HTMLDivElement>(null);
+  const inputFieldRef = useRef<HTMLInputElement>(null);
+
   return (
     <InputFieldElement
       inputFieldObjFromProps={inputFieldObjFromProps}
       value={selectedDate}
       onChange={handleInputChange}
+      containerDivRef={datePickerInputFieldContainerRef}
+      ref={inputFieldRef}
     >
       <DatePickerInputFieldElementCtx.Provider
         value={{
@@ -716,6 +798,13 @@ export function DatePickerInputFieldElementContent() {
           setDatePickerState,
           setSelectedDateImmediately: setSelectedDateImmediatelyStable,
           selectedDateObj,
+          insideDatePicker: true,
+          ...(datePickerState === "start" && {
+            arrowSvgHeight,
+            setArrowSvgHeight,
+          }),
+          datePickerInputFieldContainerRef,
+          inputFieldRef,
         }}
       >
         <DatePicker />

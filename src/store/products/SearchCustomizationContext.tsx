@@ -57,6 +57,7 @@ export type ISearchCustomizationContext = {
   debouncedDiscountActive: number;
   setDiscountActive: (newDiscount: number) => void;
   searchTerm: string;
+  insideCtxProvider: boolean;
 } & IProductTagsContextBody;
 
 type productsSearchCustomizationTagTypes =
@@ -165,6 +166,7 @@ export const SearchCustomizationContext =
     selectedPublishersState: {} as ISelectedTags,
     selectedPublishersDispatch: () => {},
     searchTerm: "",
+    insideCtxProvider: false,
   });
 
 export default function SearchCustomizationContextProvider({
@@ -346,6 +348,7 @@ export default function SearchCustomizationContextProvider({
         selectedPublishersState,
         selectedPublishersDispatch,
         searchTerm,
+        insideCtxProvider: true,
       }}
     >
       {children}

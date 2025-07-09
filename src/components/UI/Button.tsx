@@ -40,6 +40,8 @@ export default function Button({
   type,
   useRounded = true,
   biggerFont = false,
+  additionalTailwindCSSClassNames,
+  alternateTailwindClassesForBiggerFont = false,
   ...props // sadly it is not supported in TS so I add each prop individually
 }: {
   children?: ReactNode;
@@ -58,6 +60,8 @@ export default function Button({
   type?: "submit" | "reset" | "button";
   useRounded?: boolean;
   biggerFont?: boolean;
+  additionalTailwindCSSClassNames?: string;
+  alternateTailwindClassesForBiggerFont?: boolean;
 }) {
   const initialClasses = {
     opacity: 0.5,
@@ -115,6 +119,8 @@ export default function Button({
           Object.values(additionalTailwindCSS).join(" ")
         } text-xs  ${
           biggerFont || useBiggerFontFromCtx ? "xs:text-base" : "xs:text-sm"
+        } ${additionalTailwindCSSClassNames} ${
+          alternateTailwindClassesForBiggerFont ? "!text-base 2xs:!text-xl" : ""
         }`}
         whileHover={
           disabled

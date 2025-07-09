@@ -40,7 +40,11 @@ export default function ContactInformationFormContent({
       </ContactInformationFormInputFieldsContent>
       <RegisterPageFormControls>
         {showGoBackBtn && (
-          <Button type="button" onClick={goBackBtnClickHandler}>
+          <Button
+            type="button"
+            onClick={goBackBtnClickHandler}
+            alternateTailwindClassesForBiggerFont
+          >
             Go back
           </Button>
         )}

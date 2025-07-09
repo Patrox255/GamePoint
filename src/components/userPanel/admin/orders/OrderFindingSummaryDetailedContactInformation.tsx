@@ -30,6 +30,7 @@ export default function OrderFindingSummaryDetailedContactInformation() {
         onClick={() =>
           setSelectedContactInformationEntryIdToChangeTheOrderOneTo("")
         }
+        alternateTailwindClassesForBiggerFont
       >
         Change the selected orderer's contact details entry used for this order
       </Button>

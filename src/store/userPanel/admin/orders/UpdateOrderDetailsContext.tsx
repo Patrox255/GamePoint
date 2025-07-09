@@ -3,6 +3,7 @@ import {
   ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -42,6 +43,10 @@ export const UpdateOrderDetailsContext = createContext<{
   setOrderItemsQuantityModificationEntries: React.Dispatch<
     React.SetStateAction<OrderItemsQuantityModificationEntries>
   >;
+  orderModificationTotalPrice?: number;
+  setOrderModificationTotalPrice: React.Dispatch<
+    React.SetStateAction<number | undefined>
+  >;
 }>({
   selectedOrderFromList: "",
   setSelectedOrderFromList: () => {},
@@ -51,6 +56,8 @@ export const UpdateOrderDetailsContext = createContext<{
   setSelectedContactInformationEntryIdToChangeTheOrderOneTo: () => {},
   orderItemsQuantityModificationEntriesStable: undefined,
   setOrderItemsQuantityModificationEntries: () => {},
+  orderModificationTotalPrice: undefined,
+  setOrderModificationTotalPrice: () => {},
 });
 
 export default function UpdateOrderDetailsContextProvider({
@@ -115,22 +122,48 @@ export default function UpdateOrderDetailsContextProvider({
   const orderItemsQuantityModificationEntriesStable =
     useCompareComplexForUseMemo(orderItemsQuantityModificationEntries);
 
+  const [orderModificationTotalPrice, setOrderModificationTotalPrice] =
+    useState<number | undefined>(undefined);
+
   const onModifyGameQuantityOrderItemsFnStable =
     useCallback<onModifyGameQuantityFnStable>(
-      (newGameQuantity, gameInfo) => {
+      (
+        newGameQuantity,
+        gameInfo,
+        unmodifiedGameInfoEntryForOrderModification
+      ) => {
         const { _id } = gameInfo;
         const orderItemsQuantityModificationRelatedEntryIndex =
           orderItemsQuantityModificationEntriesStable.findIndex(
             (orderItemsQuantityModificationEntry) =>
               orderItemsQuantityModificationEntry.id === _id
           );
-        if (orderItemsQuantityModificationRelatedEntryIndex === -1)
+        const handleUpdateTotalPrice = (quantityChange: number) => {
+          setOrderModificationTotalPrice((oldTotalPrice) => {
+            if (oldTotalPrice === undefined) return oldTotalPrice;
+            return oldTotalPrice + quantityChange * gameInfo.finalPrice;
+          });
+        };
+
+        if (orderItemsQuantityModificationRelatedEntryIndex === -1) {
+          if (unmodifiedGameInfoEntryForOrderModification)
+            handleUpdateTotalPrice(
+              newGameQuantity -
+                unmodifiedGameInfoEntryForOrderModification.quantity
+            );
           return setOrderItemsQuantityModificationEntries(
             (oldOrderItemsQuantityModificationEntries) => [
               ...oldOrderItemsQuantityModificationEntries,
               { id: _id, newQuantity: newGameQuantity },
             ]
           );
+        }
+        handleUpdateTotalPrice(
+          newGameQuantity -
+            orderItemsQuantityModificationEntriesStable[
+              orderItemsQuantityModificationRelatedEntryIndex
+            ].newQuantity
+        );
         setOrderItemsQuantityModificationEntries(
           (oldOrderItemsQuantityModificationEntries) => {
             const newOrderItemsQuantityModificationEntries = [
@@ -152,6 +185,12 @@ export default function UpdateOrderDetailsContextProvider({
       [orderItemsQuantityModificationEntriesStable]
     );
 
+  useEffect(() => {
+    if (selectedOrderFromList !== "") return;
+    setOrderItemsQuantityModificationEntries([]);
+    setOrderModificationTotalPrice(undefined);
+  }, [selectedOrderFromList]);
+
   return (
     <UpdateOrderDetailsContext.Provider
       value={{
@@ -163,6 +202,8 @@ export default function UpdateOrderDetailsContextProvider({
         setSelectedContactInformationEntryIdToChangeTheOrderOneTo,
         orderItemsQuantityModificationEntriesStable,
         setOrderItemsQuantityModificationEntries,
+        orderModificationTotalPrice,
+        setOrderModificationTotalPrice,
       }}
     >
       <FetchedGamesQuantityModificationAdditionalInformationContextProvider

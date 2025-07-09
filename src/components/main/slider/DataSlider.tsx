@@ -7,6 +7,7 @@ import {
 } from "../../../hooks/useSlider";
 import AnimatedAppearance from "../../UI/AnimatedAppearance";
 import { isEqual } from "lodash";
+import { MotionStyle } from "framer-motion";
 
 export const SliderContext = createContext<{
   activeElementIndex: number;
@@ -30,6 +31,7 @@ export default function DataSlider<ElementInterface, Y>({
   additionalActionUponReachingTheBeginningByGoingForwardInTheEnd,
   additionalActionUponReachingTheEndByGoingBackwardsInTheBeginning,
   customSliderContainerWidthTailwindClass = "w-[95%] lg:w-4/5",
+  additionalContainerStyle,
 }: {
   elements: ElementInterface[];
   children: ReactNode;
@@ -42,6 +44,7 @@ export default function DataSlider<ElementInterface, Y>({
   additionalActionUponReachingTheBeginningByGoingForwardInTheEnd?: () => void;
   additionalActionUponReachingTheEndByGoingBackwardsInTheBeginning?: () => void;
   customSliderContainerWidthTailwindClass?: string;
+  additionalContainerStyle?: MotionStyle;
 }) {
   const stableElements = useRef<ElementInterface[]>();
   if (!stableElements.current) stableElements.current = elements;
@@ -66,7 +69,7 @@ export default function DataSlider<ElementInterface, Y>({
   });
 
   return (
-    <AnimatedAppearance>
+    <AnimatedAppearance style={additionalContainerStyle}>
       <div
         className={`data-slider-container relative flex justify-center items-center text-center gap-8 ${customSliderContainerWidthTailwindClass}`}
       >

@@ -6,6 +6,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -15,6 +16,7 @@ import ArrowSVG from "../UI/ArrowSVG";
 import leftArrow from "../../assets/left-arrow.svg";
 import rightArrow from "../../assets/right-arrow.svg";
 import Header from "../UI/headers/Header";
+import { debounce } from "lodash";
 
 export const tabsSectionElementTransitionProperties = {
   initial: { opacity: 0 },
@@ -125,6 +127,43 @@ export default function TabsComponent<
   );
   const duringNavigationTransition =
     tabsState !== debouncingTabsState || forceDisableNavigation;
+
+  const availableTagHeaderRef = useRef<HTMLHeadingElement>(null);
+  // Has to manually set height nav component if tabs component acts in alternate slider look mode as tabs headers then are
+  // positioned absolutely and do not contribute towards overall height
+  const [curAvailableTagHeaderHeight, setCurAvailableTagHeaderHeight] =
+    useState<number | undefined>();
+  const [arrowSvgHeight, setArrowSvgHeight] = useState<number | undefined>();
+  const handleHeaderResize = useMemo(
+    () =>
+      debounce(() => {
+        if (!availableTagHeaderRef?.current) return;
+        setCurAvailableTagHeaderHeight(
+          availableTagHeaderRef.current.getBoundingClientRect().height
+        );
+      }, 200),
+    []
+  );
+  useEffect(() => {
+    window.addEventListener("resize", handleHeaderResize);
+    const availableTagHeaderRefSaved = availableTagHeaderRef?.current;
+    if (!availableTagHeaderRefSaved) return;
+    availableTagHeaderRefSaved.addEventListener("resize", handleHeaderResize);
+
+    return () => {
+      window.removeEventListener("resize", handleHeaderResize);
+      if (!availableTagHeaderRefSaved) return;
+      availableTagHeaderRefSaved.removeEventListener(
+        "resize",
+        handleHeaderResize
+      );
+    };
+  }, [handleHeaderResize, curTabIndex]);
+
+  useEffect(() => {
+    handleHeaderResize();
+  }, [handleHeaderResize, curTabIndex]);
+
   const tabsNavigationContent = !useAlternativeLookAsASlider ? (
     availableTabs.map((availableTab) => {
       const active = availableTab.tagName === tabsState;
@@ -137,13 +176,22 @@ export default function TabsComponent<
           disabled={disabled}
           key={`${availableTab.tagName}${disabled ? "-disabled" : ""}`}
           active={active}
+          alternateTailwindClassesForBiggerFont
         >
           {availableTab.header}
         </Button>
       );
     })
   ) : (
-    <>
+    <motion.div
+      className="tabs-container-nav w-full flex items-center justify-between relative"
+      style={{
+        ...(arrowSvgHeight && {
+          paddingTop: `${+arrowSvgHeight + 24}px`,
+        }),
+      }}
+      layout
+    >
       <ArrowSVG
         arrowSrc={leftArrow}
         alt="Arrow pointing to the left"
@@ -152,11 +200,21 @@ export default function TabsComponent<
         }
         disabled={duringNavigationTransition}
         customWidthTailwindClass="w-12"
+        insideAlternateSliderLookTabsComponent
+        setArrowSvgHeightProp={setArrowSvgHeight}
+        arrowSvgHeightProp={arrowSvgHeight}
       />
-      <motion.div className="tabs-container w-full flex items-center relative overflow-hidden">
+      <motion.div
+        className="tabs-container w-full flex items-center relative overflow-hidden"
+        style={{
+          ...(curAvailableTagHeaderHeight && {
+            height: `${curAvailableTagHeaderHeight}px`,
+          }),
+        }}
+      >
         {availableTabs.map((availableTab, availableTabIndex) => (
           <motion.div
-            className="w-full flex-shrink-0 absolute top-0 left-0 h-full flex justify-center items-center"
+            className="w-full flex-shrink-0 absolute top-0 left-0 flex justify-center items-center"
             initial={{ opacity: 0 }}
             animate={{
               translateX: `${(availableTabIndex - curTabIndex) * 100}%`,
@@ -165,7 +223,21 @@ export default function TabsComponent<
             key={availableTab.header}
             transition={{ duration: 0.5, opacity: { duration: 2 } }}
           >
-            <Header>{availableTab.header}</Header>
+            <Header
+              headerRef={
+                curTabIndex === availableTabIndex
+                  ? availableTagHeaderRef
+                  : undefined
+              }
+              // Have to remount the component which is currently active in order to modify the ref
+              key={
+                curTabIndex === availableTabIndex
+                  ? `${tabsState}-tab-header-with-ref-${curTabIndex}`
+                  : `${tabsState}-${curTabIndex}`
+              }
+            >
+              {availableTab.header}
+            </Header>
           </motion.div>
         ))}
       </motion.div>
@@ -178,18 +250,17 @@ export default function TabsComponent<
         disabled={duringNavigationTransition}
         customWidthTailwindClass="w-12"
         translateXVal="2rem"
+        insideAlternateSliderLookTabsComponent
+        setArrowSvgHeightProp={setArrowSvgHeight}
+        arrowSvgHeightProp={arrowSvgHeight}
       />
-    </>
+    </motion.div>
   );
 
   return (
     <>
       {availableTabs.length !== 0 && (
-        <nav
-          className={`flex gap-4 ${
-            useAlternativeLookAsASlider ? "w-1/2" : "w-full"
-          } justify-center`}
-        >
+        <nav className={`flex gap-4 w-full justify-center flex-wrap`}>
           {tabsNavigationContent}
         </nav>
       )}

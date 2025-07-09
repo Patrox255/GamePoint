@@ -1,14 +1,16 @@
-import { motion } from "framer-motion";
+import { motion, MotionStyle } from "framer-motion";
 import { ReactNode } from "react";
 
 export default function AnimatedAppearance({
   children,
   staggerChildren = true,
   flexTailwindClass = "flex-col",
+  style,
 }: {
   children: ReactNode;
   staggerChildren?: boolean;
-  flexTailwindClass?: "flex-col" | "flex-row";
+  flexTailwindClass?: string;
+  style?: MotionStyle;
 }) {
   return (
     <motion.div
@@ -29,6 +31,7 @@ export default function AnimatedAppearance({
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true }}
+      style={style}
     >
       {children}
     </motion.div>

@@ -68,11 +68,11 @@ export default function UserPanelPage() {
         <Header
           size="large"
           usePaddingBottom={false}
-          additionalTailwindClasses="py-8"
+          additionalTailwindClasses="text-xl xs:!text-4xl py-8 px-4"
         >
           Account Management
         </Header>
-        <article className="w-4/5 flex justify-center items-center flex-col px-8 py-8 bg-darkerBg rounded-xl">
+        <article className="w-full xs:w-4/5 flex justify-center items-center flex-col px-8 py-8 bg-darkerBg rounded-xl">
           <TabsComponent
             defaultTabsStateValue={panelSection}
             possibleTabsStable={possiblePanelSections}

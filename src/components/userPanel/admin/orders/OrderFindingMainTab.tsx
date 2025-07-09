@@ -45,7 +45,7 @@ export default function OrderFindingMainTab() {
   return (
     <>
       <section className="order-finding-control-section-wrapper flex flex-col gap-4">
-        <section className="order-finding-control-section flex gap-4">
+        <section className="order-finding-control-section flex gap-4 flex-wrap justify-center items-center">
           {ordersFindingCredentials.map((ordersFindingCredentialsEntry) => {
             const { name } = ordersFindingCredentialsEntry;
             const placeholder =

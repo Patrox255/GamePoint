@@ -13,6 +13,7 @@ import { ReactNode, useContext, useMemo } from "react";
 import { IInputFieldsObjs } from "../../lib/inputFieldsObjs";
 import { inputValue } from "../UI/Input";
 import { ContactInformationFormContentContext } from "./ContactInformationFormContent";
+import InputFieldsSingleRowResidenceContextProvider from "../../store/UI/InputFieldsSingleRowResidenceContext";
 
 export type IInputFieldsDefaultValues = {
   [key in keyof IInputFieldsObjs]: inputValue;
@@ -100,17 +101,19 @@ export default function ContactInformationFormInputFieldsContent({
           inputFieldObjFromProps={inputFieldsObjectsWithDefaultValues.city}
         />
       </InputFieldSingleRow>
-      <InputFieldSingleRow identificator="contact-information-residence">
-        <InputFieldElement
-          inputFieldObjFromProps={inputFieldsObjectsWithDefaultValues.street}
-        />
-        <InputFieldElement
-          inputFieldObjFromProps={inputFieldsObjectsWithDefaultValues.house}
-        />
-        <InputFieldElement
-          inputFieldObjFromProps={inputFieldsObjectsWithDefaultValues.flat}
-        />
-      </InputFieldSingleRow>
+      <InputFieldsSingleRowResidenceContextProvider>
+        <InputFieldSingleRow identificator="contact-information-residence">
+          <InputFieldElement
+            inputFieldObjFromProps={inputFieldsObjectsWithDefaultValues.street}
+          />
+          <InputFieldElement
+            inputFieldObjFromProps={inputFieldsObjectsWithDefaultValues.house}
+          />
+          <InputFieldElement
+            inputFieldObjFromProps={inputFieldsObjectsWithDefaultValues.flat}
+          />
+        </InputFieldSingleRow>
+      </InputFieldsSingleRowResidenceContextProvider>
     </motion.div>
   );
 }

@@ -5,7 +5,7 @@ import {
   AnimationProps,
   DOMKeyframesDefinition,
 } from "framer-motion";
-import { useCallback, useContext, useEffect } from "react";
+import { useCallback, useContext, useEffect, useMemo } from "react";
 
 import customColors from "../../styles/properties";
 import { GameResultContext } from "../main/nav/GamesResults";
@@ -17,6 +17,8 @@ import {
   useWindowMatchMediaQueriesCSSPropertiesMap,
   windowMatchMediaQueriesCSSPropertiesMap,
 } from "../../hooks/RWD/useWindowMatchMediaQueriesPropertiesMap";
+import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
+import { UpdateOrderDetailsContext } from "../../store/userPanel/admin/orders/UpdateOrderDetailsContext";
 
 export const priceFormat = new Intl.NumberFormat(navigator.language, {
   style: "currency",
@@ -56,7 +58,7 @@ type mediaQueriesProperties =
   | "priceTagFontSize"
   | "discountBoxPadding"
   | "discountBoxFontSize";
-const priceTagFontSizeMediaQueryKeyToCSSPropertyValueMap: cssPropertyMediaQueryKeyToCSSPropertyValueMap =
+export const priceTagFontSizeMediaQueryKeyToCSSPropertyValueMap: cssPropertyMediaQueryKeyToCSSPropertyValueMap =
   {
     default: ".750rem",
     xs: ".875rem",
@@ -79,6 +81,7 @@ export default function PriceTag({
   startAnimation = false,
   removeOriginalPriceAfterAnimation = false,
   customRWDFlexDisplayProperties = "2xs:flex-row lg:flex-col xl:flex-row",
+  priceTagFontSizeMediaQueryKeyToCSSPropertyValueMapOverwrite,
 }: {
   priceFromProps?: number;
   discountFromProps?: number;
@@ -86,6 +89,7 @@ export default function PriceTag({
   startAnimation: boolean;
   removeOriginalPriceAfterAnimation?: boolean;
   customRWDFlexDisplayProperties?: string;
+  priceTagFontSizeMediaQueryKeyToCSSPropertyValueMapOverwrite?: cssPropertyMediaQueryKeyToCSSPropertyValueMap;
 }) {
   const [scope, animate] = useAnimate();
   const { showQuantityAndFinalPrice, game } = useContext(GameResultContext);
@@ -112,9 +116,31 @@ export default function PriceTag({
 
   const shouldFireAnimation = !isFree && hasDiscount && startAnimation;
 
-  const mediaQueriesPropertiesMap = useWindowMatchMediaQueriesCSSPropertiesMap(
-    mediaQueriesPropertiesMapInput
+  const priceTagFontSizeMediaQueryKeyToCSSPropertyValueMapOverwriteStable =
+    useCompareComplexForUseMemo(
+      priceTagFontSizeMediaQueryKeyToCSSPropertyValueMapOverwrite
+    );
+  const mediaQueriesPropertiesMapInputStable = useMemo(
+    () => ({
+      ...mediaQueriesPropertiesMapInput,
+      ...(priceTagFontSizeMediaQueryKeyToCSSPropertyValueMapOverwriteStable && {
+        priceTagFontSize:
+          priceTagFontSizeMediaQueryKeyToCSSPropertyValueMapOverwriteStable,
+        discountBoxFontSize:
+          priceTagFontSizeMediaQueryKeyToCSSPropertyValueMapOverwriteStable,
+      }),
+    }),
+    [priceTagFontSizeMediaQueryKeyToCSSPropertyValueMapOverwriteStable]
   );
+
+  const mediaQueriesPropertiesMap = useWindowMatchMediaQueriesCSSPropertiesMap(
+    mediaQueriesPropertiesMapInputStable
+  );
+
+  // In case we are on modifyOrderAdminPanelPage we just want to only show the quantity related to the product but not the final
+  // price which is handled seperately
+  const isOnModifyOrderAdminPanelPage =
+    useContext(UpdateOrderDetailsContext)?.selectedOrderFromList !== "";
 
   useEffect(() => {
     const sequence = async () => {
@@ -271,7 +297,7 @@ export default function PriceTag({
           </motion.p>
         </>
       )}
-      {quantityHigherThanOne && (
+      {quantityHigherThanOne && !isOnModifyOrderAdminPanelPage && (
         <motion.p
           className="final-price font-bold"
           initial={hiddenInitialElementMotionPropFn()}

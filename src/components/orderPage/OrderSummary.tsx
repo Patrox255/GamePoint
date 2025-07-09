@@ -51,12 +51,14 @@ export const OrderSummaryCartInformationContext = createContext<{
   cartDetailsIsLoading: boolean;
   stateCartStable: cartStateArr | undefined;
   cartTotalPrice: number | undefined;
+  insideOrderSummaryContext: boolean;
 }>({
   gamesWithQuantityStable: undefined,
   cartDetailsError: null,
   cartDetailsIsLoading: false,
   stateCartStable: undefined,
   cartTotalPrice: undefined,
+  insideOrderSummaryContext: false,
 });
 
 export default function OrderSummary({
@@ -125,7 +127,11 @@ export default function OrderSummary({
   return (
     <>
       <OrderPageHeader>Order summary</OrderPageHeader>
-      <section className="order-details-entries-wrapper flex flex-col gap-8">
+      <section
+        className={`order-details-entries-wrapper flex flex-col gap-8 w-full ${
+          !serveAsUpdateOrderInformationSummary ? "lg:w-3/4 xl:w-1/2" : ""
+        } `}
+      >
         {contactInformationToRender}
         <OrderSummaryCartInformationContext.Provider
           value={{
@@ -134,6 +140,7 @@ export default function OrderSummary({
             cartDetailsIsLoading,
             stateCartStable,
             cartTotalPrice,
+            insideOrderSummaryContext: true,
           }}
         >
           <OrderCartInformation />
@@ -144,6 +151,7 @@ export default function OrderSummary({
         <Button
           onClick={handleGoBack}
           disabled={btnDisabledDueToOrderQueryState}
+          alternateTailwindClassesForBiggerFont
         >
           Go back
         </Button>
@@ -155,6 +163,7 @@ export default function OrderSummary({
               btnDisabledDueToOrderQueryState
             }
             onClick={placeAnOrderClickCallback}
+            alternateTailwindClassesForBiggerFont
           >
             {placeAnOrderBtnDisabled
               ? "Getting order data..."

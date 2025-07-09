@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -17,6 +18,7 @@ import { IGameWithQuantityBasedOnCartDetailsEntry } from "../../helpers/generate
 import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
 import { ValidationErrorsArr } from "../UI/FormWithErrorHandling";
 import { useAppSelector } from "../../hooks/reduxStore";
+import { OrderSummaryContentContext } from "../../store/orderPage/OrderSummaryContentContext";
 
 const cartControlButtonsAdditionalTailwindCSS = {
   px: "px-3",
@@ -25,7 +27,8 @@ const cartControlButtonsAdditionalTailwindCSS = {
 
 export type onModifyGameQuantityFnStable = (
   newGameQuantity: number,
-  gameInfo: IGameWithQuantityBasedOnCartDetailsEntry
+  gameInfo: IGameWithQuantityBasedOnCartDetailsEntry,
+  unmodifiedGameInfoEntryForOrderModification?: IGameWithQuantityBasedOnCartDetailsEntry
 ) => void;
 
 type IFetchedGamesQuantityModificationAdditionalInformationContextBody = {
@@ -75,6 +78,16 @@ export default function FetchedGamesQuantityModificationAdditionalInformation({
   const { onModifyGameQuantityFnStable } = useContext(
     FetchedGamesQuantityModificationAdditionalInformationContext
   );
+  const { gamesWithQuantityOutOfOrderItemsStable } = useContext(
+    OrderSummaryContentContext
+  );
+  const gamesWithQuantityOutOfOrderItemsRelatedEntry = useMemo(
+    () =>
+      gamesWithQuantityOutOfOrderItemsStable?.find(
+        (entry) => entry._id === game._id
+      ),
+    [game._id, gamesWithQuantityOutOfOrderItemsStable]
+  );
 
   const gameStable = useCompareComplexForUseMemo(game);
   const productIdWhichCartModificationResultedInAnError = useAppSelector(
@@ -107,12 +120,17 @@ export default function FetchedGamesQuantityModificationAdditionalInformation({
       onModifyGameQuantityFnStable &&
       gameQuantityFromPassedGameInformation !== gameQuantityState
     )
-      onModifyGameQuantityFnStable(gameQuantityState, gameStable);
+      onModifyGameQuantityFnStable(
+        gameQuantityState,
+        gameStable,
+        gamesWithQuantityOutOfOrderItemsRelatedEntry
+      );
   }, [
     gameQuantityState,
     onModifyGameQuantityFnStable,
     gameStable,
     gameQuantityFromPassedGameInformation,
+    gamesWithQuantityOutOfOrderItemsRelatedEntry,
   ]);
 
   const freeToPlayGame = game.finalPrice === 0;
@@ -142,9 +160,9 @@ export default function FetchedGamesQuantityModificationAdditionalInformation({
           )}
         </div>
       )}
-      <div className="game-cart-controls flex gap-2 justify-center items-center">
+      <div className="game-cart-controls flex gap-2 justify-center items-center flex-wrap">
         {!freeToPlayGame && (
-          <>
+          <div className="game-quantity-control-wrapper flex justify-center items-center gap-2">
             <Button
               additionalTailwindCSS={cartControlButtonsAdditionalTailwindCSS}
               onClick={() => changeGameQuantityStateBasedOnCurrentOne(-1)}
@@ -175,7 +193,7 @@ export default function FetchedGamesQuantityModificationAdditionalInformation({
             >
               +
             </Button>
-          </>
+          </div>
         )}
         <HeaderLinkOrHeaderAnimation
           onlyAnimation={true}

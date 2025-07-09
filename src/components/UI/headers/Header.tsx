@@ -33,9 +33,11 @@ export default function Header({
   size = "medium",
   additionalTailwindClasses,
   colorTailwindClass = "text-highlightRed",
+  headerRef,
 }: {
   children: ReactNode;
   motionAnimationProperties?: AnimationProps;
+  headerRef?: React.RefObject<HTMLHeadingElement>;
 } & IHeaderPropsSharedWithHighlightCounter) {
   const { headerAnimationProps, disabled } = useContext(HeaderLinkContext);
   const usesHeaderLinkContext = Object.keys(headerAnimationProps).length !== 0;
@@ -55,9 +57,10 @@ export default function Header({
             ? "cursor-pointer"
             : ""
           : colorTailwindClass
-      } text-center ${additionalTailwindClasses} leading-3`}
+      } text-center ${additionalTailwindClasses}`}
       {...motionAnimationProperties}
       {...(usesHeaderLinkContext ? headerAnimationProps : {})}
+      ref={headerRef}
     >
       {children}
     </HeaderElement>

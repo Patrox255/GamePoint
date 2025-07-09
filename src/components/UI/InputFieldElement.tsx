@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import {
+import React, {
   createContext,
   forwardRef,
   ReactNode,
@@ -19,6 +19,7 @@ import Error from "./Error";
 import DropDownMenuWrapper from "./DropDownMenu/DropDownMenuWrapper";
 import DropDownMenuDroppedElementsContainer from "./DropDownMenu/DropDownMenuDroppedElementsContainer";
 import useCompareComplexForUseMemo from "../../hooks/useCompareComplexForUseMemo";
+import { InputFieldsSingleRowResidenceContext } from "../../store/UI/InputFieldsSingleRowResidenceContext";
 
 export interface IInputFieldValidationError {
   message: string;
@@ -55,9 +56,18 @@ export const InputFieldSingleRow = ({
   children: ReactNode;
   identificator?: string;
 }) => {
+  const isRelatedToResidenceInfo = useContext(
+    InputFieldsSingleRowResidenceContext
+  );
+
   return (
     <InputFieldSingleRowCtx.Provider value={true}>
-      <div className="w-full flex gap-6 items-center" id={identificator}>
+      <div
+        className={`w-full flex flex-col ${
+          !isRelatedToResidenceInfo ? "xs:flex-row" : "md:flex-row"
+        } gap-6 items-center`}
+        id={identificator}
+      >
         {children}
       </div>
     </InputFieldSingleRowCtx.Provider>
@@ -143,6 +153,7 @@ const InputFieldElement = forwardRef<
     onChange?: inputOnChange;
     customAlignSelfTailwindClass?: string;
     contentAboveInput?: ReactNode;
+    containerDivRef?: React.LegacyRef<HTMLDivElement>; // Used only to extend date picker to screen width
   }
 >(
   (
@@ -156,6 +167,7 @@ const InputFieldElement = forwardRef<
       onChange,
       customAlignSelfTailwindClass,
       contentAboveInput,
+      containerDivRef,
     },
     inputRef
   ) => {
@@ -209,7 +221,9 @@ const InputFieldElement = forwardRef<
     const inputLabelElement = (
       <>
         {generateInputFieldLabel(inputFieldObj, markAsRequired)}
-        <div className={`flex gap-3`}>
+        <div
+          className={`flex gap-3 xs:flex-row flex-col justify-center items-center`}
+        >
           <Input
             placeholder={
               inputFieldObj.renderLabel === false ||
@@ -237,6 +251,7 @@ const InputFieldElement = forwardRef<
             min={inputFieldObj.min}
             max={inputFieldObj.max}
             step={inputFieldObj.step}
+            biggerFont
           />
           {children && (
             <InputFieldElementChildrenCtxWrapper>
@@ -274,6 +289,7 @@ const InputFieldElement = forwardRef<
         animate={inputFocused ? "hover" : "default"}
         whileHover="hover"
         whileFocus="hover"
+        ref={containerDivRef}
       >
         {contentAboveInput && (
           <InputFieldElementChildrenCtxWrapper>

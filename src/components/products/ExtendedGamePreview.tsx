@@ -120,7 +120,7 @@ const ExtendedGamePreview = memo(
               )}
             </AddReviewContextProvider>
           </motion.article>
-          <article className="product-reviews text-center">
+          <article className="product-reviews w-full text-center">
             <header className="py-6">
               <Header size="large">Reviews</Header>
             </header>

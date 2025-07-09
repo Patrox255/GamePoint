@@ -51,6 +51,7 @@ interface IInputProps {
   lightThemeFromProps?: boolean;
   defaultValue?: inputValue;
   disabled?: boolean;
+  biggerFont?: boolean; // Mainly used for forms
 }
 
 const Input = forwardRef<HTMLInputElement, IInputProps>(
@@ -82,6 +83,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       lightThemeFromProps,
       defaultValue,
       disabled = false,
+      biggerFont = false,
     },
     ref
   ) => {
@@ -113,11 +115,14 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
       useContext(FormWithErrorHandlingContext).lightTheme ||
       lightThemeFromProps;
 
+    let fontClasses = "xl:text-xl text-xs";
+    if (biggerFont) fontClasses = "text-xs+ xs:text-sm xl:text-xl";
+
     const className = `outline-none py-2 px-1 rounded-lg ${
       lightTheme ? "bg-bodyBg" : "bg-darkerBg"
     } text-defaultFont border-2 ${width} ${
       additionalTailwindClasses ? additionalTailwindClasses : ""
-    } xl:text-xl text-xs`;
+    } ${fontClasses}`;
 
     const sharedPropsAcrossInputAndSelect = {
       className,

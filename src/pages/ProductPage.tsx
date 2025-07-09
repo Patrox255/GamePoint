@@ -23,7 +23,7 @@ export default function ProductPage() {
 
   return (
     <MainWrapper>
-      <div className="w-3/5 flex flex-col justify-center items-center">
+      <div className="w-full xl:w-3/4 flex flex-col justify-center items-center px-8">
         <ProductContextProvider productSlug={productSlug}>
           <Product />
         </ProductContextProvider>

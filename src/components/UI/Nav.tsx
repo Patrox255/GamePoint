@@ -125,7 +125,12 @@ const Nav = memo(() => {
   const shouldShowOnlyUserIcon = useWindowMatchMediaQueries("2xs");
 
   const userRelatedElement = isLoading ? undefined : !isLogged ? (
-    <Button onClick={() => setLoginModalOpen(true)}>Log in</Button>
+    <Button
+      onClick={() => setLoginModalOpen(true)}
+      alternateTailwindClassesForBiggerFont
+    >
+      Log in
+    </Button>
   ) : (
     <DropDownMenuWrapper widthTailwindClass="w-auto">
       <Button>

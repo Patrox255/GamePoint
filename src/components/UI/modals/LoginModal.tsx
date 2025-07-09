@@ -124,10 +124,16 @@ export default function LoginModal() {
         </HeaderLinkOrHeaderAnimation>
         <div className="form-controls pt-6 w-full flex justify-between gap-2 items-center">
           <ButtonContextProvider useBiggerFont>
-            <Button type="button" onClick={() => setLoginModalOpen(false)}>
+            <Button
+              type="button"
+              onClick={() => setLoginModalOpen(false)}
+              alternateTailwindClassesForBiggerFont
+            >
               Close
             </Button>
-            <Button>{isPending ? "Logging in..." : "Log in"}</Button>
+            <Button alternateTailwindClassesForBiggerFont>
+              {isPending ? "Logging in..." : "Log in"}
+            </Button>
           </ButtonContextProvider>
         </div>
       </FormWithErrorHandling>
@@ -137,8 +143,12 @@ export default function LoginModal() {
   if (loginModalState === "success")
     content = (
       <>
-        <CheckMarkSVG additionalTailwindClasses="w-48" />
-        <Header size="large" colorTailwindClass="text-highlightGreen">
+        <CheckMarkSVG additionalTailwindClasses="w-24 lg:w-48" />
+        <Header
+          size="large"
+          colorTailwindClass="text-highlightGreen"
+          additionalTailwindClasses="xs:!text-4xl !text-xl px-3"
+        >
           Successfully logged in!
         </Header>
         <Button onClick={handleCloseLoginModal}>Close</Button>

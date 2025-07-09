@@ -5,7 +5,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useContext, useMemo } from "react";
+import { useCallback, useContext, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 
 import { IUserOrdersManagerParams } from "./UserOrdersManager";
@@ -36,6 +36,8 @@ export default function OrderSummaryUserPanel() {
   const {
     selectedOrderFromList: orderIdFromAdminOrderFinding,
     handleGoBackFromOrderSummary: handleGoBackFromAdminOrderSummary,
+    orderModificationTotalPrice,
+    setOrderModificationTotalPrice,
   } = useContext(UpdateOrderDetailsContext);
 
   const orderId = orderIdFromAdminOrderFinding || orderIdFromParam;
@@ -93,6 +95,10 @@ export default function OrderSummaryUserPanel() {
     [requestedOrderData]
   );
 
+  useEffect(() => {
+    setOrderModificationTotalPrice(selectedOrder?.totalValue);
+  }, [selectedOrder?.totalValue, setOrderModificationTotalPrice]);
+
   let content;
   if (requestedOrderIsLoading)
     content = <LoadingFallback customText="Retrieving order data..." />;
@@ -123,7 +129,7 @@ export default function OrderSummaryUserPanel() {
       <OrderSummaryContentContext.Provider
         value={{
           contactInformationToRender: selectedOrder.orderContactInformation,
-          cartTotalPriceNotFromCartDetails: selectedOrder.totalValue,
+          cartTotalPriceNotFromCartDetails: orderModificationTotalPrice,
           orderStatus: selectedOrder.status,
           gamesWithQuantityOutOfOrderItemsStable,
         }}
@@ -138,6 +144,7 @@ export default function OrderSummaryUserPanel() {
         userOrdersComponentsMotionProperties,
         ["exit"]
       )}
+      className="w-full flex justify-center items-center flex-col text-center"
     >
       {content}
     </motion.article>

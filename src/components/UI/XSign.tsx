@@ -11,7 +11,7 @@ export default function XSign({
 }) {
   return (
     <motion.p
-      className={`inline ml-3 text-2xl font-bold ${
+      className={`inline text-2xl font-bold ${
         !disabled ? "cursor-pointer" : ""
       }`}
       {...(!disabled && {

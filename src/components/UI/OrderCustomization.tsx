@@ -106,7 +106,7 @@ export default function OrderCustomization<fieldsNames extends string>({
   orderCustomizationDispatch: React.Dispatch<IOrderCustomizationReducer>;
 }) {
   const paragraphClasses =
-    "flex items-center justify-center cursor-pointer gap-2";
+    "flex items-center justify-center cursor-pointer gap-2 text-sm xs:text-base";
   const orderCustomizationEntries = useMemo(
     () =>
       Object.entries<IOrderCustomizationObjToRenderEntryProperty>(
@@ -119,7 +119,7 @@ export default function OrderCustomization<fieldsNames extends string>({
   );
 
   return (
-    <header className="flex justify-center items-center w-full pb-4 text-lg font-bold">
+    <header className="flex justify-center items-center w-full pb-4 text-lg font-bold flex-col xs:flex-row xs:gap-0 gap-4">
       {orderCustomizationEntries.map(
         ([entryIdentificator, entryProperties]) => {
           const currentCustomizationStateKey = entryIdentificator;

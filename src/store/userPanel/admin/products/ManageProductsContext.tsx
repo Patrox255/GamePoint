@@ -6,11 +6,13 @@ export const ManageProductsContext = createContext<{
   setSelectedProductId: (newProductId: string) => void;
   setSelectedProductIdAndDebouncedOne: (newProductId: string) => void;
   restrictManageProductsSectionsNavigation: boolean;
+  onManageProductsPage?: boolean;
 }>({
   selectedProductId: "",
   setSelectedProductId: () => {},
   setSelectedProductIdAndDebouncedOne: () => {},
   restrictManageProductsSectionsNavigation: false,
+  onManageProductsPage: false,
 });
 
 export default function ManageProductsContextProvider({
@@ -37,6 +39,7 @@ export default function ManageProductsContextProvider({
         setSelectedProductId,
         setSelectedProductIdAndDebouncedOne,
         restrictManageProductsSectionsNavigation,
+        onManageProductsPage: true,
       }}
     >
       {children}

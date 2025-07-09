@@ -64,10 +64,14 @@ export default function OrderUserContactCustomization({
                 return setNoSelectedContactInformationError(true);
               handleSelectContactInformation();
             }}
+            alternateTailwindClassesForBiggerFont
           >
             Select
           </Button>
-          <Button onClick={() => navigate(navigatePaths.userPanelContact)}>
+          <Button
+            onClick={() => navigate(navigatePaths.userPanelContact)}
+            alternateTailwindClassesForBiggerFont
+          >
             Customize your contact details
           </Button>
         </article>

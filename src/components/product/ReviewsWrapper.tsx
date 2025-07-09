@@ -38,7 +38,7 @@ const Review = ({
   return (
     <motion.li
       key={(review as IReview & { _id: string })._id}
-      className={`bg-darkerBg p-8 ${
+      className={`bg-darkerBg p-3 2xs:p-8 ${
         customTailwindCSS ? customTailwindCSS : ""
       } rounded-xl`}
       initial={{ opacity: 0.7 }}

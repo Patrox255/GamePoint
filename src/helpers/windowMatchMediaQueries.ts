@@ -3,8 +3,9 @@
 const windowMatchMediaQueries = {
   xs: window.matchMedia("(min-width: 340px)"),
   "2xs": window.matchMedia("(min-width: 550px)"),
-  lg: window.matchMedia("(min-width: 1024px)"),
   sm: window.matchMedia("(min-width: 640px)"),
+  md: window.matchMedia("(min-width: 768px)"),
+  lg: window.matchMedia("(min-width: 1024px)"),
 };
 
 export type windowMatchMediaQueriesKeys = keyof typeof windowMatchMediaQueries;

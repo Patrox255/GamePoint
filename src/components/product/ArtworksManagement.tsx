@@ -26,6 +26,7 @@ import leftArrowSVG from "../../assets/left-arrow.svg";
 import rightArrowSVG from "../../assets/right-arrow.svg";
 import HighlightCounter from "../UI/HighlightCounter";
 import { userOrdersComponentsMotionProperties } from "../../store/userPanel/UserOrdersManagerOrdersDetailsContext";
+import { useWindowMatchMediaQueries } from "../../hooks/RWD/useWindowMatchMediaQueries";
 
 interface IStoredArtworkWithCustomInformation {
   url: string;
@@ -181,9 +182,62 @@ export default function ArtworksManagement() {
     disabled: loadingArtwork || loadingArtworkToDisplay,
   };
 
+  const [arrowSvgHeight, setArrowSvgHeight] = useState<number | undefined>();
+  const putArrowsUpperDueToLowerResolution = !useWindowMatchMediaQueries("2xs");
+
+  const controlArrows = (
+    <>
+      <ArrowSVG
+        arrowSrc={leftArrowSVG}
+        alt="Arrow pointing to the left"
+        onClick={() => modifyCurrentArtworkIndexToOverride(-1)}
+        {...blockControlsDuringAnimationProp}
+        insideAlternateSliderLookTabsComponent
+        customWidthTailwindClass="w-12"
+        arrowSvgHeightProp={arrowSvgHeight}
+        setArrowSvgHeightProp={setArrowSvgHeight}
+        addPaddingWhenInsideAlternateSliderLookTabsComponent={
+          !putArrowsUpperDueToLowerResolution
+        }
+      />
+      <ArrowSVG
+        arrowSrc={rightArrowSVG}
+        alt="Arrow pointing to the right"
+        onClick={() => modifyCurrentArtworkIndexToOverride(1)}
+        translateXVal="2rem"
+        {...blockControlsDuringAnimationProp}
+        insideAlternateSliderLookTabsComponent
+        customWidthTailwindClass="w-12"
+        arrowSvgHeightProp={arrowSvgHeight}
+        setArrowSvgHeightProp={setArrowSvgHeight}
+        addPaddingWhenInsideAlternateSliderLookTabsComponent={
+          !putArrowsUpperDueToLowerResolution
+        }
+      />
+    </>
+  );
+
+  const arrowsSvgContainerStyle = useMemo<React.CSSProperties | undefined>(
+    () => ({
+      ...(arrowSvgHeight && {
+        paddingBottom: `${arrowSvgHeight}px`,
+      }),
+    }),
+    [arrowSvgHeight]
+  );
+
   return (
     <>
       <Header>Artworks Management</Header>
+      {putArrowsUpperDueToLowerResolution &&
+        currentArtworksStable.length >= 2 && (
+          <section
+            className="artworks-management-arrows-control-container relative w-full flex justify-center items-center"
+            style={arrowsSvgContainerStyle}
+          >
+            {controlArrows}
+          </section>
+        )}
       <section
         id="artworks-management-container"
         className="w-full flex justify-center gap-4 transition-all"
@@ -241,27 +295,17 @@ export default function ArtworksManagement() {
             )}
           </AnimatePresence>
           <AnimatePresence>
-            {currentArtworksStable.length >= 2 && (
-              <motion.section
-                className="flex justify-between items-center self-stretch"
-                id="artworks-management-current-artwork-controls"
-                {...userOrdersComponentsMotionProperties}
-              >
-                <ArrowSVG
-                  arrowSrc={leftArrowSVG}
-                  alt="Arrow pointing to the left"
-                  onClick={() => modifyCurrentArtworkIndexToOverride(-1)}
-                  {...blockControlsDuringAnimationProp}
-                />
-                <ArrowSVG
-                  arrowSrc={rightArrowSVG}
-                  alt="Arrow pointing to the right"
-                  onClick={() => modifyCurrentArtworkIndexToOverride(1)}
-                  translateXVal="2rem"
-                  {...blockControlsDuringAnimationProp}
-                />
-              </motion.section>
-            )}
+            {currentArtworksStable.length >= 2 &&
+              !putArrowsUpperDueToLowerResolution && (
+                <motion.section
+                  className="flex justify-between items-center self-stretch relative"
+                  id="artworks-management-current-artwork-controls"
+                  {...userOrdersComponentsMotionProperties}
+                  style={arrowsSvgContainerStyle}
+                >
+                  {controlArrows}
+                </motion.section>
+              )}
           </AnimatePresence>
           {loadingArtworkError && (
             <Error
