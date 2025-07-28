@@ -4,8 +4,37 @@ GamePoint is a project of computer games shop web application with various addit
 
 ## Table of Contents
 
+- [Tech Stack](#tech-stack)
 - [Demo](#demo)
+- [Visual preview of key features](#visual-preview-of-key-features)
 - [Installation](#installation-for-development)
+
+## Tech Stack
+
+### Front end
+- React
+
+- TypeScript
+
+- State management: Redux Toolkit
+
+- Data fetching/caching: TanStack Query
+
+- Styling: Tailwind CSS
+
+- Deployment: Vercel
+
+### Back end
+
+- Node.js + Express (custom REST API)
+
+- MongoDB with Mongoose ODM
+
+- JWT auth (access & refresh tokens)
+
+- IGDB API (via Twitch authentication) for game data
+
+- Vercel Blob for storing uploaded artworks
 
 ## Demo
 
@@ -21,6 +50,40 @@ Some of the accounts have been set to be admins as well but to save time looking
 **Password:** `Testing123!`
 
 _Note: These credentials are for demonstration purposes only._
+
+## Visual preview of key features
+
+### Artwork Slider
+
+https://github.com/user-attachments/assets/8ed2d6b8-2680-4728-9b3a-c3b5e53c24fb
+
+### Review System
+
+https://github.com/user-attachments/assets/bd3ad21a-6a2e-40c4-9897-22e90c30303b
+
+### Custom Date Picker
+
+https://github.com/user-attachments/assets/0d8ba2ef-a339-46e1-b588-e64b59b1e592
+
+### Advanced Search Engine
+
+https://github.com/user-attachments/assets/678ccc50-2642-4865-9edc-f918b764d31e
+
+### Contact Details Manager
+
+https://github.com/user-attachments/assets/e5024270-c6c2-469f-8221-4df272af74c1
+
+### Artwork Manager
+
+https://github.com/user-attachments/assets/6dc78319-764c-4d4f-875e-5dabcdcb963f
+
+### Admin Panel
+
+https://github.com/user-attachments/assets/bb50995c-545b-4da3-970e-c244cba5bea9
+
+### Notification System
+
+Active throughout all of the application effectively letting the user know what's happening and visible for example in the video above.
 
 ## Installation for development
 
